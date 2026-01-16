@@ -3,10 +3,10 @@ use dioxus::prelude::*;
 #[component]
 pub fn Header() -> Element {
     rsx! {
-        header { class: "shrink-0 pt-6 px-5 pb-2 flex flex-col gap-4 z-20",
+        header { class: "shrink-0 pt-6 px-5 pb-2 flex flex-col gap-4 z-20 peer-checked/settings:[&_.settings-icon]:text-primary peer-checked/settings:[&_.settings-icon]:rotate-45",
             div { class: "flex items-center justify-between",
                 div { class: "flex items-center gap-3",
-                    div { class: "h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center shadow-lg shadow-primary/20",
+                    div { class: "h-8 w-8 rounded-lg bg-linear-to-br from-primary to-blue-600 flex items-center justify-center shadow-lg shadow-primary/20",
                         span { class: "material-symbols-outlined text-black text-[20px] font-bold", "terminal" }
                     }
                     h1 { class: "text-xl font-bold tracking-tight leading-none",

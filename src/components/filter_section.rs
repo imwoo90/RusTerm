@@ -3,14 +3,23 @@ use dioxus::prelude::*;
 #[component]
 pub fn FilterSection() -> Element {
     rsx! {
-        div { class: "shrink-0 px-5 py-3 z-10 flex flex-col gap-3 filter-section",
+        div {
+            class: "shrink-0 px-5 py-3 z-10 flex flex-col gap-3 filter-section \
+                    peer-checked/highlight:[&_.highlight-panel]:max-h-[400px] peer-checked/highlight:[&_.highlight-panel]:opacity-100 peer-checked/highlight:[&_.highlight-panel]:visible peer-checked/highlight:[&_.highlight-panel]:mt-2 peer-checked/highlight:[&_.highlight-panel]:p-4 \
+                    peer-checked/highlight:[&_.highlight-icon-btn]:text-primary peer-checked/highlight:[&_.highlight-icon-btn]:bg-primary/10 peer-checked/highlight:[&_.highlight-icon-btn]:border-primary/50 \
+                    peer-checked/timestamp:[&_.timestamp-switch-bg]:bg-primary/80 peer-checked/timestamp:[&_.timestamp-switch-bg]:border-primary peer-checked/timestamp:[&_.timestamp-switch-bg]:shadow-[0_0_8px_rgba(0,191,255,0.4)] \
+                    peer-checked/timestamp:[&_.timestamp-switch-dot]:translate-x-3.5 peer-checked/timestamp:[&_.timestamp-switch-dot]:bg-white \
+                    peer-checked/timestamp:[&_.timestamp-label]:text-primary peer-checked/timestamp:[&_.timestamp-label]:font-bold \
+                    peer-checked/autoscroll:[&_.autoscroll-switch-bg]:bg-primary/80 peer-checked/autoscroll:[&_.autoscroll-switch-bg]:border-primary peer-checked/autoscroll:[&_.autoscroll-switch-bg]:shadow-[0_0_8px_rgba(0,191,255,0.4)] \
+                    peer-checked/autoscroll:[&_.autoscroll-switch-dot]:translate-x-3.5 peer-checked/autoscroll:[&_.autoscroll-switch-dot]:bg-white \
+                    peer-checked/autoscroll:[&_.autoscroll-label]:text-primary peer-checked/autoscroll:[&_.autoscroll-label]:font-bold",
             div { class: "flex gap-2 w-full items-stretch",
                 div { class: "relative flex-1 group",
                     span { class: "material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 text-[20px] group-focus-within:text-primary transition-colors",
                         "search"
                     }
                     input {
-                        class: "w-full bg-[#0d0f10] text-sm font-medium text-white placeholder-gray-600 pl-10 pr-[7.5rem] py-2.5 rounded-xl border border-[#2a2e33] focus:border-primary/50 focus:shadow-glow outline-none shadow-inset-input transition-all",
+                        class: "w-full bg-[#0d0f10] text-sm font-medium text-white placeholder-gray-600 pl-10 pr-30 py-2.5 rounded-xl border border-[#2a2e33] focus:border-primary/50 focus:shadow-glow outline-none shadow-inset-input transition-all",
                         placeholder: "Filter output...",
                         "type": "text"
                     }

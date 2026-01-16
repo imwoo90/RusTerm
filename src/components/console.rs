@@ -3,7 +3,14 @@ use dioxus::prelude::*;
 #[component]
 pub fn Console() -> Element {
     rsx! {
-        main { class: "flex-1 min-h-0 mx-4 mb-0 mt-0 relative group/console",
+        main {
+            class: "flex-1 min-h-0 mx-4 mb-0 mt-0 relative group/console \
+                    peer-not-checked/timestamp:[&_.log-timestamp]:hidden \
+                    peer-checked/autoscroll:[&_.scroll-status-active]:block \
+                    peer-not-checked/autoscroll:[&_.scroll-status-paused]:block \
+                    peer-checked/autoscroll:[&_#go-to-bottom-btn]:opacity-0 \
+                    peer-checked/autoscroll:[&_#go-to-bottom-btn]:pointer-events-none \
+                    peer-checked/autoscroll:[&_#go-to-bottom-btn]:translate-y-10",
             div { class: "absolute inset-0 bg-console-bg rounded-t-2xl border-t border-x border-[#222629] shadow-[inset_0_0_20px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col",
                 div { class: "absolute inset-0 scanlines opacity-20 pointer-events-none z-10" }
                 div { class: "shrink-0 h-6 bg-[#16181a] border-b border-[#222629] flex items-center justify-between px-3",
@@ -88,7 +95,7 @@ pub fn Console() -> Element {
                     }
                 }
                 label {
-                    class: "absolute bottom-6 right-6 bg-primary text-[#121416] rounded-full w-10 h-10 shadow-lg shadow-black/50 hover:bg-white active:scale-95 transition-all duration-300 z-20 flex items-center justify-center cursor-pointer group/fab",
+                    class: "absolute bottom-6 right-6 bg-primary text-surface rounded-full w-10 h-10 shadow-lg shadow-black/50 hover:bg-white active:scale-95 transition-all duration-300 z-20 flex items-center justify-center cursor-pointer group/fab",
                     "for": "autoscroll-toggle",
                     id: "go-to-bottom-btn",
                     span { class: "material-symbols-outlined text-[20px] font-bold", "arrow_downward" }

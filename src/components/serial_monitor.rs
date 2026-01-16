@@ -12,13 +12,14 @@ pub fn SerialMonitor() -> Element {
         div {
             class: "bg-background-light dark:bg-background-dark h-screen w-full flex flex-col font-display text-white overflow-hidden selection:bg-primary/30 selection:text-primary",
 
-            input { checked: true, class: "peer hidden", id: "timestamp-toggle", "type": "checkbox" }
-            input { checked: true, class: "peer hidden", id: "autoscroll-toggle", "type": "checkbox" }
-            input { class: "peer hidden", id: "settings-panel-toggle", "type": "checkbox" }
-            input { class: "peer hidden", id: "highlight-panel-toggle", "type": "checkbox" }
-
-            Header {}
-            SettingsPanel {}
+            input { checked: true, class: "peer/timestamp hidden", id: "timestamp-toggle", "type": "checkbox" }
+            input { checked: true, class: "peer/autoscroll hidden", id: "autoscroll-toggle", "type": "checkbox" }
+            div { class: "relative shrink-0 z-30",
+                input { class: "peer/settings hidden", id: "settings-panel-toggle", "type": "checkbox" }
+                Header {}
+                SettingsPanel {}
+            }
+            input { class: "peer/highlight hidden", id: "highlight-panel-toggle", "type": "checkbox" }
             FilterSection {}
             Console {}
             Footer {}
