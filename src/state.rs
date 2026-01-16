@@ -28,6 +28,12 @@ pub struct AppState {
     pub match_case: Signal<bool>,
     pub use_regex: Signal<bool>,
     pub invert_filter: Signal<bool>,
+    // New Settings
+    pub baud_rate: Signal<&'static str>,
+    pub data_bits: Signal<&'static str>,
+    pub stop_bits: Signal<&'static str>,
+    pub parity: Signal<&'static str>,
+    pub flow_control: Signal<&'static str>,
 }
 
 pub const HIGHLIGHT_COLORS: &[&str] = &[

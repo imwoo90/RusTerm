@@ -1,3 +1,4 @@
+use crate::components::common::CustomSelect;
 use crate::state::AppState;
 use dioxus::prelude::*;
 
@@ -32,21 +33,16 @@ pub fn Header() -> Element {
                     span { class: "material-symbols-outlined text-[#29A329] text-[18px]", "usb" }
                     span { class: "text-xs font-bold text-gray-400", "COM3" }
                 }
-                div { class: "relative flex-1",
-                    select {
-                        class: "w-full appearance-none bg-surface text-xs font-bold text-gray-300 py-2 pl-3 pr-8 rounded-lg border border-white/5 outline-none focus:border-primary/50 transition-colors cursor-pointer hover:bg-[#222528]",
-                        option { "9600 baud" }
-                        option { "19200 baud" }
-                        option { "38400 baud" }
-                        option { "57600 baud" }
-                        option { selected: true, "115200 baud" }
-                    }
-                    div { class: "pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500 group-hover:text-primary transition-colors",
-                        span { class: "material-symbols-outlined text-[18px]", "expand_more" }
-                    }
+
+                CustomSelect {
+                    options: vec!["9600", "19200", "38400", "57600", "115200"],
+                    selected: state.baud_rate,
+                    onchange: move |val| state.baud_rate.set(val),
+                    class: "flex-1"
                 }
+
                 button {
-                    class: "bg-surface border border-white/5 rounded-lg px-2.5 flex items-center justify-center cursor-pointer hover:bg-[#222528] active:scale-95 transition-all",
+                    class: "bg-surface border border-white/5 rounded-lg px-2.5 flex items-center justify-center cursor-pointer hover:bg-[#222528] active:scale-95 transition-all text-gray-500",
                     onclick: move |_| {
                         let current = (state.show_settings)();
                         state.show_settings.set(!current);

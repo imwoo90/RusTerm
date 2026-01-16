@@ -21,6 +21,13 @@ pub fn SerialMonitor() -> Element {
     let use_regex = use_signal(|| false);
     let invert_filter = use_signal(|| false);
 
+    // Serial settings state
+    let baud_rate = use_signal(|| "115200");
+    let data_bits = use_signal(|| "8");
+    let stop_bits = use_signal(|| "1");
+    let parity = use_signal(|| "None");
+    let flow_control = use_signal(|| "None");
+
     use_context_provider(|| AppState {
         show_settings,
         show_highlights,
@@ -32,6 +39,11 @@ pub fn SerialMonitor() -> Element {
         match_case,
         use_regex,
         invert_filter,
+        baud_rate,
+        data_bits,
+        stop_bits,
+        parity,
+        flow_control,
     });
 
     rsx! {
