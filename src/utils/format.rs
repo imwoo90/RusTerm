@@ -51,4 +51,44 @@ mod tests {
         assert_eq!(format_hex(&[0x0A, 0xFF, 0x00]), "0A FF 00");
         assert_eq!(format_hex(&[]), "");
     }
+
+    #[test]
+    fn test_parse_hex_string() {
+        // Valid cases
+        assert_eq!(parse_hex_string("AA BB CC"), Ok(vec![0xAA, 0xBB, 0xCC]));
+        assert_eq!(parse_hex_string("aa:bb-cc"), Ok(vec![0xAA, 0xBB, 0xCC]));
+        assert_eq!(parse_hex_string("0xDE 0xAD"), Ok(vec![0xDE, 0xAD]));
+        assert_eq!(
+            parse_hex_string("deadbeef"),
+            Ok(vec![0xDE, 0xAD, 0xBE, 0xEF])
+        );
+        assert_eq!(parse_hex_string(""), Ok(vec![]));
+
+        // Invalid cases
+        assert!(parse_hex_string("ABC").is_err()); // Odd length
+        assert!(parse_hex_string("G H I").is_err()); // Invalid chars
+        assert!(parse_hex_string("0").is_err()); // Odd length
+        assert!(parse_hex_string("0xGG").is_err()); // Invalid chars
+    }
+
+    #[test]
+    fn test_format_hex_input() {
+        // Formatting logic: formatting happens on input, so it should space out every 2 chars
+        assert_eq!(format_hex_input("a"), "A");
+        assert_eq!(format_hex_input("ab"), "AB");
+        assert_eq!(format_hex_input("abc"), "AB C");
+        assert_eq!(format_hex_input("abcd"), "AB CD");
+        assert_eq!(format_hex_input("abcde"), "AB CD E");
+
+        // Handles mixed case and separators gracefully (by removing them then formatting)
+        assert_eq!(format_hex_input("a b c d"), "AB CD");
+        // Let's verify 'x' behavior. 'x' is not a hexdigit.
+        // So "0xab" -> '0', 'a', 'b' -> "0A B" or "0AB"?
+        // 0 (hex), x (skip), a (hex), b (hex).
+        // chars: 0, a, b. -> "0A B".
+        assert_eq!(format_hex_input("0xab"), "0A B");
+
+        assert_eq!(format_hex_input("hello world"), "ED"); // h(skip), e(E), l(skip)... d(D).
+                                                           // e, d. -> ED
+    }
 }
