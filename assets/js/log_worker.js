@@ -71,6 +71,15 @@ self.onmessage = async (e) => {
     const type = msg.type;
     const data = msg.data;
 
+    if (type === 'SET_LINE_ENDING') {
+        const mode = data; // "None", "NL", "CR", "NLCR"
+        console.log(`[LogWorker] RX Line Ending set to: ${mode}`);
+
+        // Define splitter function or Regex based on mode
+        // Note: For highest performance, we handle this in APPEND_CHUNK
+        self.lineEndingMode = mode;
+    }
+
     if (type === 'APPEND_CHUNK') {
         if (!syncAccessHandle) return;
 
@@ -82,24 +91,11 @@ self.onmessage = async (e) => {
         let str;
         if (isHex) {
             // Hex Mode: Convert bytes to Hex String "AA BB CC ..."
-            // Note: In Hex mode, line breaking based on time or size?
-            // Usually simple hex dump doesn't have newlines in the raw stream.
-            // But we need to structure it. Let's just dump it as one line per chunk 
-            // OR format it nicely (e.g. 16 bytes per line).
-            // For now, let's treat the whole chunk as one "event" or split purely by size if needed.
-            // But to keep it simple and consistent with stream expectation:
-            // Just convert the WHOLE chunk to a single hex string line.
-            // (Or if it's too long, the UI wraps it).
-
-            // Optimization: Array.from overhead?
             const hexParts = [];
             for (let i = 0; i < chunk.length; i++) {
                 hexParts.push(chunk[i].toString(16).toUpperCase().padStart(2, '0'));
             }
             str = hexParts.join(' ') + '\n';
-
-            // Reset text decoder buffer if we switch modes? 
-            // Mixed mode might leave partial chars. It's acceptable.
             leftoverChunk = "";
         } else {
             // Text Mode
@@ -108,7 +104,28 @@ self.onmessage = async (e) => {
 
         // Combine with leftover
         const fullText = leftoverChunk + str;
-        const lines = fullText.split('\n');
+        let lines;
+
+        // Default mode is NL if undefined
+        const mode = self.lineEndingMode || "NL";
+
+        if (mode === "None") {
+            // RAW Mode: Don't split? But we need "lines" for the list.
+            // In typical RAW monitoring, we just dump everything. 
+            // BUT our architecture relies on "Lines".
+            // Compromise: We behave like NL for storage structure, but maybe we should split by timer?
+            // For now, let's treat it as NL to prevent infinite line length crashes.
+            lines = fullText.split('\n');
+        } else if (mode === "CR") {
+            lines = fullText.split('\r');
+        } else if (mode === "NLCR") {
+            // Split by \r\n. 
+            // Note: If we just split by \r\n, what about mixed content?
+            lines = fullText.split('\r\n');
+        } else {
+            // NL (Default)
+            lines = fullText.split('\n');
+        }
 
         // The last element is potentially incomplete
         leftoverChunk = lines.pop(); // Save for next chunk
@@ -122,7 +139,14 @@ self.onmessage = async (e) => {
 
         // Add timestamps
         for (const line of lines) {
-            const cleanLine = line.endsWith('\r') ? line.slice(0, -1) : line;
+            // Clean up: In CR mode, do we leave \n? In NL mode do we leave \r?
+            // Usually we want cleaner output.
+            let cleanLine = line;
+
+            // Optional: Strip remaining control chars to avoid double spacing in UI
+            if (mode === "NL" && cleanLine.endsWith('\r')) cleanLine = cleanLine.slice(0, -1);
+            if (mode === "CR" && cleanLine.startsWith('\n')) cleanLine = cleanLine.slice(1);
+
             batchBuffer += timeStr + cleanLine + '\n';
         }
 
@@ -157,7 +181,11 @@ self.onmessage = async (e) => {
                 let relativeByteOffset = 0;
 
                 for (const line of lines) {
-                    const cleanLine = line.endsWith('\r') ? line.slice(0, -1) : line;
+                    // Clean Line logic again for consistency
+                    let cleanLine = line;
+                    if (mode === "NL" && cleanLine.endsWith('\r')) cleanLine = cleanLine.slice(0, -1);
+                    if (mode === "CR" && cleanLine.startsWith('\n')) cleanLine = cleanLine.slice(1);
+
                     const finalLineStr = timeStr + cleanLine + '\n';
                     const lineByteLen = encoder.encode(finalLineStr).byteLength;
 

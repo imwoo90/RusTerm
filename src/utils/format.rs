@@ -53,6 +53,16 @@ pub fn send_chunk_to_worker(worker: &web_sys::Worker, data: &[u8], is_hex: bool)
     let _ = worker.post_message_with_transfer(&msg, &transfer);
 }
 
+/// Helper to send general control messages to worker
+pub fn send_worker_msg(
+    worker: &web_sys::Worker,
+    msg: crate::components::console::types::WorkerMsg,
+) {
+    if let Ok(js_value) = serde_wasm_bindgen::to_value(&msg) {
+        let _ = worker.post_message(&js_value);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

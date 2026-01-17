@@ -37,6 +37,8 @@ pub enum WorkerMsg {
         use_regex: bool,
         invert: bool,
     },
+    #[serde(rename = "SET_LINE_ENDING")]
+    SetLineEnding(String),
 }
 
 pub const LINE_HEIGHT: f64 = 20.0;

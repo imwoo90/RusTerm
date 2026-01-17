@@ -43,6 +43,23 @@ pub fn SerialMonitor() -> Element {
         }
     });
 
+    // Sync RX Line Ending to Worker
+    use_effect(move || {
+        let ending = rx_line_ending();
+        if let Some(w) = log_worker.read().as_ref() {
+            let mode_str = match ending {
+                LineEnding::None => "None",
+                LineEnding::NL => "NL",
+                LineEnding::CR => "CR",
+                LineEnding::NLCR => "NLCR",
+            };
+            crate::utils::send_worker_msg(
+                w,
+                crate::components::console::types::WorkerMsg::SetLineEnding(mode_str.to_string()),
+            );
+        }
+    });
+
     use_context_provider(|| AppState {
         show_settings,
         show_highlights,
