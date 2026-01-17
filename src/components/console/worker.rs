@@ -36,6 +36,11 @@ pub fn use_log_worker(
                             }
                         }
                         WorkerMsg::LogWindow { lines, .. } => visible_logs.set(lines),
+                        WorkerMsg::Error(msg) => {
+                            if let Some(win) = web_sys::window() {
+                                let _ = win.alert_with_message(&format!("Worker Error: {}", msg));
+                            }
+                        }
                         _ => {}
                     }
                 }

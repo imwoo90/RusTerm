@@ -72,7 +72,7 @@ pub fn Console() -> Element {
                 }
 
                 div {
-                    class: "flex-1 overflow-y-auto font-mono text-xs md:text-sm leading-relaxed scrollbar-custom relative",
+                    class: "flex-1 overflow-y-auto font-mono text-xs md:text-sm leading-[20px] scrollbar-custom relative",
                     id: "console-output",
                     onmounted: move |evt| {
                         let handle = evt.data();

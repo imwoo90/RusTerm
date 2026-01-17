@@ -31,6 +31,8 @@ async function initOPFS() {
 
     } catch (e) {
         console.error("[LogWorker] Init Error:", e);
+        // Notify main thread about OPFS failure
+        self.postMessage({ type: 'ERROR', data: "Failed to initialize OPFS storage. Your browser may not support it or storage is full." });
     }
 }
 

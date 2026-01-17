@@ -28,6 +28,8 @@ pub enum WorkerMsg {
     ExportReady(String),
     #[serde(rename = "CLEAR")]
     Clear,
+    #[serde(rename = "ERROR")]
+    Error(String),
 }
 
 pub const LINE_HEIGHT: f64 = 20.0;
