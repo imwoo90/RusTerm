@@ -71,36 +71,51 @@ pub fn ConnectionControl() -> Element {
 
                         // Clear logs if starting
                         if let Some(w) = state.log_worker.peek().as_ref() {
-                            let _ = w.post_message(&serde_wasm_bindgen::to_value(&WorkerMsg::Clear).unwrap());
-                        }
+                            let _ = w
 
+                                // Check if simulation was stopped
+
+                                .post_message(
+
+                                    &serde_wasm_bindgen::to_value(&WorkerMsg::Clear).unwrap(),
+                                );
+                        }
                         let worker_sig = state.log_worker;
                         let sim_sig = state.is_simulating;
-
                         spawn(async move {
                             loop {
-                                // Check if simulation was stopped
                                 if !sim_sig() {
                                     break;
                                 }
-
                                 if let Some(w) = worker_sig.peek().as_ref() {
-                                     let timestamp = Local::now().format("[%H:%M:%S%.3f] ").to_string();
-                                     let rnd = js_sys::Math::random();
-                                     let content = if rnd < 0.1 {
-                                         format!("Error: System overheat at {:.1}°C", 80.0 + rnd * 20.0)
-                                     } else if rnd < 0.3 {
-                                         format!("Warning: Voltage fluctuation detected: {:.2}V", 3.0 + rnd)
-                                     } else {
-                                         format!("Info: Sensor reading: A={:.2}, B={:.2}, C={:.2}", rnd * 100.0, rnd * 50.0, rnd * 10.0)
-                                     };
-
-                                     let log_entry = format!("{}{}", timestamp, content);
-                                     let msg = WorkerMsg::AppendLog(log_entry);
-                                     let _ = w.post_message(&serde_wasm_bindgen::to_value(&msg).unwrap());
+                                    let timestamp = Local::now()
+                                        .format("[%H:%M:%S%.3f] ")
+                                        .to_string();
+                                    let rnd = js_sys::Math::random();
+                                    let content = if rnd < 0.1 {
+                                        format!(
+                                            "Error: System overheat at {:.1}°C",
+                                            80.0 + rnd * 20.0,
+                                        )
+                                    } else if rnd < 0.3 {
+                                        format!(
+                                            "Warning: Voltage fluctuation detected: {:.2}V",
+                                            3.0 + rnd,
+                                        )
+                                    } else {
+                                        format!(
+                                            "Info: Sensor reading: A={:.2}, B={:.2}, C={:.2}",
+                                            rnd * 100.0,
+                                            rnd * 50.0,
+                                            rnd * 10.0,
+                                        )
+                                    };
+                                    let log_entry = format!("{}{}", timestamp, content);
+                                    let msg = WorkerMsg::AppendLog(log_entry);
+                                    let _ = w
+                                        .post_message(&serde_wasm_bindgen::to_value(&msg).unwrap());
                                 }
-
-                                gloo_timers::future::TimeoutFuture::new(100).await;
+                                gloo_timers::future::TimeoutFuture::new(1).await;
                             }
                         });
                     } else {
@@ -145,9 +160,12 @@ pub fn ConnectionControl() -> Element {
                                 {
                                     // Clear logs before connecting
                                     if let Some(w) = state.log_worker.peek().as_ref() {
-                                        let _ = w.post_message(&serde_wasm_bindgen::to_value(&WorkerMsg::Clear).unwrap());
-                                    }
+                                        let _ = w
 
+                                            .post_message(
+                                                &serde_wasm_bindgen::to_value(&WorkerMsg::Clear).unwrap(),
+                                            );
+                                    }
                                     state.port.set(Some(SerialPortWrapper(port.clone())));
                                     state.is_connected.set(true);
                                     state.success("Connected");
@@ -271,7 +289,7 @@ pub fn ConnectionControl() -> Element {
                             disabled: (state.is_connected)(),
                         }
                     }
-
+                
                 }
             }
         }

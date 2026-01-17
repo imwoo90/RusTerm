@@ -4,8 +4,9 @@ use dioxus::prelude::*;
 
 #[component]
 pub fn FilterBar() -> Element {
-    let state = use_context::<AppState>();
+    let mut state = use_context::<AppState>();
     let show_highlights = (state.show_highlights)();
+    let mut is_panel_open = use_signal(|| false);
 
     rsx! {
         div { class: "shrink-0 px-5 py-3 z-10 flex flex-col gap-3 filter-section relative",
@@ -16,14 +17,46 @@ pub fn FilterBar() -> Element {
                     active: show_highlights,
                     class: "w-12 h-10 rounded-xl border border-[#2a2e33] bg-[#0d0f10] shadow-inset-input",
                     onclick: move |_| {
-                        let mut state = use_context::<AppState>();
-                        let current = (state.show_highlights)();
-                        state.show_highlights.set(!current);
+                        // Logic:
+                        // 1. Toggle Panel Visibility
+                        // 2. If opening panel and feature is off, turn it on? Or just toggle feature?
+                        // User Request: "Panel closed != Feature Off"
+
+                        // Revised Logic: Button handles Panel Toggle primarily.
+                        // But we also want to toggle the feature if user intents to.
+                        // Let's make single click toggle PANEL.
+                        // Inside panel we control feature? No, user wants simple access.
+
+                        // Compromise:
+                        // Button Click -> Toggle Panel.
+                        // IF Panel is opening AND feature is OFF -> Turn ON feature.
+
+                        let panel_state = is_panel_open();
+
+                        if !panel_state {
+                            // Opening
+                            is_panel_open.set(true);
+                            if !show_highlights {
+                                state.show_highlights.set(true);
+                            }
+                        } else {
+                            // Closing via button
+                            is_panel_open.set(false);
+                            // Do NOT turn off feature automatically when closing panel via button?
+                            // Or maybe yes? If I click button again, maybe I want to hide panel but keep feature.
+                            // Let's keep feature ON.
+                        }
                     },
-                    title: "Toggle Highlights",
+                    title: "Toggle Highlights Panel",
                 }
+                // Optional: Explicit Toggle Switch for Feature ON/OFF next to it?
+                // Or just rely on Panel being "Settings" and Button being "Open Settings".
             }
-            HighlightPanel { visible: show_highlights }
+            // Highlight Panel is now controlled by is_panel_open
+            HighlightPanel {
+                visible: is_panel_open(),
+                onclose: move |_| is_panel_open.set(false)
+            }
             DisplayOptions {}
         }
     }
@@ -32,15 +65,15 @@ pub fn FilterBar() -> Element {
 // ... FilterInput ...
 
 #[component]
-fn HighlightPanel(visible: bool) -> Element {
-    let mut state = use_context::<AppState>();
+fn HighlightPanel(visible: bool, onclose: EventHandler<()>) -> Element {
+    let state = use_context::<AppState>();
     let highlights = (state.highlights)();
 
     rsx! {
         if visible {
             div {
                 class: "fixed inset-0 z-40 cursor-default",
-                onclick: move |_| state.show_highlights.set(false),
+                onclick: move |_| onclose.call(()),
             }
         }
         div {
