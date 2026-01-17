@@ -26,6 +26,18 @@ pub fn SerialMonitor() -> Element {
     let parity = use_signal(|| "None");
     let flow_control = use_signal(|| "None");
     let rx_line_ending = use_signal(|| LineEnding::NL);
+    let port = use_signal(|| None);
+    let is_connected = use_signal(|| false);
+    let mut log_worker = use_signal(|| None::<web_sys::Worker>);
+
+    use_effect(move || {
+        if log_worker.peek().is_none() {
+            let worker_path = asset!("/assets/log_worker.js").to_string();
+            if let Ok(w) = web_sys::Worker::new(&worker_path) {
+                log_worker.set(Some(w));
+            }
+        }
+    });
 
     use_context_provider(|| AppState {
         show_settings,
@@ -44,6 +56,9 @@ pub fn SerialMonitor() -> Element {
         parity,
         flow_control,
         rx_line_ending,
+        port,
+        is_connected,
+        log_worker,
     });
 
     rsx! {

@@ -54,8 +54,8 @@ pub async fn open_port(
 
 pub async fn read_loop(
     port: SerialPort,
-    on_data: impl Fn(Vec<u8>) + 'static,
-    on_error: impl Fn(String) + 'static,
+    mut on_data: impl FnMut(Vec<u8>) + 'static,
+    mut on_error: impl FnMut(String) + 'static,
 ) {
     let readable = port.readable();
     let reader = readable.get_reader();

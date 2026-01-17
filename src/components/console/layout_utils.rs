@@ -51,7 +51,7 @@ pub fn use_auto_scroller(
 }
 
 #[component]
-pub fn ConsoleHeader(autoscroll: bool, count: usize) -> Element {
+pub fn ConsoleHeader(autoscroll: bool, count: usize, is_connected: bool) -> Element {
     rsx! {
         div { class: "shrink-0 h-6 bg-[#16181a] border-b border-[#222629] flex items-center justify-between px-3",
             div { class: "flex items-center gap-4",
@@ -74,7 +74,7 @@ pub fn ConsoleHeader(autoscroll: bool, count: usize) -> Element {
                     }
                 }
                 div { class: "text-[9px] font-mono text-[#4a555a] uppercase tracking-widest",
-                    "/dev/tty.usbserial"
+                    if is_connected { "Serial Connected" } else { "Offline" }
                 }
             }
         }

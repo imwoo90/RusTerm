@@ -1,14 +1,12 @@
 use crate::state::AppState;
 use dioxus::prelude::*;
-use gloo_timers::future::TimeoutFuture;
 use std::rc::Rc;
-use web_sys::Worker;
 
 use super::layout_utils::{
     use_auto_scroller, use_window_resize, ConsoleHeader, ResumeScrollButton,
 };
 use super::log_line::LogLine;
-use super::types::{WorkerMsg, BOTTOM_BUFFER_EXTRA, LINE_HEIGHT, TOP_BUFFER};
+use super::types::{BOTTOM_BUFFER_EXTRA, LINE_HEIGHT, TOP_BUFFER};
 use super::worker::{use_data_request, use_log_worker}; // Only if needed locally, but log_line uses it. Wait, LogLine calls it. So View doesn't need to call it directly.
 
 #[component]
@@ -16,7 +14,7 @@ pub fn Console() -> Element {
     let mut state = use_context::<AppState>();
 
     // 1. Signals & Setup
-    let worker = use_signal(|| None::<Worker>);
+    // worker is now in AppState
     let visible_logs = use_signal(|| Vec::<String>::new());
     let total_lines = use_signal(|| 0usize);
     let mut start_index = use_signal(|| 0usize);
@@ -29,32 +27,10 @@ pub fn Console() -> Element {
     let mut sentinel_handle = use_signal(|| None::<Rc<MountedData>>);
 
     // 2. Effects
-    use_log_worker(total_lines, visible_logs, worker);
+    use_log_worker(total_lines, visible_logs, state.log_worker);
     use_window_resize(console_height, state.autoscroll, sentinel_handle);
-    use_data_request(start_index, window_size, total_lines, worker);
+    use_data_request(start_index, window_size, total_lines, state.log_worker);
     use_auto_scroller(state.autoscroll, total_lines, sentinel_handle);
-
-    // Test Data Simulator
-    use_resource(move || async move {
-        let mut count = 0;
-        loop {
-            TimeoutFuture::new(50).await;
-            if let Some(w) = worker.peek().as_ref() {
-                let now = js_sys::Date::new_0();
-                let log = format!(
-                    "[{:02}:{:02}:{:02}] RX DATA: PKT_{:05} STATUS=OK TEMP=24.5C",
-                    now.get_hours(),
-                    now.get_minutes(),
-                    now.get_seconds(),
-                    count
-                );
-                if let Ok(js_obj) = serde_wasm_bindgen::to_value(&WorkerMsg::AppendLog(log)) {
-                    let _ = w.post_message(&js_obj);
-                }
-                count += 1;
-            }
-        }
-    });
 
     let total_height = (total_lines() as f64) * LINE_HEIGHT;
     let offset_top = (start_index() as f64) * LINE_HEIGHT;
@@ -76,7 +52,7 @@ pub fn Console() -> Element {
             div { class: "absolute inset-0 bg-console-bg rounded-t-2xl border-t border-x border-[#222629] shadow-[inset_0_0_20px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col",
                 div { class: "absolute inset-0 scanlines opacity-20 pointer-events-none z-10" }
 
-                ConsoleHeader { autoscroll: (state.autoscroll)(), count: total_lines() }
+                ConsoleHeader { autoscroll: (state.autoscroll)(), count: total_lines(), is_connected: (state.is_connected)() }
 
                 div {
                     class: "flex-1 overflow-y-auto font-mono text-xs md:text-sm leading-relaxed scrollbar-custom relative",

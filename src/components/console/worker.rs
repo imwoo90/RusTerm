@@ -7,25 +7,23 @@ use web_sys::{MessageEvent, Worker};
 pub fn use_log_worker(
     mut total_lines: Signal<usize>,
     mut visible_logs: Signal<Vec<String>>,
-    mut worker: Signal<Option<Worker>>,
+    worker: Signal<Option<Worker>>,
 ) {
     use_effect(move || {
-        let worker_path = asset!("/assets/log_worker.js").to_string();
-        let w = Worker::new(&worker_path).expect("Failed to create worker");
-
-        let onmessage = Closure::wrap(Box::new(move |e: MessageEvent| {
-            if let Ok(msg) = serde_wasm_bindgen::from_value::<WorkerMsg>(e.data()) {
-                match msg {
-                    WorkerMsg::TotalLines(count) => total_lines.set(count),
-                    WorkerMsg::LogWindow { lines, .. } => visible_logs.set(lines),
-                    _ => {}
+        if let Some(w) = worker() {
+            let onmessage = Closure::wrap(Box::new(move |e: MessageEvent| {
+                if let Ok(msg) = serde_wasm_bindgen::from_value::<WorkerMsg>(e.data()) {
+                    match msg {
+                        WorkerMsg::TotalLines(count) => total_lines.set(count),
+                        WorkerMsg::LogWindow { lines, .. } => visible_logs.set(lines),
+                        _ => {}
+                    }
                 }
-            }
-        }) as Box<dyn FnMut(MessageEvent)>);
+            }) as Box<dyn FnMut(MessageEvent)>);
 
-        w.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
-        onmessage.forget();
-        worker.set(Some(w));
+            w.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
+            onmessage.forget();
+        }
     });
 }
 

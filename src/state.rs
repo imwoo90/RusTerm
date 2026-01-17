@@ -1,4 +1,16 @@
 use dioxus::prelude::*;
+use web_sys::{SerialPort, Worker};
+
+#[derive(Clone, Debug)]
+pub struct SerialPortWrapper(pub SerialPort);
+// Safety: In WASM, we are single-threaded. Dioxus requires Send/Sync for Context, but we know it's local.
+unsafe impl Send for SerialPortWrapper {}
+unsafe impl Sync for SerialPortWrapper {}
+impl PartialEq for SerialPortWrapper {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Highlight {
@@ -35,6 +47,10 @@ pub struct AppState {
     pub parity: Signal<&'static str>,
     pub flow_control: Signal<&'static str>,
     pub rx_line_ending: Signal<LineEnding>,
+    // Serial State
+    pub port: Signal<Option<SerialPortWrapper>>,
+    pub is_connected: Signal<bool>,
+    pub log_worker: Signal<Option<Worker>>,
 }
 
 pub const HIGHLIGHT_COLORS: &[&str] = &[

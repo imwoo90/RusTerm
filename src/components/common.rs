@@ -7,16 +7,24 @@ pub fn CustomSelect(
     selected: Signal<&'static str>,
     onchange: EventHandler<&'static str>,
     #[props(default = "w-full")] class: &'static str,
+    #[props(default = false)] disabled: bool,
 ) -> Element {
     let mut is_open = use_signal(|| false);
 
     rsx! {
         div { class: "relative {class} group/select",
             button {
-                class: "w-full flex items-center justify-between bg-[#0d0f10] border border-[#2a2e33] rounded-lg text-xs font-bold text-gray-300 py-2 px-3 hover:bg-[#16181a] hover:border-primary/50 transition-all duration-200 outline-none focus:border-primary/50",
+                class: if disabled {
+                    "w-full flex items-center justify-between bg-[#0d0f10] border border-[#2a2e33] rounded-lg text-xs font-bold text-gray-500 py-2 px-3 opacity-50 cursor-not-allowed"
+                } else {
+                    "w-full flex items-center justify-between bg-[#0d0f10] border border-[#2a2e33] rounded-lg text-xs font-bold text-gray-300 py-2 px-3 hover:bg-[#16181a] hover:border-primary/50 transition-all duration-200 outline-none focus:border-primary/50"
+                },
+                disabled: "{disabled}",
                 onclick: move |e| {
-                    e.stop_propagation();
-                    is_open.set(!is_open());
+                    if !disabled {
+                        e.stop_propagation();
+                        is_open.set(!is_open());
+                    }
                 },
                 span { "{selected}" }
                 span {
