@@ -6,7 +6,7 @@ use super::layout_utils::{
     use_auto_scroller, use_window_resize, ConsoleHeader, ResumeScrollButton,
 };
 use super::log_line::LogLine;
-use super::types::{BOTTOM_BUFFER_EXTRA, LINE_HEIGHT, TOP_BUFFER};
+use super::types::{WorkerMsg, BOTTOM_BUFFER_EXTRA, LINE_HEIGHT, TOP_BUFFER};
 use super::worker::{use_data_request, use_log_worker}; // Only if needed locally, but log_line uses it. Wait, LogLine calls it. So View doesn't need to call it directly.
 
 #[component]
@@ -47,12 +47,21 @@ pub fn Console() -> Element {
         None
     };
 
+    let onexport = move |_evt: MouseEvent| {
+        if let Some(w) = state.log_worker.peek().as_ref() {
+            let msg = WorkerMsg::ExportLogs;
+            if let Ok(js_obj) = serde_wasm_bindgen::to_value(&msg) {
+                let _ = w.post_message(&js_obj);
+            }
+        }
+    };
+
     rsx! {
         main { class: "flex-1 min-h-0 mx-4 mb-0 mt-0 relative group/console",
             div { class: "absolute inset-0 bg-console-bg rounded-t-2xl border-t border-x border-[#222629] shadow-[inset_0_0_20px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col",
                 div { class: "absolute inset-0 scanlines opacity-20 pointer-events-none z-10" }
 
-                ConsoleHeader { autoscroll: (state.autoscroll)(), count: total_lines(), is_connected: (state.is_connected)() }
+                ConsoleHeader { autoscroll: (state.autoscroll)(), count: total_lines(), is_connected: (state.is_connected)(), onexport: onexport }
 
                 div {
                     class: "flex-1 overflow-y-auto font-mono text-xs md:text-sm leading-relaxed scrollbar-custom relative",

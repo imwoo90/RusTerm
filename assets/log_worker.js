@@ -86,4 +86,21 @@ self.onmessage = async (e) => {
             console.error("[LogWorker] Read Error:", err);
         }
     }
+
+    if (type === 'EXPORT_LOGS') {
+        if (!syncAccessHandle) return;
+        try {
+            syncAccessHandle.flush();
+            const size = syncAccessHandle.getSize();
+            const readBuffer = new Uint8Array(size);
+            syncAccessHandle.read(readBuffer, { at: 0 });
+
+            const blob = new Blob([readBuffer], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+
+            self.postMessage({ type: 'EXPORT_READY', data: url });
+        } catch (err) {
+            console.error("[LogWorker] Export Error:", err);
+        }
+    }
 };

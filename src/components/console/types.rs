@@ -22,6 +22,10 @@ pub enum WorkerMsg {
         start_line: usize,
         count: usize,
     },
+    #[serde(rename = "EXPORT_LOGS")]
+    ExportLogs,
+    #[serde(rename = "EXPORT_READY")]
+    ExportReady(String),
 }
 
 pub const LINE_HEIGHT: f64 = 20.0;

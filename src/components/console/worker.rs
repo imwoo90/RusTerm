@@ -16,6 +16,26 @@ pub fn use_log_worker(
                     match msg {
                         WorkerMsg::TotalLines(count) => total_lines.set(count),
                         WorkerMsg::LogWindow { lines, .. } => visible_logs.set(lines),
+                        WorkerMsg::ExportReady(url) => {
+                            if let Some(window) = web_sys::window() {
+                                if let Some(document) = window.document() {
+                                    if let Ok(a) = document.create_element("a") {
+                                        let _ = a.set_attribute("href", &url);
+                                        let _ = a.set_attribute("download", "serial_logs.txt");
+                                        let _ = a.set_attribute("style", "display: none");
+                                        if let Some(body) = document.body() {
+                                            let _ = body.append_child(&a);
+                                            if let Ok(anchor) =
+                                                a.dyn_into::<web_sys::HtmlAnchorElement>()
+                                            {
+                                                anchor.click();
+                                                let _ = body.remove_child(&anchor);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         _ => {}
                     }
                 }
