@@ -1,7 +1,7 @@
 use crate::components::common::ToggleSwitch;
 use crate::serial;
 use crate::state::{AppState, LineEnding};
-use crate::utils::CommandHistory;
+use crate::utils::{format_hex_input, parse_hex_string, CommandHistory};
 use dioxus::prelude::*;
 
 #[component]
@@ -40,6 +40,7 @@ pub fn InputBar() -> Element {
     let mut input_value = use_signal(String::new);
     let mut history = use_signal(|| CommandHistory::load());
     let mut history_index = use_signal(|| None::<usize>);
+    let mut is_hex_input = use_signal(|| false);
 
     let rx_ending = (state.rx_line_ending)();
     let tx_ending = (state.line_ending)();
@@ -54,7 +55,20 @@ pub fn InputBar() -> Element {
             history.write().add(text.clone());
             history_index.set(None);
 
-            let mut data = text.clone().into_bytes();
+            let mut data = if is_hex_input() {
+                match parse_hex_string(&text) {
+                    Ok(d) => d,
+                    Err(e) => {
+                        if let Some(w) = web_sys::window() {
+                            let _ = w.alert_with_message(&format!("Hex Error: {}", e));
+                        }
+                        return;
+                    }
+                }
+            } else {
+                text.clone().into_bytes()
+            };
+
             match (state.line_ending)() {
                 LineEnding::NL => data.push(b'\n'),
                 LineEnding::CR => data.push(b'\r'),
@@ -100,12 +114,20 @@ pub fn InputBar() -> Element {
                         }
                     }
                     // TX Controls
-                    LineEndSelector {
-                        label: "Payload",
-                        selected: tx_ending,
-                        onselect: move |val| state.line_ending.set(val),
-                        active_class: "bg-primary/20 text-primary border-primary/20",
-                        is_rx: false,
+                    div { class: "flex items-center gap-4",
+                        ToggleSwitch {
+                            label: "HEX INPUT",
+                            active: is_hex_input(),
+                            onclick: move |_| is_hex_input.set(!is_hex_input()),
+                        }
+                        div { class: "w-px h-6 bg-[#2a2e33]" }
+                        LineEndSelector {
+                            label: "Payload",
+                            selected: tx_ending,
+                            onselect: move |val| state.line_ending.set(val),
+                            active_class: "bg-primary/20 text-primary border-primary/20",
+                            is_rx: false,
+                        }
                     }
                 }
                 div { class: "flex gap-3 items-stretch h-12",
@@ -115,7 +137,14 @@ pub fn InputBar() -> Element {
                             placeholder: "Enter ASCII command...",
                             "type": "text",
                             value: "{input_value}",
-                            oninput: move |evt| input_value.set(evt.value()),
+                            oninput: move |evt| {
+                                if is_hex_input() {
+                                    let formatted = format_hex_input(&evt.value());
+                                    input_value.set(formatted);
+                                } else {
+                                    input_value.set(evt.value());
+                                }
+                            },
                             onkeydown: move |evt| {
                                 match evt.key() {
                                     Key::Enter => on_send(),

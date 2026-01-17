@@ -7,9 +7,9 @@ pub mod parser;
 pub mod scroll;
 
 pub use filter::LogFilter;
-pub use format::format_hex;
+pub use format::{format_hex, format_hex_input, parse_hex_string};
 pub use highlight::process_log_segments;
 pub use history::CommandHistory;
-pub use macros::{MacroItem, MacroStorage};
+pub use macros::MacroStorage;
 pub use parser::LineParser;
 pub use scroll::{calculate_start_index, calculate_window_size};

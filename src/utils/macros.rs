@@ -8,6 +8,8 @@ pub struct MacroItem {
     pub id: u64,
     pub label: String,
     pub command: String,
+    #[serde(default)]
+    pub is_hex: bool,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
@@ -26,21 +28,8 @@ impl MacroStorage {
                 }
             }
         }
-        // Default example macros
-        Self {
-            items: vec![
-                MacroItem {
-                    id: 1,
-                    label: "Help".to_string(),
-                    command: "help".to_string(),
-                },
-                MacroItem {
-                    id: 2,
-                    label: "Version".to_string(),
-                    command: "version".to_string(),
-                },
-            ],
-        }
+        // Default: Empty
+        Self { items: Vec::new() }
     }
 
     pub fn save(&self) {
@@ -57,9 +46,14 @@ impl MacroStorage {
         self.items.clone()
     }
 
-    pub fn add(&mut self, label: String, command: String) {
+    pub fn add(&mut self, label: String, command: String, is_hex: bool) {
         let id = js_sys::Date::now() as u64;
-        self.items.push(MacroItem { id, label, command });
+        self.items.push(MacroItem {
+            id,
+            label,
+            command,
+            is_hex,
+        });
         self.save();
     }
 
