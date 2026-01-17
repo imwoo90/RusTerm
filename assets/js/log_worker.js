@@ -8,8 +8,11 @@ let lineCount = 0;
 let isFiltering = false;
 let filteredLines = []; // [{start, end}, ...]
 let searchSessionId = 0;
-// Store active filter options for realtime filtering
 let activeFilter = null; // { query, regex, match_case, invert }
+
+// Stream Processing State (Moved from Main Thread)
+let leftoverChunk = "";  // Incomplete line buffer
+const textDecoder = new TextDecoder('utf-8', { fatal: false });
 
 // Throttling State
 let lastNotifyTime = 0;
@@ -19,7 +22,6 @@ const NOTIFY_INTERVAL = 50; // Update UI at most every 50ms (20fps)
 function scheduleUpdate() {
     const now = Date.now();
     if (now - lastNotifyTime > NOTIFY_INTERVAL) {
-        // Send immediately
         postTotalLines();
         lastNotifyTime = now;
         if (notifyTimer) {
@@ -27,7 +29,6 @@ function scheduleUpdate() {
             notifyTimer = null;
         }
     } else {
-        // Schedule deferred update (trailing edge)
         if (!notifyTimer) {
             notifyTimer = setTimeout(() => {
                 postTotalLines();
@@ -46,23 +47,17 @@ function postTotalLines() {
 async function initOPFS() {
     try {
         const root = await navigator.storage.getDirectory();
-
-        // Cleanup: remove old session files
         for await (const name of root.keys()) {
             if (name.startsWith('session_logs_')) {
-                try {
-                    await root.removeEntry(name);
-                } catch (e) { }
+                try { await root.removeEntry(name); } catch (e) { }
             }
         }
-
         const fileName = `session_logs_${Date.now()}.txt`;
         fileHandle = await root.getFileHandle(fileName, { create: true });
         syncAccessHandle = await fileHandle.createSyncAccessHandle();
 
         console.log(`[LogWorker] Initialized OPFS: ${fileName}`);
         self.postMessage({ type: 'INITIALIZED', data: fileName });
-
     } catch (e) {
         console.error("[LogWorker] Init Error:", e);
         self.postMessage({ type: 'ERROR', data: "Failed to initialize OPFS storage." });
@@ -76,53 +71,120 @@ self.onmessage = async (e) => {
     const type = msg.type;
     const data = msg.data;
 
-    if (type === 'APPEND_LOG') {
+    if (type === 'APPEND_CHUNK') {
         if (!syncAccessHandle) return;
 
-        const text = data + '\n';
+        // data.chunk is Uint8Array (Transferable)
+        const chunk = data.chunk;
+        const isHex = data.is_hex;
+
+        // Decode
+        let str;
+        if (isHex) {
+            // Hex Mode: Convert bytes to Hex String "AA BB CC ..."
+            // Note: In Hex mode, line breaking based on time or size?
+            // Usually simple hex dump doesn't have newlines in the raw stream.
+            // But we need to structure it. Let's just dump it as one line per chunk 
+            // OR format it nicely (e.g. 16 bytes per line).
+            // For now, let's treat the whole chunk as one "event" or split purely by size if needed.
+            // But to keep it simple and consistent with stream expectation:
+            // Just convert the WHOLE chunk to a single hex string line.
+            // (Or if it's too long, the UI wraps it).
+
+            // Optimization: Array.from overhead?
+            const hexParts = [];
+            for (let i = 0; i < chunk.length; i++) {
+                hexParts.push(chunk[i].toString(16).toUpperCase().padStart(2, '0'));
+            }
+            str = hexParts.join(' ') + '\n';
+
+            // Reset text decoder buffer if we switch modes? 
+            // Mixed mode might leave partial chars. It's acceptable.
+            leftoverChunk = "";
+        } else {
+            // Text Mode
+            str = textDecoder.decode(chunk, { stream: true });
+        }
+
+        // Combine with leftover
+        const fullText = leftoverChunk + str;
+        const lines = fullText.split('\n');
+
+        // The last element is potentially incomplete
+        leftoverChunk = lines.pop(); // Save for next chunk
+
+        if (lines.length === 0) return; // No complete lines yet
+
+        // Process complete lines
+        let batchBuffer = "";
+        const now = new Date();
+        const timeStr = `[${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}.${now.getMilliseconds().toString().padStart(3, '0')}] `;
+
+        // Add timestamps
+        for (const line of lines) {
+            const cleanLine = line.endsWith('\r') ? line.slice(0, -1) : line;
+            batchBuffer += timeStr + cleanLine + '\n';
+        }
+
         const encoder = new TextEncoder();
-        const buffer = encoder.encode(text);
+        const writeBuffer = encoder.encode(batchBuffer);
 
         try {
             const pos = syncAccessHandle.getSize();
-            syncAccessHandle.write(buffer, { at: pos });
+            syncAccessHandle.write(writeBuffer, { at: pos });
 
-            const newStart = pos;
-            const newEnd = pos + buffer.byteLength; // Includes newline
+            // Optimization to find newline offsets without re-scanning strings
+            let currentOffset = pos;
 
-            // Update main index
-            lineOffsets.push(newEnd);
-            lineCount++;
-
-            // Handle Realtime Filtering
-            if (isFiltering && activeFilter) {
-                // Check if this new line matches current filter
-                let matched = false;
-                // Remove trailing newline for matching check
-                const lineContent = data;
-
-                if (activeFilter.regex) {
-                    try { matched = activeFilter.regex.test(lineContent); } catch (e) { }
-                } else {
-                    matched = activeFilter.match_case
-                        ? lineContent.includes(activeFilter.query)
-                        : lineContent.toLowerCase().includes(activeFilter.lowerQuery);
+            // Scan writeBuffer (which is Uint8Array) for newlines (10)
+            for (let i = 0; i < writeBuffer.length; i++) {
+                if (writeBuffer[i] === 10) { // \n
+                    const lineEnd = currentOffset + i + 1; // +1 to include newline
+                    lineOffsets.push(lineEnd);
+                    lineCount++;
                 }
-
-                if (activeFilter.invert) matched = !matched;
-
-                if (matched) {
-                    filteredLines.push({
-                        start: newStart,
-                        end: newEnd // Points to next line start
-                    });
-                    // Force update for filter view
-                    scheduleUpdate();
-                }
-            } else {
-                // Normal update
-                scheduleUpdate();
             }
+
+            // Realtime Filtering Logic
+            if (isFiltering && activeFilter) {
+                // We need to check filtering logic for the lines we just added.
+                // We can iterate 'lines' array again.
+                // Logic:
+                // 1. Reconstruct full line string (timeStr + cleanLine + \n)
+                // 2. Check match
+                // 3. If match, calculate its start/end byte offset based on its byte length
+
+                let relativeByteOffset = 0;
+
+                for (const line of lines) {
+                    const cleanLine = line.endsWith('\r') ? line.slice(0, -1) : line;
+                    const finalLineStr = timeStr + cleanLine + '\n';
+                    const lineByteLen = encoder.encode(finalLineStr).byteLength;
+
+                    const startPos = pos + relativeByteOffset;
+                    const endPos = startPos + lineByteLen;
+
+                    let matched = false;
+                    const contentToCheck = finalLineStr;
+
+                    if (activeFilter.regex) {
+                        try { matched = activeFilter.regex.test(contentToCheck); } catch (e) { }
+                    } else {
+                        matched = activeFilter.match_case
+                            ? contentToCheck.includes(activeFilter.query)
+                            : contentToCheck.toLowerCase().includes(activeFilter.lowerQuery);
+                    }
+                    if (activeFilter.invert) matched = !matched;
+
+                    if (matched) {
+                        filteredLines.push({ start: startPos, end: endPos });
+                    }
+
+                    relativeByteOffset += lineByteLen;
+                }
+            }
+
+            scheduleUpdate();
 
         } catch (err) {
             console.error("[LogWorker] Write Error:", err);
@@ -176,8 +238,6 @@ self.onmessage = async (e) => {
     }
 
     if (type === 'EXPORT_LOGS') {
-        // ... (Export logic remains same, omitted for brevity but should be kept if overwriting)
-        // Since I'm overwriting, I MUST include the full code.
         const includeTimestamp = data && data.include_timestamp;
         if (!syncAccessHandle) return;
 
@@ -239,6 +299,7 @@ self.onmessage = async (e) => {
             activeFilter = null;
             filteredLines = [];
             searchSessionId++;
+            leftoverChunk = ""; // Clear buffer
 
             self.postMessage({ type: 'TOTAL_LINES', data: 0 });
             console.log("[LogWorker] Storage Cleared");
@@ -261,11 +322,9 @@ self.onmessage = async (e) => {
             return;
         }
 
-        // Setup Filter
         isFiltering = true;
         filteredLines = [];
 
-        // Prepare shared filter object
         let regex = null;
         let lowerQuery = "";
         if (use_regex) {
@@ -274,13 +333,7 @@ self.onmessage = async (e) => {
             lowerQuery = match_case ? query : query.toLowerCase();
         }
 
-        activeFilter = {
-            query,
-            lowerQuery,
-            match_case,
-            regex,
-            invert
-        };
+        activeFilter = { query, lowerQuery, match_case, regex, invert };
 
         try {
             const CHUNK_SIZE = 5000;

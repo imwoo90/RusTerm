@@ -2,8 +2,6 @@ use crate::components::common::{CustomSelect, IconButton};
 use crate::components::console::types::WorkerMsg;
 use crate::serial;
 use crate::state::{AppState, SerialPortWrapper};
-use crate::utils::{format_hex, LineParser};
-use chrono::Local;
 use dioxus::prelude::*;
 
 #[component]
@@ -82,38 +80,55 @@ pub fn ConnectionControl() -> Element {
                         }
                         let worker_sig = state.log_worker;
                         let sim_sig = state.is_simulating;
+                        let hex_sig = state.is_hex_view; // Capture hex signal
+
                         spawn(async move {
                             loop {
                                 if !sim_sig() {
                                     break;
                                 }
                                 if let Some(w) = worker_sig.peek().as_ref() {
-                                    let timestamp = Local::now()
-                                        .format("[%H:%M:%S%.3f] ")
-                                        .to_string();
+                                    // Generate dummy content
                                     let rnd = js_sys::Math::random();
                                     let content = if rnd < 0.1 {
                                         format!(
-                                            "Error: System overheat at {:.1}°C",
+                                            "Error: System overheat at {:.1}°C\n",
                                             80.0 + rnd * 20.0,
                                         )
                                     } else if rnd < 0.3 {
                                         format!(
-                                            "Warning: Voltage fluctuation detected: {:.2}V",
+                                            "Warning: Voltage fluctuation detected: {:.2}V\n",
                                             3.0 + rnd,
                                         )
                                     } else {
                                         format!(
-                                            "Info: Sensor reading: A={:.2}, B={:.2}, C={:.2}",
+                                            "Info: Sensor reading: A={:.2}, B={:.2}, C={:.2}\n",
                                             rnd * 100.0,
                                             rnd * 50.0,
                                             rnd * 10.0,
                                         )
                                     };
-                                    let log_entry = format!("{}{}", timestamp, content);
-                                    let msg = WorkerMsg::AppendLog(log_entry);
-                                    let _ = w
-                                        .post_message(&serde_wasm_bindgen::to_value(&msg).unwrap());
+
+                                    // Convert to Uint8Array for Transferable
+                                    let bytes = content.as_bytes();
+                                    let uint8_array = js_sys::Uint8Array::from(bytes);
+                                    let is_hex = hex_sig(); // Read current hex state
+
+                                    // Create Message Object: { type: "APPEND_CHUNK", data: { chunk: Uint8Array, is_hex: bool } }
+                                    let msg = js_sys::Object::new();
+                                    let _ = js_sys::Reflect::set(&msg, &"type".into(), &"APPEND_CHUNK".into());
+
+                                    let payload = js_sys::Object::new();
+                                    let _ = js_sys::Reflect::set(&payload, &"chunk".into(), &uint8_array);
+                                    let _ = js_sys::Reflect::set(&payload, &"is_hex".into(), &is_hex.into());
+                                    let _ = js_sys::Reflect::set(&msg, &"data".into(), &payload);
+
+                                    // Create Transfer List
+                                    let transfer = js_sys::Array::new();
+                                    transfer.push(&uint8_array.buffer()); // Transfer ownership of buffer
+
+                                    // Post Message with Transfer
+                                    let _ = w.post_message_with_transfer(&msg, &transfer);
                                 }
                                 gloo_timers::future::TimeoutFuture::new(1).await;
                             }
@@ -169,37 +184,34 @@ pub fn ConnectionControl() -> Element {
                                     state.port.set(Some(SerialPortWrapper(port.clone())));
                                     state.is_connected.set(true);
                                     state.success("Connected");
-                                    let mut parser = LineParser::new();
+                                    // No LineParser needed here anymore. Worker does the parsing.
                                     serial::read_loop(
                                             port,
                                             move |data| {
-                                                if (state.is_hex_view)() {
-                                                    let hex_string = format_hex(&data);
-                                                    if let Some(w) = state.log_worker.peek().as_ref() {
-                                                        let timestamp = Local::now()
-                                                            .format("[%H:%M:%S%.3f] ")
-                                                            .to_string();
-                                                        let log_entry = format!("{}{}", timestamp, hex_string);
-                                                        let msg = WorkerMsg::AppendLog(log_entry);
-                                                        let _ = w
-                                                            .post_message(&serde_wasm_bindgen::to_value(&msg).unwrap());
-                                                    }
-                                                } else {
-                                                    let mode = (state.rx_line_ending)();
-                                                    parser.set_mode(mode);
-                                                    let chunk = String::from_utf8_lossy(&data);
-                                                    let lines = parser.push(&chunk);
-                                                    if let Some(w) = state.log_worker.peek().as_ref() {
-                                                        for line in lines {
-                                                            let timestamp = Local::now()
-                                                                .format("[%H:%M:%S%.3f] ")
-                                                                .to_string();
-                                                            let log_entry = format!("{}{}", timestamp, line);
-                                                            let msg = WorkerMsg::AppendLog(log_entry);
-                                                            let _ = w
-                                                                .post_message(&serde_wasm_bindgen::to_value(&msg).unwrap());
-                                                        }
-                                                    }
+                                                // data is Vec<u8>
+                                                // Hex view logic handled by worker? Or still here?
+                                                // User wants Transferable. Simpler to move EVERYTHING to worker.
+                                                // But let's stick to raw bytes relay.
+
+                                                if let Some(w) = state.log_worker.peek().as_ref() {
+                                                    // Convert to Uint8Array
+                                                    let uint8_array = js_sys::Uint8Array::from(data.as_slice());
+                                                    let is_hex = (state.is_hex_view)();
+
+                                                    // Create Message
+                                                    let msg = js_sys::Object::new();
+                                                    let _ = js_sys::Reflect::set(&msg, &"type".into(), &"APPEND_CHUNK".into());
+
+                                                    let payload = js_sys::Object::new();
+                                                    let _ = js_sys::Reflect::set(&payload, &"chunk".into(), &uint8_array);
+                                                    let _ = js_sys::Reflect::set(&payload, &"is_hex".into(), &is_hex.into());
+                                                    let _ = js_sys::Reflect::set(&msg, &"data".into(), &payload);
+
+                                                    // Transfer
+                                                    let transfer = js_sys::Array::new();
+                                                    transfer.push(&uint8_array.buffer());
+
+                                                    let _ = w.post_message_with_transfer(&msg, &transfer);
                                                 }
                                             },
                                             move |_| {
@@ -289,7 +301,7 @@ pub fn ConnectionControl() -> Element {
                             disabled: (state.is_connected)(),
                         }
                     }
-                
+
                 }
             }
         }
