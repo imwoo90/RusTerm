@@ -30,6 +30,7 @@ pub fn SerialMonitor() -> Element {
     let is_hex_view = use_signal(|| false);
     let port = use_signal(|| None);
     let is_connected = use_signal(|| false);
+    let is_simulating = use_signal(|| false);
     let mut log_worker = use_signal(|| None::<web_sys::Worker>);
     let toasts = use_signal(Vec::new);
 
@@ -62,6 +63,7 @@ pub fn SerialMonitor() -> Element {
         is_hex_view,
         port,
         is_connected,
+        is_simulating,
         log_worker,
         toasts,
     });

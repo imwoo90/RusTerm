@@ -58,6 +58,59 @@ pub fn ConnectionControl() -> Element {
                 title: "Settings",
             }
 
+            // Test Mode Button
+            button {
+                class: if (state.is_simulating)() { "flex items-center justify-center w-9 h-9 bg-yellow-500/80 hover:bg-yellow-500 border border-yellow-500/50 rounded-lg transition-all active:scale-95 shadow-lg shadow-yellow-500/20 text-white gap-2" } else { "flex items-center justify-center w-9 h-9 bg-[#16181a] border border-[#2a2e33] rounded-lg hover:border-yellow-500/50 hover:text-yellow-500 transition-colors text-gray-400 gap-2" },
+                onclick: move |_| {
+                    let current = (state.is_simulating)();
+                    let next = !current;
+                    state.is_simulating.set(next);
+
+                    if next {
+                        state.info("Simulation Started");
+
+                        // Clear logs if starting
+                        if let Some(w) = state.log_worker.peek().as_ref() {
+                            let _ = w.post_message(&serde_wasm_bindgen::to_value(&WorkerMsg::Clear).unwrap());
+                        }
+
+                        let worker_sig = state.log_worker;
+                        let sim_sig = state.is_simulating;
+
+                        spawn(async move {
+                            loop {
+                                // Check if simulation was stopped
+                                if !sim_sig() {
+                                    break;
+                                }
+
+                                if let Some(w) = worker_sig.peek().as_ref() {
+                                     let timestamp = Local::now().format("[%H:%M:%S%.3f] ").to_string();
+                                     let rnd = js_sys::Math::random();
+                                     let content = if rnd < 0.1 {
+                                         format!("Error: System overheat at {:.1}°C", 80.0 + rnd * 20.0)
+                                     } else if rnd < 0.3 {
+                                         format!("Warning: Voltage fluctuation detected: {:.2}V", 3.0 + rnd)
+                                     } else {
+                                         format!("Info: Sensor reading: A={:.2}, B={:.2}, C={:.2}", rnd * 100.0, rnd * 50.0, rnd * 10.0)
+                                     };
+
+                                     let log_entry = format!("{}{}", timestamp, content);
+                                     let msg = WorkerMsg::AppendLog(log_entry);
+                                     let _ = w.post_message(&serde_wasm_bindgen::to_value(&msg).unwrap());
+                                }
+
+                                gloo_timers::future::TimeoutFuture::new(100).await;
+                            }
+                        });
+                    } else {
+                        state.info("Simulation Stopped");
+                    }
+                },
+                title: "Test Mode",
+                span { class: "material-symbols-outlined text-[18px]", "bug_report" }
+            }
+
             // Connect Button
             button {
                 class: if (state.is_connected)() { "group relative flex items-center gap-2 bg-red-500/80 hover:bg-red-500 border border-red-500/50 pl-3 pr-4 py-1.5 rounded-lg transition-all duration-300 active:scale-95 shadow-lg shadow-red-500/20 ml-2" } else { "group relative flex items-center gap-2 bg-primary hover:bg-primary-hover border border-primary/50 pl-3 pr-4 py-1.5 rounded-lg transition-all duration-300 active:scale-95 shadow-lg shadow-primary/20 ml-2" },

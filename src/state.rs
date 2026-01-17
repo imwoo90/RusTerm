@@ -53,6 +53,7 @@ pub struct AppState {
     // Serial State
     pub port: Signal<Option<SerialPortWrapper>>,
     pub is_connected: Signal<bool>,
+    pub is_simulating: Signal<bool>,
     pub log_worker: Signal<Option<Worker>>,
     pub toasts: Signal<Vec<ToastMessage>>,
 }
