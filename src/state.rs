@@ -1,4 +1,6 @@
+use crate::components::common::{ToastMessage, ToastType};
 use dioxus::prelude::*;
+use gloo_timers::future::TimeoutFuture;
 use web_sys::{SerialPort, Worker};
 
 #[derive(Clone, Debug)]
@@ -52,6 +54,54 @@ pub struct AppState {
     pub port: Signal<Option<SerialPortWrapper>>,
     pub is_connected: Signal<bool>,
     pub log_worker: Signal<Option<Worker>>,
+    pub toasts: Signal<Vec<ToastMessage>>,
+}
+
+impl AppState {
+    pub fn add_toast(&self, message: &str, type_: ToastType) {
+        let mut toasts = self.toasts;
+        let id = js_sys::Date::now() as usize;
+
+        toasts.write().push(ToastMessage {
+            id,
+            message: message.to_string(),
+            type_,
+        });
+
+        let mut toasts_clone = toasts;
+        spawn(async move {
+            TimeoutFuture::new(3000).await;
+            toasts_clone.write().retain(|t| t.id != id);
+        });
+    }
+
+    pub fn add_toast_signal(
+        mut toasts: Signal<Vec<ToastMessage>>,
+        message: &str,
+        type_: ToastType,
+    ) {
+        let id = js_sys::Date::now() as usize;
+        toasts.write().push(ToastMessage {
+            id,
+            message: message.to_string(),
+            type_,
+        });
+
+        spawn(async move {
+            TimeoutFuture::new(3000).await;
+            toasts.write().retain(|t| t.id != id);
+        });
+    }
+
+    pub fn success(&self, msg: &str) {
+        self.add_toast(msg, ToastType::Success);
+    }
+    pub fn error(&self, msg: &str) {
+        self.add_toast(msg, ToastType::Error);
+    }
+    pub fn info(&self, msg: &str) {
+        self.add_toast(msg, ToastType::Info);
+    }
 }
 
 pub const HIGHLIGHT_COLORS: &[&str] = &[

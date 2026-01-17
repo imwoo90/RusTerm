@@ -1,4 +1,6 @@
 use super::types::WorkerMsg;
+use crate::components::common::{ToastMessage, ToastType};
+use crate::state::AppState;
 use dioxus::prelude::*;
 use wasm_bindgen::prelude::*;
 use web_sys::{MessageEvent, Worker};
@@ -8,6 +10,7 @@ pub fn use_log_worker(
     mut total_lines: Signal<usize>,
     mut visible_logs: Signal<Vec<String>>,
     worker: Signal<Option<Worker>>,
+    toasts: Signal<Vec<ToastMessage>>,
 ) {
     use_effect(move || {
         if let Some(w) = worker() {
@@ -30,6 +33,11 @@ pub fn use_log_worker(
                                             {
                                                 anchor.click();
                                                 let _ = body.remove_child(&anchor);
+                                                AppState::add_toast_signal(
+                                                    toasts,
+                                                    "Log Exported Successfully",
+                                                    ToastType::Success,
+                                                );
                                             }
                                         }
                                     }

@@ -1,3 +1,4 @@
+use crate::components::common::ToastContainer;
 use crate::state::{AppState, LineEnding};
 use dioxus::prelude::*;
 
@@ -30,6 +31,7 @@ pub fn SerialMonitor() -> Element {
     let port = use_signal(|| None);
     let is_connected = use_signal(|| false);
     let mut log_worker = use_signal(|| None::<web_sys::Worker>);
+    let toasts = use_signal(Vec::new);
 
     use_effect(move || {
         if log_worker.peek().is_none() {
@@ -61,6 +63,7 @@ pub fn SerialMonitor() -> Element {
         port,
         is_connected,
         log_worker,
+        toasts,
     });
 
     rsx! {
@@ -74,6 +77,7 @@ pub fn SerialMonitor() -> Element {
             Console {}
             InputBar {}
             Footer {}
+            ToastContainer { toasts }
         }
     }
 }

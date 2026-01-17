@@ -27,7 +27,7 @@ pub fn Console() -> Element {
     let mut sentinel_handle = use_signal(|| None::<Rc<MountedData>>);
 
     // 2. Effects
-    use_log_worker(total_lines, visible_logs, state.log_worker);
+    use_log_worker(total_lines, visible_logs, state.log_worker, state.toasts);
     use_window_resize(console_height, state.autoscroll, sentinel_handle);
     use_data_request(start_index, window_size, total_lines, state.log_worker);
     use_auto_scroller(state.autoscroll, total_lines, sentinel_handle);

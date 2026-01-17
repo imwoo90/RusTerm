@@ -68,6 +68,7 @@ pub fn ConnectionControl() -> Element {
                                 let _ = serial::close_port(&wrapper.0).await;
                                 state.port.set(None);
                                 state.is_connected.set(false);
+                                state.info("Disconnected");
                             }
                         });
                     } else {
@@ -80,6 +81,7 @@ pub fn ConnectionControl() -> Element {
                                 if serial::open_port(&port, baud, data_bits, stop_bits, (state.parity)(), (state.flow_control)()).await.is_ok() {
                                     state.port.set(Some(SerialPortWrapper(port.clone())));
                                     state.is_connected.set(true);
+                                    state.success("Connected");
 
                                     let mut parser = LineParser::new();
 
@@ -111,7 +113,10 @@ pub fn ConnectionControl() -> Element {
                                     }, move |_| {
                                         state.is_connected.set(false);
                                         state.port.set(None);
+                                        state.error("Connection Lost");
                                     }).await;
+                                } else {
+                                    state.error("Failed to Open Port");
                                 }
                             }
                         });

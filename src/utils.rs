@@ -72,3 +72,53 @@ impl LineParser {
         lines
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_none_mode() {
+        let mut parser = LineParser::new();
+        parser.set_mode(LineEnding::None);
+        assert_eq!(parser.push("hello"), vec!["hello"]);
+        assert_eq!(parser.push("world"), vec!["world"]);
+    }
+
+    #[test]
+    fn test_nl_mode() {
+        let mut parser = LineParser::new();
+        parser.set_mode(LineEnding::NL);
+
+        let lines = parser.push("hello\nworld");
+        assert_eq!(lines, vec!["hello"]);
+
+        let lines = parser.push("\n");
+        assert_eq!(lines, vec!["world"]);
+
+        // \r before \n is stripped
+        assert_eq!(parser.push("windows\r\n"), vec!["windows"]);
+    }
+
+    #[test]
+    fn test_cr_mode() {
+        let mut parser = LineParser::new();
+        parser.set_mode(LineEnding::CR);
+
+        assert_eq!(parser.push("one\rtwo\r"), vec!["one", "two"]);
+        assert_eq!(parser.push("thr"), Vec::<String>::new());
+        assert_eq!(parser.push("ee\r"), vec!["three"]);
+    }
+
+    #[test]
+    fn test_nlcr_mode() {
+        let mut parser = LineParser::new();
+        parser.set_mode(LineEnding::NLCR);
+
+        assert_eq!(parser.push("one\r\ntwo"), vec!["one"]);
+        assert_eq!(parser.push("\r\n"), vec!["two"]);
+
+        assert_eq!(parser.push("half\r"), Vec::<String>::new());
+        assert_eq!(parser.push("\n"), vec!["half"]);
+    }
+}
