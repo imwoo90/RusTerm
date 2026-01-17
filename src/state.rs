@@ -34,6 +34,7 @@ pub struct AppState {
     pub stop_bits: Signal<&'static str>,
     pub parity: Signal<&'static str>,
     pub flow_control: Signal<&'static str>,
+    pub rx_line_ending: Signal<LineEnding>,
 }
 
 pub const HIGHLIGHT_COLORS: &[&str] = &[

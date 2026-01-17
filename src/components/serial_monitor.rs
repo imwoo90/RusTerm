@@ -25,6 +25,7 @@ pub fn SerialMonitor() -> Element {
     let stop_bits = use_signal(|| "1");
     let parity = use_signal(|| "None");
     let flow_control = use_signal(|| "None");
+    let rx_line_ending = use_signal(|| LineEnding::NL);
 
     use_context_provider(|| AppState {
         show_settings,
@@ -42,6 +43,7 @@ pub fn SerialMonitor() -> Element {
         stop_bits,
         parity,
         flow_control,
+        rx_line_ending,
     });
 
     rsx! {

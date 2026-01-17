@@ -96,6 +96,7 @@ pub fn ConnectionControl() -> Element {
                             onchange: move |val| state.flow_control.set(val),
                         }
                     }
+
                 }
             }
         }
