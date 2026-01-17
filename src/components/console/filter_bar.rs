@@ -34,10 +34,16 @@ pub fn FilterBar() -> Element {
 
 #[component]
 fn HighlightPanel(visible: bool) -> Element {
-    let state = use_context::<AppState>();
+    let mut state = use_context::<AppState>();
     let highlights = (state.highlights)();
 
     rsx! {
+        if visible {
+            div {
+                class: "fixed inset-0 z-40 cursor-default",
+                onclick: move |_| state.show_highlights.set(false)
+            }
+        }
         div {
             class: "absolute top-full left-5 right-5 z-50 bg-surface rounded-xl border border-white/10 shadow-2xl transition-all duration-300 origin-top",
             class: if visible { "opacity-100 visible scale-100 translate-y-2 p-4" } else { "opacity-0 invisible scale-95 translate-y-0 p-0 overflow-hidden h-0" },
