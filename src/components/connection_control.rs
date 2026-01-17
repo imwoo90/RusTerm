@@ -259,7 +259,6 @@ pub fn ConnectionControl() -> Element {
                             disabled: (state.is_connected)(),
                         }
                     }
-
                 }
             }
         }

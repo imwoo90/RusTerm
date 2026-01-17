@@ -49,13 +49,11 @@ pub fn FilterBar() -> Element {
                     },
                     title: "Toggle Highlights Panel",
                 }
-                // Optional: Explicit Toggle Switch for Feature ON/OFF next to it?
-                // Or just rely on Panel being "Settings" and Button being "Open Settings".
             }
             // Highlight Panel is now controlled by is_panel_open
             HighlightPanel {
                 visible: is_panel_open(),
-                onclose: move |_| is_panel_open.set(false)
+                onclose: move |_| is_panel_open.set(false),
             }
             DisplayOptions {}
         }

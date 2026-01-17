@@ -10,8 +10,8 @@ A high-performance, browser-based Serial Monitor that requires **no installation
 
 Unlike typical web serial tools, this project leverages **OPFS (Origin Private File System)** and **Web Workers** to handle **Gigabyte-scale logs** without freezing the UI, featuring real-time filtering and virtual scrolling.
 
-![Screenshot](https://via.placeholder.com/800x450?text=Web+Serial+Monitor+Screenshot)
-*(Screenshot placeholder - Replace with actual screenshot)*
+[**🔴 LIVE DEMO**](https://imwoo90.github.io/web_serial_monitor/)
+
 
 ---
 
@@ -44,10 +44,10 @@ This project uses a hybrid architecture to maximize performance in a browser env
 
 ```mermaid
 graph TD
-    User[User / Serial Device] -->|Data Stream| Main[Main Thread (Rust)]
-    Main -->|Virtual DOM| Browser[Browser UI]
-    Main -->|PostMessage| Worker[Log Worker (JS)]
-    Worker -->|SyncAccessHandle| OPFS[OPFS Storage]
+    User["User / Serial Device"] -->|Data Stream| Main["Main Thread (Rust)"]
+    Main -->|Virtual DOM| Browser["Browser UI"]
+    Main -->|PostMessage| Worker["Log Worker (JS)"]
+    Worker -->|SyncAccessHandle| OPFS["OPFS Storage"]
     Worker -->|Filtered View| Main
 ```
 
@@ -63,8 +63,8 @@ graph TD
 ### Running Locally
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-username/web-serial-monitor.git
-cd web-serial-monitor
+git clone https://github.com/imwoo90/web_serial_monitor.git
+cd web_serial_monitor
 
 # 2. Run with Trunk / Dioxus CLI
 dx serve --port 8080
