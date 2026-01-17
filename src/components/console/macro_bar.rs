@@ -47,7 +47,7 @@ pub fn MacroBar() -> Element {
     rsx! {
         div { class: "flex flex-wrap gap-2 p-2 bg-background-dark border-t border-[#2a2e33] min-h-[40px] items-center",
             for item in storage.read().get_items() {
-                 button {
+                button {
                     key: "{item.id}",
                     class: "px-3 py-1 bg-[#2a2e33] hover:bg-primary hover:text-white rounded text-xs font-mono transition-colors border border-gray-700 select-none",
                     onclick: move |_| send_cmd(item.command.clone(), item.is_hex),
@@ -57,7 +57,7 @@ pub fn MacroBar() -> Element {
                     },
                     title: "Right-click to remove",
                     "{item.label}"
-                 }
+                }
             }
 
             // Add Button
@@ -75,7 +75,9 @@ pub fn MacroBar() -> Element {
                         h3 { class: "text-sm font-bold text-gray-300 mb-3", "Add Quick Command" }
                         div { class: "space-y-3",
                             div {
-                                label { class: "block text-[10px] uppercase text-gray-500 font-bold mb-1", "Label" }
+                                label { class: "block text-[10px] uppercase text-gray-500 font-bold mb-1",
+                                    "Label"
+                                }
                                 input {
                                     class: "w-full bg-[#0d0f10] text-white p-2 rounded border border-[#2a2e33] text-xs focus:border-primary/50 outline-none",
                                     placeholder: "e.g. Reboot",
@@ -85,7 +87,9 @@ pub fn MacroBar() -> Element {
                                 }
                             }
                             div {
-                                label { class: "block text-[10px] uppercase text-gray-500 font-bold mb-1", "Command" }
+                                label { class: "block text-[10px] uppercase text-gray-500 font-bold mb-1",
+                                    "Command"
+                                }
                                 input {
                                     class: "w-full bg-[#0d0f10] text-white p-2 rounded border border-[#2a2e33] text-xs font-mono focus:border-primary/50 outline-none",
                                     placeholder: "e.g. AT+RST",
@@ -97,7 +101,7 @@ pub fn MacroBar() -> Element {
                                         } else {
                                             new_cmd.set(e.value());
                                         }
-                                    }
+                                    },
                                 }
                             }
                         }
@@ -106,9 +110,11 @@ pub fn MacroBar() -> Element {
                                 class: "w-4 h-4 rounded bg-[#0d0f10] border-[#2a2e33] checked:bg-primary checked:border-primary focus:ring-0 cursor-pointer accent-primary",
                                 "type": "checkbox",
                                 checked: "{new_hex}",
-                                onchange: move |e| new_hex.set(e.value() == "true")
+                                onchange: move |e| new_hex.set(e.value() == "true"),
                             }
-                            span { class: "text-xs text-gray-400 font-bold select-none", "Hex Mode" }
+                            span { class: "text-xs text-gray-400 font-bold select-none",
+                                "Hex Mode"
+                            }
                         }
 
                         div { class: "flex justify-end gap-2 mt-4",
@@ -143,7 +149,10 @@ pub fn MacroBar() -> Element {
                         }
                     }
                     // Click outside to close
-                    div { class: "absolute inset-0 -z-10", onclick: move |_| show_form.set(false) }
+                    div {
+                        class: "absolute inset-0 -z-10",
+                        onclick: move |_| show_form.set(false),
+                    }
                 }
             }
         }

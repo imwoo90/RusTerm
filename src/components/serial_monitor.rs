@@ -69,10 +69,7 @@ pub fn SerialMonitor() -> Element {
     rsx! {
         div { class: "bg-background-light dark:bg-background-dark h-screen w-full flex flex-col font-display text-white overflow-hidden selection:bg-primary/30 selection:text-primary",
 
-            div { class: "relative shrink-0 z-30",
-                Header {}
-
-            }
+            div { class: "relative shrink-0 z-30", Header {} }
             FilterBar {}
             Console {}
             MacroBar {}

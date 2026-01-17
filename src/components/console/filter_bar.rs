@@ -8,8 +8,7 @@ pub fn FilterBar() -> Element {
     let show_highlights = (state.show_highlights)();
 
     rsx! {
-        div {
-            class: "shrink-0 px-5 py-3 z-10 flex flex-col gap-3 filter-section relative",
+        div { class: "shrink-0 px-5 py-3 z-10 flex flex-col gap-3 filter-section relative",
             div { class: "flex gap-2 w-full items-stretch",
                 FilterInput {}
                 IconButton {
@@ -21,7 +20,7 @@ pub fn FilterBar() -> Element {
                         let current = (state.show_highlights)();
                         state.show_highlights.set(!current);
                     },
-                    title: "Toggle Highlights"
+                    title: "Toggle Highlights",
                 }
             }
             HighlightPanel { visible: show_highlights }
@@ -41,7 +40,7 @@ fn HighlightPanel(visible: bool) -> Element {
         if visible {
             div {
                 class: "fixed inset-0 z-40 cursor-default",
-                onclick: move |_| state.show_highlights.set(false)
+                onclick: move |_| state.show_highlights.set(false),
             }
         }
         div {
@@ -50,7 +49,7 @@ fn HighlightPanel(visible: bool) -> Element {
             div { class: "flex flex-col gap-3",
                 PanelHeader {
                     title: "Active Highlights",
-                    subtitle: Some(format!("{} active rules", highlights.len()))
+                    subtitle: Some(format!("{} active rules", highlights.len())),
                 }
                 div { class: "flex flex-wrap gap-2",
                     for h in highlights {
@@ -62,7 +61,7 @@ fn HighlightPanel(visible: bool) -> Element {
                                 let mut list = state.highlights.read().clone();
                                 list.retain(|item| item.id != h.id);
                                 state.highlights.set(list);
-                            }
+                            },
                         }
                     }
                 }
@@ -97,7 +96,7 @@ fn FilterInput() -> Element {
                         let mut state = use_context::<AppState>();
                         let current = (state.match_case)();
                         state.match_case.set(!current);
-                    }
+                    },
                 }
                 FilterOptionButton {
                     title: "Use Regex",
@@ -107,7 +106,7 @@ fn FilterInput() -> Element {
                         let mut state = use_context::<AppState>();
                         let current = (state.use_regex)();
                         state.use_regex.set(!current);
-                    }
+                    },
                 }
                 FilterOptionButton {
                     title: "Invert Filter",
@@ -117,7 +116,7 @@ fn FilterInput() -> Element {
                         let mut state = use_context::<AppState>();
                         let current = (state.invert_filter)();
                         state.invert_filter.set(!current);
-                    }
+                    },
                 }
             }
         }
@@ -223,7 +222,7 @@ fn HighlightTag(color: &'static str, label: String, onremove: EventHandler<Mouse
                 icon: "close",
                 icon_class: "text-[14px]",
                 class: "ml-1 w-4 h-4 rounded-full",
-                onclick: move |evt| onremove.call(evt)
+                onclick: move |evt| onremove.call(evt),
             }
         }
     }
@@ -270,7 +269,7 @@ fn HighlightInput() -> Element {
                     if evt.key() == Key::Enter {
                         add_highlight_logic();
                     }
-                }
+                },
             }
             button {
                 class: "px-4 rounded-lg bg-primary text-surface font-bold hover:bg-white transition-all active:scale-95 flex items-center gap-2",
@@ -294,7 +293,7 @@ fn DisplayOptions() -> Element {
                 onclick: move |_| {
                     let current = (state.show_timestamps)();
                     state.show_timestamps.set(!current);
-                }
+                },
             }
             div { class: "ml-auto text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2",
                 span { class: "w-1.5 h-1.5 rounded-full bg-primary animate-pulse" }

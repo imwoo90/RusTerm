@@ -87,7 +87,11 @@ pub fn ConsoleHeader(
                 }
 
                 div { class: "text-[9px] font-mono text-[#4a555a] uppercase tracking-widest",
-                    if is_connected { "Serial Connected" } else { "Offline" }
+                    if is_connected {
+                        "Serial Connected"
+                    } else {
+                        "Offline"
+                    }
                 }
             }
         }

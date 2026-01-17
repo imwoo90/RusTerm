@@ -14,7 +14,9 @@ fn LineEndSelector(
 ) -> Element {
     rsx! {
         div { class: "flex items-center gap-2",
-            span { class: "text-[10px] font-bold text-gray-500 uppercase tracking-widest", "{label}" }
+            span { class: "text-[10px] font-bold text-gray-500 uppercase tracking-widest",
+                "{label}"
+            }
             div { class: "flex bg-[#0d0f10] p-0.5 rounded-lg border border-[#2a2e33]",
                 for ending in [LineEnding::None, LineEnding::NL, LineEnding::CR, LineEnding::NLCR] {
                     button {
@@ -22,7 +24,7 @@ fn LineEndSelector(
                         class: if selected == ending { "{active_class} border shadow-sm" } else { "text-gray-500 hover:text-white" },
                         onclick: move |_| onselect.call(ending),
                         match ending {
-                            LineEnding::None => if is_rx { "RAW" } else { "NONE" },
+                            LineEnding::None => if is_rx { "RAW" } else { "NONE" }
                             LineEnding::NL => "LF",
                             LineEnding::CR => "CR",
                             LineEnding::NLCR => "CRLF",
@@ -154,7 +156,7 @@ pub fn InputBar() -> Element {
                                         let len = h.len();
                                         if len > 0 {
                                             let new_idx = match history_index() {
-                                                Some(i) => if i > 0 { i - 1 } else { 0 },
+                                                Some(i) => if i > 0 { i - 1 } else { 0 }
                                                 None => len - 1,
                                             };
                                             history_index.set(Some(new_idx));
@@ -182,7 +184,7 @@ pub fn InputBar() -> Element {
                                     }
                                     _ => {}
                                 }
-                            }
+                            },
                         }
                         div { class: "absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none",
                             span { class: "material-symbols-outlined text-[16px]", "keyboard" }

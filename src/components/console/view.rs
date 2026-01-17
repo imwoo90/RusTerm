@@ -64,7 +64,12 @@ pub fn Console() -> Element {
             div { class: "absolute inset-0 bg-console-bg rounded-t-2xl border-t border-x border-[#222629] shadow-[inset_0_0_20px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col",
                 div { class: "absolute inset-0 scanlines opacity-20 pointer-events-none z-10" }
 
-                ConsoleHeader { autoscroll: (state.autoscroll)(), count: total_lines(), is_connected: (state.is_connected)(), onexport: onexport }
+                ConsoleHeader {
+                    autoscroll: (state.autoscroll)(),
+                    count: total_lines(),
+                    is_connected: (state.is_connected)(),
+                    onexport,
+                }
 
                 div {
                     class: "flex-1 overflow-y-auto font-mono text-xs md:text-sm leading-relaxed scrollbar-custom relative",
@@ -84,7 +89,11 @@ pub fn Console() -> Element {
                         spawn(async move {
                             if let Some(handle) = handle {
                                 if let Ok(offset) = handle.get_scroll_offset().await {
-                                    let new_index = calculate_start_index(offset.y, LINE_HEIGHT, TOP_BUFFER);
+                                    let new_index = calculate_start_index(
+                                        offset.y,
+                                        LINE_HEIGHT,
+                                        TOP_BUFFER,
+                                    );
                                     if start_index() != new_index {
                                         start_index.set(new_index);
                                     }
@@ -95,14 +104,15 @@ pub fn Console() -> Element {
 
                     // Virtual Scroll Spacer & Content
                     div { style: "height: {total_height}px; width: 100%; position: absolute; top: 0; left: 0; pointer-events: none;" }
-                    div {
-                        style: "position: absolute; top: 0; left: 0; right: 0; transform: translateY({offset_top}px); padding: 0.5rem 1rem 20px 1rem; pointer-events: auto;",
+                    div { style: "position: absolute; top: 0; left: 0; right: 0; transform: translateY({offset_top}px); padding: 0.5rem 1rem 20px 1rem; pointer-events: auto;",
                         {
                             let highlights = (state.highlights)().clone();
                             let show_timestamps = (state.show_timestamps)();
                             let show_highlights = (state.show_highlights)();
 
-                            visible_logs.read().iter()
+                            visible_logs
+                                .read()
+                                .iter()
                                 .enumerate()
                                 .filter(move |(_, text)| filter.matches(text))
                                 .map(move |(idx, text)| {
@@ -112,7 +122,7 @@ pub fn Console() -> Element {
                                             text: text.clone(),
                                             highlights: highlights.clone(),
                                             show_timestamps,
-                                            show_highlights
+                                            show_highlights,
                                         }
                                     }
                                 })
@@ -121,7 +131,9 @@ pub fn Console() -> Element {
 
                     // Loading & Sentinel
                     if visible_logs.read().is_empty() && total_lines() > 0 {
-                        div { class: "text-gray-500 animate-pulse text-[12px] px-4", "Loading buffer..." }
+                        div { class: "text-gray-500 animate-pulse text-[12px] px-4",
+                            "Loading buffer..."
+                        }
                     }
                     div {
                         style: "position: absolute; top: {total_height}px; height: 1px; width: 100%; pointer-events: none;",
