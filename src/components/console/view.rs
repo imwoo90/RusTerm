@@ -31,7 +31,7 @@ pub fn Console() -> Element {
     let mut sentinel_handle = use_signal(|| None::<Rc<MountedData>>);
 
     // 2. Effects
-    use_log_worker(total_lines, visible_logs, state.log_worker, state.toasts);
+    use_log_worker(total_lines, visible_logs, state.log_worker);
     use_window_resize(console_height, state.autoscroll, sentinel_handle);
     use_data_request(start_index, window_size, total_lines, state.log_worker);
     use_auto_scroller(state.autoscroll, total_lines, sentinel_handle);
@@ -48,8 +48,11 @@ pub fn Console() -> Element {
     );
 
     let onexport = move |_evt: MouseEvent| {
-        if let Some(w) = state.log_worker.peek().as_ref() {
-            let msg = WorkerMsg::ExportLogs;
+        let worker = state.log_worker.read().clone();
+        if let Some(w) = worker {
+            let msg = WorkerMsg::ExportLogs {
+                include_timestamp: (state.show_timestamps)(),
+            };
             if let Ok(js_obj) = serde_wasm_bindgen::to_value(&msg) {
                 let _ = w.post_message(&js_obj);
             }

@@ -88,19 +88,76 @@ self.onmessage = async (e) => {
     }
 
     if (type === 'EXPORT_LOGS') {
+        const includeTimestamp = data && data.include_timestamp;
         if (!syncAccessHandle) return;
+
         try {
             syncAccessHandle.flush();
-            const size = syncAccessHandle.getSize();
-            const readBuffer = new Uint8Array(size);
-            syncAccessHandle.read(readBuffer, { at: 0 });
+            const fileSize = syncAccessHandle.getSize();
 
-            const blob = new Blob([readBuffer], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
+            // 1. Create Source Stream from OPFS
+            const sourceStream = new ReadableStream({
+                start(controller) {
+                    this.offset = 0;
+                },
+                pull(controller) {
+                    const chunkSize = 64 * 1024; // 64KB
+                    if (this.offset >= fileSize) {
+                        controller.close();
+                        return;
+                    }
 
-            self.postMessage({ type: 'EXPORT_READY', data: url });
+                    const buffer = new Uint8Array(chunkSize);
+                    // syncAccessHandle.read is synchronous
+                    const readBytes = syncAccessHandle.read(buffer, { at: this.offset });
+
+                    if (readBytes === 0) {
+                        controller.close();
+                        return;
+                    }
+
+                    // Slice if read less than chunk size
+                    controller.enqueue(buffer.slice(0, readBytes));
+                    this.offset += readBytes;
+                }
+            });
+
+            let finalStream = sourceStream;
+
+            // 2. Apply Timestamp Filter if needed
+            if (includeTimestamp === false) {
+                const textDecoder = new TextDecoderStream();
+                const textEncoder = new TextEncoderStream();
+
+                const transformer = new TransformStream({
+                    start() { this.buffer = ""; },
+                    transform(chunk, controller) {
+                        this.buffer += chunk;
+                        const lines = this.buffer.split('\n');
+                        this.buffer = lines.pop(); // Keep incomplete line
+
+                        for (const line of lines) {
+                            // Remove timestamp [HH:MM:SS.ms] (15 chars) + space
+                            const clean = line.replace(/^\[\d{2}:\d{2}:\d{2}\.\d{3}\] /, '');
+                            controller.enqueue(clean + '\n');
+                        }
+                    },
+                    flush(controller) {
+                        if (this.buffer) {
+                            const clean = this.buffer.replace(/^\[\d{2}:\d{2}:\d{2}\.\d{3}\] /, '');
+                            controller.enqueue(clean);
+                        }
+                    }
+                });
+
+                finalStream = sourceStream.pipeThrough(textDecoder).pipeThrough(transformer).pipeThrough(textEncoder);
+            }
+
+            // 3. Send Stream to Main Thread
+            self.postMessage({ type: 'EXPORT_STREAM', stream: finalStream }, [finalStream]);
+
         } catch (err) {
-            console.error("[LogWorker] Export Error:", err);
+            console.error("[LogWorker] Stream Export Error:", err);
         }
     }
 };

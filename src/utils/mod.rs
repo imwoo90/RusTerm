@@ -1,3 +1,4 @@
+pub mod file_save;
 pub mod filter;
 pub mod format;
 pub mod highlight;

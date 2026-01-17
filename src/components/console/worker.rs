@@ -1,6 +1,4 @@
 use super::types::WorkerMsg;
-use crate::components::common::{ToastMessage, ToastType};
-use crate::state::AppState;
 use dioxus::prelude::*;
 use wasm_bindgen::prelude::*;
 use web_sys::{MessageEvent, Worker};
@@ -10,40 +8,31 @@ pub fn use_log_worker(
     mut total_lines: Signal<usize>,
     mut visible_logs: Signal<Vec<String>>,
     worker: Signal<Option<Worker>>,
-    toasts: Signal<Vec<ToastMessage>>,
 ) {
     use_effect(move || {
         if let Some(w) = worker() {
             let onmessage = Closure::wrap(Box::new(move |e: MessageEvent| {
-                if let Ok(msg) = serde_wasm_bindgen::from_value::<WorkerMsg>(e.data()) {
+                let data = e.data();
+
+                // Check for EXPORT_STREAM (Stream objects cannot be deserialized by serde)
+                let type_key = JsValue::from_str("type");
+                if let Ok(msg_type) = js_sys::Reflect::get(&data, &type_key) {
+                    if msg_type == "EXPORT_STREAM" {
+                        let stream_key = JsValue::from_str("stream");
+                        if let Ok(stream) = js_sys::Reflect::get(&data, &stream_key) {
+                            crate::utils::file_save::save_stream_to_disk(stream);
+                            web_sys::console::log_1(&"Starting Download Stream...".into());
+                            return;
+                        }
+                    }
+                }
+
+                if let Ok(msg) = serde_wasm_bindgen::from_value::<WorkerMsg>(data) {
                     match msg {
                         WorkerMsg::TotalLines(count) => total_lines.set(count),
                         WorkerMsg::LogWindow { lines, .. } => visible_logs.set(lines),
-                        WorkerMsg::ExportReady(url) => {
-                            if let Some(window) = web_sys::window() {
-                                if let Some(document) = window.document() {
-                                    if let Ok(a) = document.create_element("a") {
-                                        let _ = a.set_attribute("href", &url);
-                                        let _ = a.set_attribute("download", "serial_logs.txt");
-                                        let _ = a.set_attribute("style", "display: none");
-                                        if let Some(body) = document.body() {
-                                            let _ = body.append_child(&a);
-                                            if let Ok(anchor) =
-                                                a.dyn_into::<web_sys::HtmlAnchorElement>()
-                                            {
-                                                anchor.click();
-                                                let _ = body.remove_child(&anchor);
-                                                AppState::add_toast_signal(
-                                                    toasts,
-                                                    "Log Exported Successfully",
-                                                    ToastType::Success,
-                                                );
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        // ExportReady is deprecated but kept for fallback if needed
+                        WorkerMsg::ExportReady(_url) => { /* remove logic or keep fallback */ }
                         _ => {}
                     }
                 }

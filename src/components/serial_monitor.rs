@@ -35,7 +35,7 @@ pub fn SerialMonitor() -> Element {
 
     use_effect(move || {
         if log_worker.peek().is_none() {
-            let worker_path = asset!("/assets/log_worker.js").to_string();
+            let worker_path = asset!("/assets/js/log_worker.js").to_string();
             if let Ok(w) = web_sys::Worker::new(&worker_path) {
                 log_worker.set(Some(w));
             }

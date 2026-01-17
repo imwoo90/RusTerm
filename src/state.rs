@@ -75,24 +75,6 @@ impl AppState {
         });
     }
 
-    pub fn add_toast_signal(
-        mut toasts: Signal<Vec<ToastMessage>>,
-        message: &str,
-        type_: ToastType,
-    ) {
-        let id = js_sys::Date::now() as usize;
-        toasts.write().push(ToastMessage {
-            id,
-            message: message.to_string(),
-            type_,
-        });
-
-        spawn(async move {
-            TimeoutFuture::new(3000).await;
-            toasts.write().retain(|t| t.id != id);
-        });
-    }
-
     pub fn success(&self, msg: &str) {
         self.add_toast(msg, ToastType::Success);
     }

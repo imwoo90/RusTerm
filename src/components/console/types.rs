@@ -23,7 +23,7 @@ pub enum WorkerMsg {
         count: usize,
     },
     #[serde(rename = "EXPORT_LOGS")]
-    ExportLogs,
+    ExportLogs { include_timestamp: bool },
     #[serde(rename = "EXPORT_READY")]
     ExportReady(String),
 }
