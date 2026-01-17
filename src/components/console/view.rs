@@ -127,6 +127,7 @@ pub fn Console() -> Element {
                         spawn(async move {
                             if let Some(handle) = handle {
                                 if let Ok(offset) = handle.get_scroll_offset().await {
+                                    // 1. Calculate Virtual Scroll Index
                                     let new_index = calculate_start_index(
                                         offset.y,
                                         LINE_HEIGHT,
@@ -134,6 +135,26 @@ pub fn Console() -> Element {
                                     );
                                     if start_index() != new_index {
                                         start_index.set(new_index);
+                                    }
+
+                                    // 2. Autoscroll Detection (Math-based)
+                                    // Sentinel visibility is flaky during layout shifts (Hex toggle).
+                                    // Instead, check if we are near the bottom.
+                                    let scroll_top = offset.y;
+                                    let viewport_height = console_height();
+                                    let content_height = (total_lines() as f64) * LINE_HEIGHT;
+
+                                    // Allow small buffer (e.g. 50px)
+                                    let is_at_bottom = scroll_top + viewport_height >= content_height - 50.0;
+
+                                    // Only update if changed
+                                    if (state.autoscroll)() != is_at_bottom {
+                                        // If content is shorter than viewport, always autoscroll
+                                        if content_height <= viewport_height {
+                                            state.autoscroll.set(true);
+                                        } else {
+                                            state.autoscroll.set(is_at_bottom);
+                                        }
                                     }
                                 }
                             }
@@ -174,13 +195,8 @@ pub fn Console() -> Element {
                         }
                     }
                     div {
+                        // Sentinel is used ONLY as a scroll target, not for detection.
                         style: "position: absolute; top: {total_height}px; height: 1px; width: 100%; pointer-events: none;",
-                        onvisible: move |evt| {
-                            let visible = evt.data().is_intersecting().unwrap_or(false);
-                            if (state.autoscroll)() != visible {
-                                state.autoscroll.set(visible);
-                            }
-                        },
                         onmounted: move |evt| sentinel_handle.set(Some(evt.data())),
                     }
                 }
