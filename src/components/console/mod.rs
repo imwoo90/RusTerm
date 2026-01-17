@@ -7,8 +7,10 @@ pub mod view;
 pub mod worker;
 
 pub mod input_bar;
+pub mod macro_bar;
 
 // Re-export main components
 pub use filter_bar::FilterBar;
 pub use input_bar::InputBar;
+pub use macro_bar::MacroBar;
 pub use view::Console;

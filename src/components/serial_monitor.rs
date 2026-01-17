@@ -2,7 +2,7 @@ use crate::components::common::ToastContainer;
 use crate::state::{AppState, LineEnding};
 use dioxus::prelude::*;
 
-use super::console::{Console, FilterBar, InputBar};
+use super::console::{Console, FilterBar, InputBar, MacroBar};
 use super::footer::Footer;
 use super::header::Header;
 
@@ -75,6 +75,7 @@ pub fn SerialMonitor() -> Element {
             }
             FilterBar {}
             Console {}
+            MacroBar {}
             InputBar {}
             Footer {}
             ToastContainer { toasts }
