@@ -30,6 +30,13 @@ pub enum WorkerMsg {
     Clear,
     #[serde(rename = "ERROR")]
     Error(String),
+    #[serde(rename = "SEARCH_LOGS")]
+    SearchLogs {
+        query: String,
+        match_case: bool,
+        use_regex: bool,
+        invert: bool,
+    },
 }
 
 pub const LINE_HEIGHT: f64 = 20.0;

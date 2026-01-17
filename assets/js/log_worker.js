@@ -4,6 +4,11 @@ let syncAccessHandle;
 let lineOffsets = [0];
 let lineCount = 0;
 
+// Filter State
+let isFiltering = false;
+let filteredLines = []; // [{start, end}, ...]
+let searchSessionId = 0;
+
 async function initOPFS() {
     try {
         const root = await navigator.storage.getDirectory();
@@ -58,8 +63,13 @@ self.onmessage = async (e) => {
             lineCount++;
             lineOffsets.push(syncAccessHandle.getSize());
 
-            // Can be throttled to avoid sending too frequently, but currently sent every time
-            self.postMessage({ type: 'TOTAL_LINES', data: lineCount });
+            // If filtering is active, we should check if new line matches query separately
+            // But for simplicity, we might just notify TOTAL_LINES if not filtering.
+            // If filtering, we might need to "Append to Filter" (TODO optimization)
+            if (!isFiltering) {
+                // Can be throttled to avoid sending too frequently, but currently sent every time
+                self.postMessage({ type: 'TOTAL_LINES', data: lineCount });
+            }
         } catch (err) {
             console.error("[LogWorker] Write Error:", err);
         }
@@ -69,9 +79,12 @@ self.onmessage = async (e) => {
         const { startLine, count } = data;
         if (!syncAccessHandle) return;
 
+        // Use filtered count if filtering
+        const total = isFiltering ? filteredLines.length : lineCount;
+
         // Handle boundary values
-        const start = Math.max(0, Math.min(startLine, lineCount));
-        const end = Math.min(start + count, lineCount);
+        const start = Math.max(0, Math.min(startLine, total));
+        const end = Math.min(start + count, total);
         const effectiveCount = end - start;
 
         if (effectiveCount <= 0) {
@@ -80,18 +93,33 @@ self.onmessage = async (e) => {
         }
 
         try {
-            const startOffset = lineOffsets[start];
-            const endOffset = lineOffsets[end];
-            const size = endOffset - startOffset;
-
-            const readBuffer = new Uint8Array(size);
-            const bytesRead = syncAccessHandle.read(readBuffer, { at: startOffset });
-
+            const lines = [];
             const decoder = new TextDecoder();
-            const text = decoder.decode(readBuffer.slice(0, bytesRead));
 
-            // Split after removing trailing newline
-            const lines = text.endsWith('\n') ? text.slice(0, -1).split('\n') : text.split('\n');
+            if (isFiltering) {
+                // Read Scattered Lines
+                for (let i = start; i < end; i++) {
+                    const meta = filteredLines[i];
+                    const size = meta.end - meta.start;
+                    const buf = new Uint8Array(size);
+                    syncAccessHandle.read(buf, { at: meta.start });
+                    const text = decoder.decode(buf);
+                    // Remove trailing newline if present
+                    lines.push(text.endsWith('\n') ? text.slice(0, -1) : text);
+                }
+            } else {
+                // Read Contiguous Block logic (Old Logic)
+                const startOffset = lineOffsets[start];
+                const endOffset = lineOffsets[end];
+                const size = endOffset - startOffset;
+
+                const readBuffer = new Uint8Array(size);
+                const bytesRead = syncAccessHandle.read(readBuffer, { at: startOffset });
+                const text = decoder.decode(readBuffer.slice(0, bytesRead));
+
+                const split = text.endsWith('\n') ? text.slice(0, -1).split('\n') : text.split('\n');
+                lines.push(...split);
+            }
 
             self.postMessage({ type: 'LOG_WINDOW', data: { startLine: start, lines } });
         } catch (err) {
@@ -180,10 +208,108 @@ self.onmessage = async (e) => {
             syncAccessHandle.flush();
             lineCount = 0;
             lineOffsets = [0];
+            // Clear filter state
+            isFiltering = false;
+            filteredLineOffsets = [0];
+            filteredLineCount = 0;
+            searchSessionId++;
+
             self.postMessage({ type: 'TOTAL_LINES', data: 0 });
             console.log("[LogWorker] Storage Cleared");
         } catch (err) {
             console.error("[LogWorker] Clear Error:", err);
+        }
+    }
+
+    if (type === 'SEARCH_LOGS') {
+        const { query, match_case, use_regex, invert } = data;
+
+        // Start new search session (invalidates old ones)
+        searchSessionId++;
+        const currentSession = searchSessionId;
+
+        // Reset if query is empty
+        if (!query || query.trim() === '') {
+            isFiltering = false;
+            filteredLines = [];
+            // Restore total lines to original count
+            self.postMessage({ type: 'TOTAL_LINES', data: lineCount });
+            return;
+        }
+
+        // Prepare Search
+        isFiltering = true;
+        filteredLines = []; // Array of {start, end}
+
+        try {
+            let regex = null;
+            let lowerQuery = "";
+            if (use_regex) {
+                regex = new RegExp(query, match_case ? '' : 'i');
+            } else {
+                lowerQuery = match_case ? query : query.toLowerCase();
+            }
+
+            // Progressive Forward Scan with Yield
+            const CHUNK_SIZE = 5000;
+            const YIELD_INTERVAL = 100; // ms
+            let lastYield = Date.now();
+
+            for (let i = 0; i < lineCount; i++) {
+                // Check abort
+                if (currentSession !== searchSessionId) return;
+
+                // Batched loop
+                const batchEnd = Math.min(i + CHUNK_SIZE, lineCount);
+                const batchStartOffset = lineOffsets[i];
+                const batchEndOffset = lineOffsets[batchEnd];
+                const size = batchEndOffset - batchStartOffset;
+
+                const buf = new Uint8Array(size);
+                syncAccessHandle.read(buf, { at: batchStartOffset });
+                const batchText = new TextDecoder().decode(buf);
+                const batchLines = batchText.endsWith('\n') ? batchText.slice(0, -1).split('\n') : batchText.split('\n');
+
+                for (let j = 0; j < batchLines.length; j++) {
+                    const line = batchLines[j];
+                    let matched = false;
+
+                    if (regex) {
+                        try { matched = regex.test(line); } catch (e) { }
+                    } else {
+                        matched = match_case ? line.includes(query) : line.toLowerCase().includes(lowerQuery);
+                    }
+
+                    if (invert) matched = !matched;
+
+                    if (matched) {
+                        const globIdx = i + j;
+                        filteredLines.push({
+                            start: lineOffsets[globIdx],
+                            end: lineOffsets[globIdx + 1]
+                        });
+                    }
+                }
+
+                i = batchEnd - 1; // Loop increment will do i++
+
+                // Yield and Update UI progressively
+                if (Date.now() - lastYield > YIELD_INTERVAL) {
+                    self.postMessage({ type: 'TOTAL_LINES', data: filteredLines.length });
+                    // Also request refresh of current window?
+                    // For now, just update scrollbar. Auto-scroller will handle rest?
+                    // Actually main thread needs to know to re-request window.
+
+                    await new Promise(r => setTimeout(r, 0));
+                    lastYield = Date.now();
+                }
+            }
+
+            // Final Update
+            self.postMessage({ type: 'TOTAL_LINES', data: filteredLines.length });
+
+        } catch (err) {
+            console.error(err);
         }
     }
 };

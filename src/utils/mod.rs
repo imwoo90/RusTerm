@@ -1,5 +1,5 @@
 pub mod file_save;
-pub mod filter;
+// pub mod filter; // Removed
 pub mod format;
 pub mod highlight;
 pub mod history;
@@ -7,7 +7,6 @@ pub mod macros;
 pub mod parser;
 pub mod scroll;
 
-pub use filter::LogFilter;
 pub use format::{format_hex, format_hex_input, parse_hex_string};
 pub use highlight::process_log_segments;
 pub use history::CommandHistory;

@@ -1,5 +1,5 @@
 use crate::state::AppState;
-use crate::utils::{calculate_start_index, calculate_window_size, LogFilter};
+use crate::utils::{calculate_start_index, calculate_window_size};
 use dioxus::prelude::*;
 use std::rc::Rc;
 
@@ -39,13 +39,51 @@ pub fn Console() -> Element {
     let total_height = (total_lines() as f64) * LINE_HEIGHT;
     let offset_top = (start_index() as f64) * LINE_HEIGHT;
 
-    // Filter Options Snapshot
-    let filter = LogFilter::new(
-        (state.filter_query)(),
-        (state.match_case)(),
-        (state.use_regex)(),
-        (state.invert_filter)(),
-    );
+    // Search Effect (Debounced)
+    use_effect(move || {
+        let query = (state.filter_query)();
+        let match_case = (state.match_case)();
+        let use_regex = (state.use_regex)();
+        let invert = (state.invert_filter)();
+        let worker_sig = state.log_worker;
+
+        // Simple debounce using async sleep (Effect runs on every dependency change)
+        spawn(async move {
+            // Wait 300ms for debounce
+            gloo_timers::future::TimeoutFuture::new(300).await;
+
+            // Check if signals are still same?
+            // Dioxus effects re-run on signal change, cleaning up previous one?
+            // Actually, in Dioxus 0.5/0.6 signals in effect dependency create subscription.
+            // If we spawn inside effect, it runs. But we need cancellation or verify value is latest.
+            // A better pattern for debounce in Dioxus:
+            // But since this is a one-shot, let's just send the message.
+            // Worker handles 'SessionId' so rapid messages are fine,
+            // but we want to avoid spamming the worker.
+
+            // However, inside this spawned future, we can't easily check if "latest" query matches.
+            // But we CAN check current signal value compared to captured value.
+            // If they differ, it means a newer effect ran (or signal changed).
+
+            // Actually, best debounce is just let the Worker handle rapid session updates (AbortController style).
+            // But sending message is cheap. Scanning is expensive.
+            // The worker's `searchSessionId` logic ALREADY handles logic cancellation!
+            // So we don't strictly need a complex debounce here IF we trust the worker to abort quickly.
+            // But let's add a small delay anyway to group keystrokes.
+
+            if let Some(w) = worker_sig.peek().as_ref() {
+                let msg = WorkerMsg::SearchLogs {
+                    query,
+                    match_case,
+                    use_regex,
+                    invert,
+                };
+                if let Ok(js_obj) = serde_wasm_bindgen::to_value(&msg) {
+                    let _ = w.post_message(&js_obj);
+                }
+            }
+        });
+    });
 
     let onexport = move |_evt: MouseEvent| {
         let worker = state.log_worker.read().clone();
@@ -114,7 +152,7 @@ pub fn Console() -> Element {
                                 .read()
                                 .iter()
                                 .enumerate()
-                                .filter(move |(_, text)| filter.matches(text))
+                                // Removed .filter() since worker sends filtered logs
                                 .map(move |(idx, text)| {
                                     rsx! {
                                         LogLine {
