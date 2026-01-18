@@ -33,10 +33,46 @@ pub fn Console() -> Element {
     // 2. Effects
     use_log_worker(total_lines, visible_logs, state.log_worker);
 
-    // Reset virtual scroll state when logs are cleared
+    // Reset virtual scroll state when logs are cleared or filtered out of view
     use_effect(move || {
-        if total_lines() == 0 {
-            start_index.set(0);
+        let total = total_lines();
+        let start = start_index();
+
+        // 1. Logs cleared
+        if total == 0 {
+            if start != 0 {
+                start_index.set(0);
+            }
+            return;
+        }
+
+        // 2. Out of bounds check
+        if start >= total {
+            if (state.autoscroll)() {
+                // If autoscrolling, jump to the end
+                let page_size = (console_height() / LINE_HEIGHT).ceil() as usize;
+                let new_start = total.saturating_sub(page_size);
+
+                if start != new_start {
+                    start_index.set(new_start);
+                }
+            } else {
+                // Otherwise reset to top
+                if start != 0 {
+                    start_index.set(0);
+                }
+
+                // Force scroll reset
+                spawn(async move {
+                    if let Some(window) = web_sys::window() {
+                        if let Some(document) = window.document() {
+                            if let Some(el) = document.get_element_by_id("console-output") {
+                                el.set_scroll_top(0);
+                            }
+                        }
+                    }
+                });
+            }
         }
     });
     use_window_resize(console_height, state.autoscroll, sentinel_handle);
@@ -116,7 +152,6 @@ pub fn Console() -> Element {
                         spawn(async move {
                             if let Some(handle) = handle {
                                 if let Ok(offset) = handle.get_scroll_offset().await {
-                                    // Use helper function for calculation
                                     let (new_index, is_at_bottom) = calculate_scroll_state(
                                         offset.y,
                                         console_height(),
@@ -127,7 +162,6 @@ pub fn Console() -> Element {
                                         start_index.set(new_index);
                                     }
 
-                                    // Only update if changed
                                     if (state.autoscroll)() != is_at_bottom {
                                         state.autoscroll.set(is_at_bottom);
                                     }
@@ -138,7 +172,8 @@ pub fn Console() -> Element {
 
                     // Virtual Scroll Spacer & Content
                     div { style: "height: {total_height}px; width: 100%; position: absolute; top: 0; left: 0; pointer-events: none;" }
-                    div { style: "position: absolute; top: 0; left: 0; right: 0; transform: translateY({offset_top}px); padding: 0.5rem 1rem 20px 1rem; pointer-events: auto; min-width: 100%; width: max-content;",
+                    div {
+                        style: "position: absolute; top: 0; left: 0; right: 0; transform: translateY({offset_top}px); padding: 0.5rem 1rem 20px 1rem; pointer-events: auto; min-width: 100%; width: max-content;",
                         {
                             let highlights = (state.highlights)().clone();
                             let show_timestamps = (state.show_timestamps)();
