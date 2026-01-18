@@ -4,6 +4,7 @@ use crate::serial;
 use crate::state::{AppState, SerialPortWrapper};
 use crate::utils::send_chunk_to_worker;
 use dioxus::prelude::*;
+use gloo_timers::future::TimeoutFuture;
 use wasm_bindgen::JsCast;
 use web_sys::ReadableStreamDefaultReader;
 
@@ -141,19 +142,39 @@ pub fn ConnectionControl() -> Element {
                 onclick: move |_| {
                     if (state.is_connected)() {
                         spawn(async move {
-                            // Cancel reader first
-                            if let Some(reader_wrapper) = (state.reader)() {
-                                let _ = serial::cancel_reader(&reader_wrapper.0).await;
-                                state.reader.set(None);
+                            // 1. Get references
+                            let maybe_reader = (state.reader)();
+                            let maybe_port = (state.port)();
+
+                            // 2. Clear reader from state to signal "manual disconnect"
+                            state.reader.set(None);
+
+                            // 3. Cancel reader
+                            if let Some(reader_wrapper) = maybe_reader {
+                                if let Err(e) = serial::cancel_reader(&reader_wrapper.0).await {
+                                    web_sys::console::error_2(&"Failed to cancel reader".into(), &e);
+                                }
                             }
 
-                            // Then close port
-                            if let Some(wrapper) = (state.port)() {
-                                let _ = serial::close_port(&wrapper.0).await;
-                                state.port.set(None);
-                                state.is_connected.set(false);
-                                state.info("Disconnected");
+                            // 4. Wait for lock release (essential for Web Serial race condition)
+                            TimeoutFuture::new(100).await;
+
+                            // 5. Close port
+                            if let Some(wrapper) = maybe_port {
+                                match serial::close_port(&wrapper.0).await {
+                                    Ok(_) => {
+                                        state.info("Disconnected");
+                                    }
+                                    Err(e) => {
+                                        state.error("Failed to close port");
+                                        web_sys::console::error_2(&"Failed to close port".into(), &e);
+                                    }
+                                }
                             }
+
+                            // 6. Cleanup
+                            state.port.set(None);
+                            state.is_connected.set(false);
                         });
                     } else {
                         spawn(async move {
