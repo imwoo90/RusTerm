@@ -32,6 +32,13 @@ pub fn Console() -> Element {
 
     // 2. Effects
     use_log_worker(total_lines, visible_logs, state.log_worker);
+
+    // Reset virtual scroll state when logs are cleared
+    use_effect(move || {
+        if total_lines() == 0 {
+            start_index.set(0);
+        }
+    });
     use_window_resize(console_height, state.autoscroll, sentinel_handle);
     use_data_request(start_index, window_size, total_lines, state.log_worker);
     use_auto_scroller(state.autoscroll, total_lines, sentinel_handle);

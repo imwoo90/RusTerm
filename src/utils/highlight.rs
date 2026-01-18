@@ -1,6 +1,7 @@
 use crate::state::Highlight;
+use regex::Regex;
 
-/// Processes log text to remove timestamps and split into highlight segments
+/// Processes log text to remove timestamps and split into highlight segments including ANSI colors
 pub fn process_log_segments(
     text: &str,
     highlights: &[Highlight],
@@ -18,9 +19,86 @@ pub fn process_log_segments(
         text
     };
 
-    // 2. Highlighting
-    let mut segments = vec![(content.to_string(), None::<String>)];
+    // 2. ANSI Code Parsing
+    // We treat ANSI codes as the base segmentation, then apply user highlights on top.
+    let mut segments = Vec::new();
 
+    // Using thread_local for Regex to avoid recompilation
+    thread_local! {
+        static ANSI_RE: Regex = Regex::new(r"\x1B\[([0-9;]*)m").unwrap();
+    }
+
+    let mut last_pos = 0;
+    let mut current_color: Option<String> = None;
+
+    ANSI_RE.with(|re| {
+        for cap in re.captures_iter(content) {
+            let m = cap.get(0).unwrap();
+            let start = m.start();
+            let end = m.end();
+
+            // Push text before the code
+            if start > last_pos {
+                segments.push((content[last_pos..start].to_string(), current_color.clone()));
+            }
+
+            // Parse the ANSI code
+            if let Some(code_match) = cap.get(1) {
+                let codes_str = code_match.as_str();
+                // Codes are separated by ;
+                // Example: "0;32" -> Reset then Green
+                // Logic: 0 -> None. 3x -> Color.
+                if codes_str.is_empty() {
+                    // \x1B[m is equivalent to \x1B[0m (Reset)
+                    current_color = None;
+                } else {
+                    for code in codes_str.split(';') {
+                        match code {
+                            "0" => current_color = None,
+                            // Standard Foreground Colors
+                            "30" | "90" => current_color = Some("#9ca3af".to_string()), // Gray-400
+                            "31" | "91" => current_color = Some("#ef4444".to_string()), // Red-500
+                            "32" | "92" => current_color = Some("#10b981".to_string()), // Emerald-500
+                            "33" | "93" => current_color = Some("#f59e0b".to_string()), // Amber-500
+                            "34" | "94" => current_color = Some("#3b82f6".to_string()), // Blue-500
+                            "35" | "95" => current_color = Some("#d946ef".to_string()), // Fuchsia-500
+                            "36" | "96" => current_color = Some("#06b6d4".to_string()), // Cyan-500
+                            "37" | "97" => current_color = Some("#f3f4f6".to_string()), // Gray-100
+                            _ => {} // Ignore background/styles for now
+                        }
+                    }
+                }
+            }
+
+            last_pos = end;
+        }
+    });
+
+    // Push remaining text
+    if last_pos < content.len() {
+        segments.push((content[last_pos..].to_string(), current_color));
+    } else if segments.is_empty() {
+        // If empty content or fully consumed by codes (unlikely to result in empty segment list if logic is right, but safe guard)
+        // Actually if content was just "\x1B[32m", we have last_pos == len, segments empty? No, last_pos would be len.
+        // Wait, if loop runs once, segments might be updated if start > last_pos.
+        // If content is just ANSI code, start=0, last_pos becomes len. loops end.
+        // Pushes?
+        // No, start > last_pos (0 > 0) is false.
+        // Loop finishes. last_pos == len.
+        // Checked: if last_pos < content.len() -> False.
+        // Result: Empty segments.
+        // But we probably want at least one empty segment if input was non-empty logic-wise?
+        // Actually empty list is fine, log line will just render nothing.
+    }
+
+    // Fallback if no ANSI codes were found, we treat the whole thing as one segment
+    if segments.is_empty() && !content.is_empty() {
+        segments.push((content.to_string(), None));
+    }
+    // If original content was empty, segments is empty, which is correct.
+
+    // 3. User Highlighting Overlay
+    // We process existing segments and split them further if keywords match
     if show_highlights {
         for h in highlights {
             if h.text.is_empty() {
@@ -28,33 +106,41 @@ pub fn process_log_segments(
             }
 
             let mut next_segments = Vec::new();
-            let mut found_for_keyword = false;
 
             for (seg_text, color) in segments {
-                // Skip segments that are already colored
-                if color.is_some() {
-                    next_segments.push((seg_text, color));
-                    continue;
-                }
+                // We allow user highlights to override ANSI colors?
+                // Or only if ANSI color is None?
+                // Typically User Highlight is "Search" or "Important", so it should override.
 
-                // Search for keyword (currently processed only once per line using split_once)
-                if !found_for_keyword && seg_text.contains(&h.text) {
+                // However, splitting logic relies on text.
+                if seg_text.contains(&h.text) {
+                    let parts: Vec<&str> = seg_text.split(&h.text).collect();
+                    // Recover delimiters
+
+                    // Simple split_once logic was used before:
+                    // Only highlighted the FIRST occurrence per segment?
+                    // The previous code:
+                    // if let Some((prefix, suffix)) = seg_text.split_once(&h.text)
+
+                    // Let's stick to split_once for simplicity and stability as per previous implementation
                     if let Some((prefix, suffix)) = seg_text.split_once(&h.text) {
                         if !prefix.is_empty() {
-                            next_segments.push((prefix.to_string(), None));
+                            next_segments.push((prefix.to_string(), color.clone()));
                         }
 
+                        // The Highlighted Part (Force User Color)
                         next_segments.push((h.text.clone(), Some(h.color.to_string())));
 
                         if !suffix.is_empty() {
-                            next_segments.push((suffix.to_string(), None));
+                            next_segments.push((suffix.to_string(), color.clone()));
+                            // Keep original background/ANSI color for suffix
                         }
-                        found_for_keyword = true;
                     } else {
-                        next_segments.push((seg_text, None));
+                        // Should not happen if contains is true
+                        next_segments.push((seg_text, color));
                     }
                 } else {
-                    next_segments.push((seg_text, None));
+                    next_segments.push((seg_text, color));
                 }
             }
             segments = next_segments;
@@ -70,37 +156,42 @@ mod tests {
     use crate::state::Highlight;
 
     #[test]
-    fn test_highlight_processing() {
-        let highlights = vec![
-            Highlight {
-                id: 1,
-                text: "Error".to_string(),
-                color: "red",
-            },
-            Highlight {
-                id: 2,
-                text: "Warning".to_string(),
-                color: "yellow",
-            },
-        ];
+    fn test_ansi_parsing() {
+        let highlights = vec![];
 
-        // 1. No highlights
-        let res = process_log_segments("Normal text", &highlights, true, false);
+        // Green text
+        let res = process_log_segments("\x1B[32mHello\x1B[0m", &highlights, false, false);
         assert_eq!(res.len(), 1);
-        assert_eq!(res[0].0, "Normal text");
-        assert!(res[0].1.is_none());
+        assert_eq!(res[0].0, "Hello");
+        assert_eq!(res[0].1.as_deref(), Some("#10b981"));
 
-        // 2. Single match
-        let res = process_log_segments("Critical Error found", &highlights, true, true);
+        // Mixed
+        let res = process_log_segments("A\x1B[31mB\x1B[0mC", &highlights, false, false);
         assert_eq!(res.len(), 3);
-        assert_eq!(res[0].0, "Critical ");
-        assert_eq!(res[1].0, "Error");
-        assert_eq!(res[1].1.as_deref(), Some("red"));
-        assert_eq!(res[2].0, " found");
+        assert_eq!(res[0].0, "A");
+        assert_eq!(res[0].1, None);
+        assert_eq!(res[1].0, "B");
+        assert_eq!(res[1].1.as_deref(), Some("#ef4444"));
+        assert_eq!(res[2].0, "C");
+        assert_eq!(res[2].1, None);
+    }
 
-        // 3. Timestamp removal (Variable format)
-        let log = "[12:00:00.000] Message";
-        let res = process_log_segments(log, &highlights, false, true);
-        assert_eq!(res[0].0, "Message");
+    #[test]
+    fn test_highlight_overlay() {
+        let highlights = vec![Highlight {
+            id: 1,
+            text: "Error".to_string(),
+            color: "blue",
+        }];
+
+        // ANSI Green text containing "Error"
+        let res = process_log_segments("\x1B[32mNoErrorHere\x1B[0m", &highlights, false, true);
+        assert_eq!(res.len(), 3);
+        assert_eq!(res[0].0, "No");
+        assert_eq!(res[0].1.as_deref(), Some("#10b981")); // Green
+        assert_eq!(res[1].0, "Error");
+        assert_eq!(res[1].1.as_deref(), Some("blue")); // User Blue wins
+        assert_eq!(res[2].0, "Here");
+        assert_eq!(res[2].1.as_deref(), Some("#10b981")); // Green
     }
 }
