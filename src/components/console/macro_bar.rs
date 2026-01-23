@@ -46,26 +46,39 @@ pub fn MacroBar() -> Element {
 
     rsx! {
         div { class: "flex flex-wrap gap-2 p-2 bg-background-dark border-t border-[#2a2e33] min-h-[40px] items-center",
-            for item in storage.read().get_items() {
+            div { class: "flex flex-wrap gap-2 flex-1",
+                for item in storage.read().get_items() {
+                    button {
+                        key: "{item.id}",
+                        class: "px-3 py-1 bg-[#2a2e33] hover:bg-primary hover:text-white rounded text-xs font-mono transition-colors border border-gray-700 select-none",
+                        onclick: move |_| send_cmd(item.command.clone(), item.is_hex),
+                        oncontextmenu: move |evt| {
+                            evt.prevent_default();
+                            storage.write().remove(item.id);
+                        },
+                        title: "Right-click to remove",
+                        "{item.label}"
+                    }
+                }
+
+                // Add Button
                 button {
-                    key: "{item.id}",
-                    class: "px-3 py-1 bg-[#2a2e33] hover:bg-primary hover:text-white rounded text-xs font-mono transition-colors border border-gray-700 select-none",
-                    onclick: move |_| send_cmd(item.command.clone(), item.is_hex),
-                    oncontextmenu: move |evt| {
-                        evt.prevent_default();
-                        storage.write().remove(item.id);
-                    },
-                    title: "Right-click to remove",
-                    "{item.label}"
+                    class: "w-6 h-6 flex items-center justify-center bg-[#1a1c1e] text-gray-400 hover:text-white rounded text-xs border border-dashed border-gray-700 hover:border-gray-500 transition-colors",
+                    onclick: move |_| show_form.set(!show_form()),
+                    title: "Add Macro",
+                    "+"
                 }
             }
 
-            // Add Button
-            button {
-                class: "w-6 h-6 flex items-center justify-center bg-[#1a1c1e] text-gray-400 hover:text-white rounded text-xs border border-dashed border-gray-700 hover:border-gray-500 transition-colors",
-                onclick: move |_| show_form.set(!show_form()),
-                title: "Add Macro",
-                "+"
+            // GitHub Link (Moved from Footer)
+            div { class: "flex items-center gap-4 ml-auto px-2",
+                 a {
+                    class: "text-gray-500 hover:text-primary transition-colors flex items-center gap-1.5 group text-[11px]",
+                    href: "https://github.com/imwoo90/web_serial_monitor",
+                    target: "_blank",
+                    span { class: "material-symbols-outlined text-[14px]", "code" }
+                    span { "GitHub" }
+                }
             }
 
             // Form Modal

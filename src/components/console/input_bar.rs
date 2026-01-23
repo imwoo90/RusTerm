@@ -1,40 +1,8 @@
-use crate::components::common::ToggleSwitch;
+use crate::components::common::{FilterOptionButton, LineEndSelector};
 use crate::serial;
 use crate::state::{AppState, LineEnding};
 use crate::utils::{format_hex_input, parse_hex_string, CommandHistory};
 use dioxus::prelude::*;
-
-#[component]
-fn LineEndSelector(
-    label: &'static str,
-    selected: LineEnding,
-    onselect: EventHandler<LineEnding>,
-    active_class: &'static str,
-    is_rx: bool,
-) -> Element {
-    rsx! {
-        div { class: "flex items-center gap-2",
-            span { class: "text-[10px] font-bold text-gray-500 uppercase tracking-widest",
-                "{label}"
-            }
-            div { class: "flex bg-[#0d0f10] p-0.5 rounded-lg border border-[#2a2e33]",
-                for ending in [LineEnding::None, LineEnding::NL, LineEnding::CR, LineEnding::NLCR] {
-                    button {
-                        class: "px-2 py-1 rounded text-[10px] font-bold transition-all duration-200",
-                        class: if selected == ending { "{active_class} border shadow-sm" } else { "text-gray-500 hover:text-white" },
-                        onclick: move |_| onselect.call(ending),
-                        match ending {
-                            LineEnding::None => if is_rx { "RAW" } else { "NONE" }
-                            LineEnding::NL => "LF",
-                            LineEnding::CR => "CR",
-                            LineEnding::NLCR => "CRLF",
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 
 #[component]
 pub fn InputBar() -> Element {
@@ -44,7 +12,6 @@ pub fn InputBar() -> Element {
     let mut history_index = use_signal(|| None::<usize>);
     let mut is_hex_input = use_signal(|| false);
 
-    let rx_ending = (state.rx_line_ending)();
     let tx_ending = (state.line_ending)();
 
     let on_send = move || {
@@ -83,118 +50,111 @@ pub fn InputBar() -> Element {
 
             if let Some(wrapper) = (state.port)() {
                 if serial::send_data(&wrapper.0, &data).await.is_ok() {
-                    // Success
                     input_value.set(String::new());
-                } else {
-                    // Fail
                 }
-            } else {
-                // Not connected
             }
         });
     };
 
     rsx! {
-        div { class: "shrink-0 p-5 pt-3 bg-background-dark border-t border-[#2a2e33] z-20 relative",
-            div { class: "absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-primary/20 to-transparent" }
-            div { class: "flex flex-col gap-3",
-                div { class: "flex items-center justify-between",
-                    // RX Controls Group
-                    div { class: "flex items-center gap-4",
-                        LineEndSelector {
-                            label: "RX Parse",
-                            selected: rx_ending,
-                            onselect: move |val| state.rx_line_ending.set(val),
-                            active_class: "bg-emerald-500/20 text-emerald-500 border-emerald-500/20",
-                            is_rx: true,
-                        }
-                        div { class: "w-px h-6 bg-[#2a2e33]" }
-                        ToggleSwitch {
-                            label: "HEX VIEW",
-                            active: (state.is_hex_view)(),
-                            onclick: move |_| state.is_hex_view.set(!(state.is_hex_view)()),
-                        }
+        div { class: "shrink-0 p-2 bg-background-dark border-t border-[#2a2e33] z-20 relative",
+            div { class: "flex gap-3 h-10 items-stretch",
+
+                // --- Left: Search / Filter ---
+                div { class: "flex-[0.4] relative group flex items-center min-w-[200px]",
+                     span { class: "material-symbols-outlined absolute left-3 text-gray-600 text-[18px] group-focus-within:text-primary transition-colors",
+                        "search"
                     }
-                    // TX Controls
-                    div { class: "flex items-center gap-4",
-                        ToggleSwitch {
-                            label: "HEX INPUT",
-                            active: is_hex_input(),
-                            onclick: move |_| is_hex_input.set(!is_hex_input()),
+                    input {
+                        class: "w-full h-full bg-[#0d0f10] text-xs font-medium text-white placeholder-gray-600 pl-9 pr-24 rounded-lg border border-[#2a2e33] focus:border-primary/50 focus:shadow-glow outline-none shadow-inset-input transition-all",
+                        placeholder: "Filter logs...",
+                        "type": "text",
+                        value: "{state.filter_query}",
+                        oninput: move |evt| state.filter_query.set(evt.value()),
+                    }
+                    // Filter Options inside input
+                    div { class: "absolute right-1 flex items-center gap-0.5",
+                        FilterOptionButton {
+                            title: "Match Case", label: "Aa", active: (state.match_case)(),
+                            onclick: move |_| { let v = (state.match_case)(); state.match_case.set(!v); }
                         }
-                        div { class: "w-px h-6 bg-[#2a2e33]" }
-                        LineEndSelector {
-                            label: "Payload",
-                            selected: tx_ending,
-                            onselect: move |val| state.line_ending.set(val),
-                            active_class: "bg-primary/20 text-primary border-primary/20",
-                            is_rx: false,
+                        FilterOptionButton {
+                            title: "Regex", label: ".*", active: (state.use_regex)(),
+                            onclick: move |_| { let v = (state.use_regex)(); state.use_regex.set(!v); }
+                        }
+                        FilterOptionButton {
+                            title: "Invert", label: "!", active: (state.invert_filter)(),
+                            onclick: move |_| { let v = (state.invert_filter)(); state.invert_filter.set(!v); }
                         }
                     }
                 }
-                div { class: "flex gap-3 items-stretch h-12",
-                    div { class: "relative flex-1",
+
+                // --- Divider ---
+                div { class: "w-px bg-[#2a2e33] my-1" }
+
+                // --- Right: TX Input ---
+                div { class: "flex-1 relative flex gap-2",
+                    div { class: "relative flex-1 group",
                         input {
-                            class: "w-full h-full bg-[#0d0f10] text-sm text-white placeholder-gray-600 px-4 rounded-xl border border-[#2a2e33] focus:border-primary/50 focus:shadow-glow outline-none shadow-inset-input transition-all",
-                            placeholder: "Enter ASCII command...",
+                            class: "w-full h-full bg-[#0d0f10] text-sm text-white placeholder-gray-600 px-4 pr-16 rounded-lg border border-[#2a2e33] focus:border-primary/50 focus:shadow-glow outline-none shadow-inset-input transition-all font-mono",
+                            placeholder: "Send command...",
                             "type": "text",
                             value: "{input_value}",
                             oninput: move |evt| {
-                                if is_hex_input() {
-                                    let formatted = format_hex_input(&evt.value());
-                                    input_value.set(formatted);
-                                } else {
-                                    input_value.set(evt.value());
-                                }
+                                if is_hex_input() { input_value.set(format_hex_input(&evt.value())); }
+                                else { input_value.set(evt.value()); }
                             },
                             onkeydown: move |evt| {
                                 match evt.key() {
                                     Key::Enter => on_send(),
                                     Key::ArrowUp => {
-                                        evt.prevent_default();
                                         let h = history.read();
-                                        let len = h.len();
-                                        if len > 0 {
-                                            let new_idx = match history_index() {
-                                                Some(i) => if i > 0 { i - 1 } else { 0 }
-                                                None => len - 1,
-                                            };
-                                            history_index.set(Some(new_idx));
-                                            if let Some(cmd) = h.get_at(new_idx) {
-                                                input_value.set(cmd.clone());
-                                            }
+                                        if h.len() > 0 {
+                                            let idx = history_index().map(|i| if i > 0 { i - 1 } else { 0 }).unwrap_or(h.len() - 1);
+                                            history_index.set(Some(idx));
+                                            if let Some(c) = h.get_at(idx) { input_value.set(c.clone()); }
                                         }
-                                    }
-                                    Key::ArrowDown => {
                                         evt.prevent_default();
+                                    },
+                                    Key::ArrowDown => {
                                         if let Some(i) = history_index() {
                                             let h = history.read();
-                                            let len = h.len();
-                                            if i + 1 >= len {
-                                                history_index.set(None);
-                                                input_value.set(String::new());
-                                            } else {
-                                                let new_idx = i + 1;
-                                                history_index.set(Some(new_idx));
-                                                if let Some(cmd) = h.get_at(new_idx) {
-                                                    input_value.set(cmd.clone());
-                                                }
+                                            if i + 1 >= h.len() { history_index.set(None); input_value.set(String::new()); }
+                                            else {
+                                                history_index.set(Some(i + 1));
+                                                if let Some(c) = h.get_at(i + 1) { input_value.set(c.clone()); }
                                             }
                                         }
-                                    }
+                                        evt.prevent_default();
+                                    },
                                     _ => {}
                                 }
-                            },
+                            }
                         }
-                        div { class: "absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none",
-                            span { class: "material-symbols-outlined text-[16px]", "keyboard" }
+
+                        // Hex Toggle inside TX Input
+                        button {
+                            class: "absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded text-[10px] font-bold border transition-colors",
+                            class: if is_hex_input() { "bg-primary/20 text-primary border-primary/30" } else { "text-gray-500 border-transparent hover:text-gray-300" },
+                            onclick: move |_| is_hex_input.set(!is_hex_input()),
+                            "HEX"
                         }
                     }
-                    button {
-                        class: "h-full aspect-square bg-primary text-surface rounded-xl flex items-center justify-center hover:bg-white transition-all hover:shadow-[0_0_15px_rgba(255,255,255,0.4)] active:scale-95 group",
-                        onclick: move |_| on_send(),
-                        span { class: "material-symbols-outlined text-[22px] group-hover:rotate-45 transition-transform duration-300",
-                            "send"
+
+                    // TX Settings & Send
+                    div { class: "flex gap-2 items-center",
+                         LineEndSelector {
+                            label: "",
+                            selected: tx_ending,
+                            onselect: move |val| state.line_ending.set(val),
+                            active_class: "bg-primary/20 text-primary border-primary/20",
+                            is_rx: false,
+                        }
+
+                        button {
+                            class: "h-full aspect-square bg-primary text-surface rounded-lg flex items-center justify-center hover:bg-white transition-all hover:shadow-[0_0_15px_rgba(255,255,255,0.4)] active:scale-95 group",
+                            onclick: move |_| on_send(),
+                            span { class: "material-symbols-outlined text-[20px] group-hover:rotate-45 transition-transform duration-300", "send" }
                         }
                     }
                 }

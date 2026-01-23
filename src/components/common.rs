@@ -1,4 +1,38 @@
+use crate::state::LineEnding;
 use dioxus::prelude::*;
+
+/// A helper component to select line endings (LF, CR, CRLF, None).
+#[component]
+pub fn LineEndSelector(
+    label: &'static str,
+    selected: LineEnding,
+    onselect: EventHandler<LineEnding>,
+    active_class: &'static str,
+    is_rx: bool,
+) -> Element {
+    rsx! {
+        div { class: "flex items-center gap-2",
+            span { class: "text-[10px] font-bold text-gray-500 uppercase tracking-widest",
+                "{label}"
+            }
+            div { class: "flex bg-[#0d0f10] p-0.5 rounded-lg border border-[#2a2e33]",
+                for ending in [LineEnding::None, LineEnding::NL, LineEnding::CR, LineEnding::NLCR] {
+                    button {
+                        class: "px-2 py-1 rounded text-[10px] font-bold transition-all duration-200",
+                        class: if selected == ending { "{active_class} border shadow-sm" } else { "text-gray-500 hover:text-white" },
+                        onclick: move |_| onselect.call(ending),
+                        match ending {
+                            LineEnding::None => if is_rx { "RAW" } else { "NONE" },
+                            LineEnding::NL => "LF",
+                            LineEnding::CR => "CR",
+                            LineEnding::NLCR => "CRLF",
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 /// A reusable custom select component with premium styling.
 #[component]
@@ -231,6 +265,30 @@ pub fn CustomInputSelect(
                     }
                 }
             }
+        }
+    }
+}
+
+#[component]
+pub fn FilterOptionButton(
+    title: &'static str,
+    label: &'static str,
+    active: bool,
+    onclick: EventHandler<MouseEvent>,
+) -> Element {
+    let state_class = if active {
+        "bg-primary/10 border border-primary/20 text-primary shadow-[0_0_10px_rgba(0,191,255,0.15)]"
+    } else {
+        "text-gray-500 hover:text-white hover:bg-[#2a2e33]"
+    };
+
+    rsx! {
+        button {
+            class: "w-8 h-7 flex items-center justify-center rounded-md transition-all focus:outline-none {state_class}",
+            title: "{title}",
+            "aria-label": "{title}",
+            onclick: move |evt| onclick.call(evt),
+            span { class: "text-[11px] font-bold font-mono", "{label}" }
         }
     }
 }

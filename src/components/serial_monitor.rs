@@ -3,7 +3,6 @@ use crate::state::{AppState, LineEnding};
 use dioxus::prelude::*;
 
 use super::console::{Console, FilterBar, InputBar, MacroBar};
-use super::footer::Footer;
 use super::header::Header;
 
 #[component]
@@ -93,11 +92,10 @@ pub fn SerialMonitor() -> Element {
         div { class: "bg-background-light dark:bg-background-dark h-screen w-full flex flex-col font-display text-white overflow-hidden selection:bg-primary/30 selection:text-primary",
 
             div { class: "relative shrink-0 z-30", Header {} }
+            InputBar {}
             FilterBar {}
             Console {}
             MacroBar {}
-            InputBar {}
-            Footer {}
             ToastContainer { toasts }
         }
     }

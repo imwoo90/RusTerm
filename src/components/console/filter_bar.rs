@@ -1,4 +1,4 @@
-use crate::components::common::{IconButton, PanelHeader, ToggleSwitch};
+use crate::components::common::{IconButton, LineEndSelector, PanelHeader, ToggleSwitch};
 use crate::state::{AppState, Highlight, HIGHLIGHT_COLORS};
 use dioxus::prelude::*;
 
@@ -6,83 +6,97 @@ use dioxus::prelude::*;
 pub fn FilterBar() -> Element {
     let mut state = use_context::<AppState>();
     let show_highlights = (state.show_highlights)();
-    let mut is_panel_open = use_signal(|| false);
+    let mut index_open = use_signal(|| false);
+
+    // RX Settings
+    let rx_ending = (state.rx_line_ending)();
 
     rsx! {
-        div { class: "shrink-0 px-5 py-3 z-10 flex flex-col gap-3 filter-section relative",
-            div { class: "flex gap-2 w-full items-stretch",
-                FilterInput {}
-                IconButton {
-                    icon: "ink_highlighter",
-                    active: show_highlights,
-                    class: "w-12 h-10 rounded-xl border border-[#2a2e33] bg-[#0d0f10] shadow-inset-input",
-                    onclick: move |_| {
-                        // Logic:
-                        // 1. Toggle Panel Visibility
-                        // 2. If opening panel and feature is off, turn it on? Or just toggle feature?
-                        // User Request: "Panel closed != Feature Off"
+        div { class: "shrink-0 px-4 py-2 z-10 flex items-center justify-between border-b border-[#2a2e33] bg-[#0d0f10] min-h-[48px]",
 
-                        // Revised Logic: Button handles Panel Toggle primarily.
-                        // But we also want to toggle the feature if user intents to.
-                        // Let's make single click toggle PANEL.
-                        // Inside panel we control feature? No, user wants simple access.
+            // Left: RX / View Settings
+            div { class: "flex items-center gap-6",
+                // Timestamp
+                 ToggleSwitch {
+                    label: "Timestamp",
+                    active: (state.show_timestamps)(),
+                    onclick: move |_| { let v = (state.show_timestamps)(); state.show_timestamps.set(!v); },
+                }
+                div { class: "w-px h-4 bg-[#2a2e33]" }
 
-                        // Compromise:
-                        // Button Click -> Toggle Panel.
-                        // IF Panel is opening AND feature is OFF -> Turn ON feature.
+                 // RX Line Ending
+                 LineEndSelector {
+                    label: "RX PARSE",
+                    selected: rx_ending,
+                    onselect: move |val| state.rx_line_ending.set(val),
+                    active_class: "bg-emerald-500/20 text-emerald-500 border-emerald-500/20",
+                    is_rx: true,
+                }
+                div { class: "w-px h-4 bg-[#2a2e33]" }
 
-                        let panel_state = is_panel_open();
-
-                        if !panel_state {
-                            // Opening
-                            is_panel_open.set(true);
-                            if !show_highlights {
-                                state.show_highlights.set(true);
-                            }
-                        } else {
-                            // Closing via button
-                            is_panel_open.set(false);
-                            // Do NOT turn off feature automatically when closing panel via button?
-                            // Or maybe yes? If I click button again, maybe I want to hide panel but keep feature.
-                            // Let's keep feature ON.
-                        }
-                    },
-                    title: "Toggle Highlights Panel",
+                // Hex View
+                ToggleSwitch {
+                    label: "HEX VIEW",
+                    active: (state.is_hex_view)(),
+                    onclick: move |_| state.is_hex_view.set(!(state.is_hex_view)()),
                 }
             }
-            // Highlight Panel is now controlled by is_panel_open
-            HighlightPanel {
-                visible: is_panel_open(),
-                onclose: move |_| is_panel_open.set(false),
+
+            // Right: Highlight Panel Toggle
+            div { class: "relative",
+                 IconButton {
+                    icon: "ink_highlighter",
+                    active: index_open(),
+                    class: "w-8 h-8 rounded-lg border border-[#2a2e33] bg-[#0d0f10] hover:border-gray-500",
+                    icon_class: "text-[18px]",
+                    onclick: move |_| {
+                        let cur = index_open();
+                        index_open.set(!cur);
+                        if !cur && !show_highlights { state.show_highlights.set(true); }
+                    },
+                    title: "Highlight Rules",
+                }
+
+                // Highlight Panel Dropdown
+                if index_open() {
+                    HighlightPanel {
+                        visible: true,
+                        onclose: move |_| index_open.set(false),
+                    }
+                }
             }
-            DisplayOptions {}
         }
     }
 }
 
-// ... FilterInput ...
-
 #[component]
 fn HighlightPanel(visible: bool, onclose: EventHandler<()>) -> Element {
-    let state = use_context::<AppState>();
+    let mut state = use_context::<AppState>();
     let highlights = (state.highlights)();
 
     rsx! {
-        if visible {
-            div {
-                class: "fixed inset-0 z-40 cursor-default",
-                onclick: move |_| onclose.call(()),
-            }
-        }
+        div { class: "fixed inset-0 z-40 cursor-default", onclick: move |_| onclose.call(()) }
         div {
-            class: "absolute top-full left-5 right-5 z-50 bg-surface rounded-xl border border-white/10 shadow-2xl transition-all duration-300 origin-top",
-            class: if visible { "opacity-100 visible scale-100 translate-y-2 p-4" } else { "opacity-0 invisible scale-95 translate-y-0 p-0 overflow-hidden h-0" },
+            class: "absolute top-full right-0 mt-2 w-80 z-50 bg-[#16181a] rounded-xl border border-white/10 shadow-2xl p-4 animate-in fade-in zoom-in-95 duration-200 origin-top-right",
             div { class: "flex flex-col gap-3",
                 PanelHeader {
                     title: "Active Highlights",
-                    subtitle: Some(format!("{} active rules", highlights.len())),
+                    subtitle: Some(format!("{} rules", highlights.len())),
                 }
-                div { class: "flex flex-wrap gap-2",
+
+                div { class: "flex items-center justify-between",
+                    span { class: "text-[10px] uppercase text-gray-500 font-bold", "Enable Highlighting" }
+                    crate::components::common::ToggleSwitch {
+                        label: "",
+                        active: (state.show_highlights)(),
+                        onclick: move |_| state.show_highlights.set(!(state.show_highlights)()),
+                    }
+                }
+
+                div { class: "flex flex-wrap gap-2 min-h-[40px] p-2 bg-[#0d0f10] rounded border border-[#2a2e33]",
+                    if highlights.is_empty() {
+                         span { class: "text-xs text-gray-600 italic px-1", "No rules added" }
+                    }
                     for h in highlights {
                         HighlightTag {
                             color: h.color,
@@ -102,81 +116,7 @@ fn HighlightPanel(visible: bool, onclose: EventHandler<()>) -> Element {
     }
 }
 
-#[component]
-fn FilterInput() -> Element {
-    let mut state = use_context::<AppState>();
-
-    rsx! {
-        div { class: "relative flex-1 group",
-            span { class: "material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 text-[20px] group-focus-within:text-primary transition-colors",
-                "search"
-            }
-            input {
-                class: "w-full bg-[#0d0f10] text-sm font-medium text-white placeholder-gray-600 pl-10 pr-30 py-2.5 rounded-xl border border-[#2a2e33] focus:border-primary/50 focus:shadow-glow outline-none shadow-inset-input transition-all",
-                placeholder: "Filter output...",
-                "type": "text",
-                value: "{state.filter_query}",
-                oninput: move |evt| state.filter_query.set(evt.value()),
-            }
-            div { class: "absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1",
-                FilterOptionButton {
-                    title: "Match Case",
-                    label: "Aa",
-                    active: (state.match_case)(),
-                    onclick: move |_| {
-                        let mut state = use_context::<AppState>();
-                        let current = (state.match_case)();
-                        state.match_case.set(!current);
-                    },
-                }
-                FilterOptionButton {
-                    title: "Use Regex",
-                    label: ".*",
-                    active: (state.use_regex)(),
-                    onclick: move |_| {
-                        let mut state = use_context::<AppState>();
-                        let current = (state.use_regex)();
-                        state.use_regex.set(!current);
-                    },
-                }
-                FilterOptionButton {
-                    title: "Invert Filter",
-                    label: "!",
-                    active: (state.invert_filter)(),
-                    onclick: move |_| {
-                        let mut state = use_context::<AppState>();
-                        let current = (state.invert_filter)();
-                        state.invert_filter.set(!current);
-                    },
-                }
-            }
-        }
-    }
-}
-
-#[component]
-fn FilterOptionButton(
-    title: &'static str,
-    label: &'static str,
-    active: bool,
-    onclick: EventHandler<MouseEvent>,
-) -> Element {
-    let state_class = if active {
-        "bg-primary/10 border border-primary/20 text-primary shadow-[0_0_10px_rgba(0,191,255,0.15)]"
-    } else {
-        "text-gray-500 hover:text-white hover:bg-[#2a2e33]"
-    };
-
-    rsx! {
-        button {
-            class: "w-8 h-7 flex items-center justify-center rounded-md transition-all focus:outline-none {state_class}",
-            title: "{title}",
-            "aria-label": "{title}",
-            onclick: move |evt| onclick.call(evt),
-            span { class: "text-[11px] font-bold font-mono", "{label}" }
-        }
-    }
-}
+// --- Restored Components ---
 
 #[component]
 fn HighlightTag(color: &'static str, label: String, onremove: EventHandler<MouseEvent>) -> Element {
@@ -307,28 +247,6 @@ fn HighlightInput() -> Element {
                 onclick: move |_| add_highlight_logic(),
                 span { class: "material-symbols-outlined text-[18px]", "add" }
                 span { class: "text-[10px] uppercase tracking-wider", "Add" }
-            }
-        }
-    }
-}
-
-#[component]
-fn DisplayOptions() -> Element {
-    let mut state = use_context::<AppState>();
-
-    rsx! {
-        div { class: "flex items-center gap-6",
-            ToggleSwitch {
-                label: "Timestamp",
-                active: (state.show_timestamps)(),
-                onclick: move |_| {
-                    let current = (state.show_timestamps)();
-                    state.show_timestamps.set(!current);
-                },
-            }
-            div { class: "ml-auto text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2",
-                span { class: "w-1.5 h-1.5 rounded-full bg-primary animate-pulse" }
-                "Live"
             }
         }
     }
