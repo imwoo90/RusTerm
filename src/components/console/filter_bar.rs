@@ -1,4 +1,4 @@
-use crate::components::common::{IconButton, LineEndSelector, PanelHeader, ToggleSwitch};
+use crate::components::common::{IconButton, LineEndSelector, PanelHeader};
 use crate::state::{AppState, Highlight, HIGHLIGHT_COLORS};
 use dioxus::prelude::*;
 
@@ -12,66 +12,77 @@ pub fn FilterBar() -> Element {
     let rx_ending = (state.rx_line_ending)();
 
     rsx! {
-        div { class: "shrink-0 px-4 py-2 z-10 flex items-center justify-between border-b border-[#2a2e33] bg-[#0d0f10] min-h-[48px]",
+        div { class: "shrink-0 p-2 z-10 border-b border-[#2a2e33] bg-[#0d0f10] overflow-x-auto",
+            div { class: "flex gap-3 items-center w-full min-w-[600px]",
 
-            // Left: RX / View Settings
-            div { class: "flex items-center gap-6",
-                // Timestamp
-                 ToggleSwitch {
-                    label: "Timestamp",
-                    active: (state.show_timestamps)(),
-                    onclick: move |_| { let v = (state.show_timestamps)(); state.show_timestamps.set(!v); },
+                // --- Left: View Settings & RX (Aligns with Filter Input: flex-[1.8]) ---
+                div { class: "flex-[1.8] flex items-center gap-4 min-w-0 pl-1",
+                    div { class: "flex items-center gap-2",
+                         // Timestamp Button
+                        button {
+                            class: "px-2 py-1 rounded text-[10px] font-bold border transition-colors select-none",
+                            class: if (state.show_timestamps)() { "bg-primary/20 text-primary border-primary/30" } else { "text-gray-500 border-transparent hover:text-gray-300 bg-[#2a2e33]/50" },
+                            onclick: move |_| { let v = (state.show_timestamps)(); state.show_timestamps.set(!v); },
+                            "TIME"
+                        }
+
+                        // Hex View Button
+                        button {
+                            class: "px-2 py-1 rounded text-[10px] font-bold border transition-colors select-none",
+                            class: if (state.is_hex_view)() { "bg-primary/20 text-primary border-primary/30" } else { "text-gray-500 border-transparent hover:text-gray-300 bg-[#2a2e33]/50" },
+                            onclick: move |_| state.is_hex_view.set(!(state.is_hex_view)()),
+                            "HEX VIEW"
+                        }
+                    }
+
+                    div { class: "w-px h-4 bg-[#2a2e33]" }
+
+                     // RX Line Ending
+                     LineEndSelector {
+                        label: "RX PARSE",
+                        selected: rx_ending,
+                        onselect: move |val| state.rx_line_ending.set(val),
+                        active_class: "bg-emerald-500/20 text-emerald-500 border-emerald-500/20",
+                        is_rx: true,
+                    }
                 }
 
-                // Hex View
-                ToggleSwitch {
-                    label: "HEX VIEW",
-                    active: (state.is_hex_view)(),
-                    onclick: move |_| state.is_hex_view.set(!(state.is_hex_view)()),
-                }
+                // --- Divider (Matches InputBar Divider Position) ---
+                div { class: "w-px h-6 bg-[#2a2e33]" }
 
-                div { class: "w-px h-4 bg-[#2a2e33]" }
+                // --- Right: TX Settings & Highlight (Aligns with Send Input: flex-1) ---
+                div { class: "flex-1 flex items-center justify-between min-w-0 pr-1",
+                     // TX Line Ending
+                     LineEndSelector {
+                        label: "TX APPEND",
+                        selected: (state.line_ending)(),
+                        onselect: move |val| state.line_ending.set(val),
+                        active_class: "bg-primary/20 text-primary border-primary/20",
+                        is_rx: false,
+                    }
 
-                 // RX Line Ending
-                 LineEndSelector {
-                    label: "RX PARSE",
-                    selected: rx_ending,
-                    onselect: move |val| state.rx_line_ending.set(val),
-                    active_class: "bg-emerald-500/20 text-emerald-500 border-emerald-500/20",
-                    is_rx: true,
-                }
-                div { class: "w-px h-4 bg-[#2a2e33]" }
+                    // Highlight Panel Toggle
+                    div { class: "relative ml-4",
+                         IconButton {
+                            icon: "ink_highlighter",
+                            active: index_open(),
+                            class: "w-8 h-8 rounded-lg border border-[#2a2e33] bg-[#0d0f10] hover:border-gray-500",
+                            icon_class: "text-[18px]",
+                            onclick: move |_| {
+                                let cur = index_open();
+                                index_open.set(!cur);
+                                if !cur && !show_highlights { state.show_highlights.set(true); }
+                            },
+                            title: "Highlight Rules",
+                        }
 
-                 // TX Line Ending (Moved from InputBar)
-                 LineEndSelector {
-                    label: "TX APPEND",
-                    selected: (state.line_ending)(),
-                    onselect: move |val| state.line_ending.set(val),
-                    active_class: "bg-primary/20 text-primary border-primary/20",
-                    is_rx: false,
-                }
-            }
-
-            // Right: Highlight Panel Toggle
-            div { class: "relative",
-                 IconButton {
-                    icon: "ink_highlighter",
-                    active: index_open(),
-                    class: "w-8 h-8 rounded-lg border border-[#2a2e33] bg-[#0d0f10] hover:border-gray-500",
-                    icon_class: "text-[18px]",
-                    onclick: move |_| {
-                        let cur = index_open();
-                        index_open.set(!cur);
-                        if !cur && !show_highlights { state.show_highlights.set(true); }
-                    },
-                    title: "Highlight Rules",
-                }
-
-                // Highlight Panel Dropdown
-                if index_open() {
-                    HighlightPanel {
-                        visible: true,
-                        onclose: move |_| index_open.set(false),
+                        // Highlight Panel Dropdown
+                        if index_open() {
+                            HighlightPanel {
+                                visible: true,
+                                onclose: move |_| index_open.set(false),
+                            }
+                        }
                     }
                 }
             }
@@ -125,8 +136,6 @@ fn HighlightPanel(visible: bool, onclose: EventHandler<()>) -> Element {
         }
     }
 }
-
-// --- Restored Components ---
 
 #[component]
 fn HighlightTag(color: &'static str, label: String, onremove: EventHandler<MouseEvent>) -> Element {

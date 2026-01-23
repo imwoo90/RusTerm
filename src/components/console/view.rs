@@ -121,6 +121,15 @@ pub fn Console() -> Element {
         }
     };
 
+    let onclear = move |_evt: MouseEvent| {
+        if let Some(w) = (state.log_worker)() {
+            let _ = w.post_message(
+                &serde_wasm_bindgen::to_value(&serde_json::json!({ "type": "CLEAR" })).unwrap(),
+            );
+            state.success("Logs Cleared");
+        }
+    };
+
     rsx! {
         main { class: "flex-1 min-h-0 mx-4 mb-0 mt-0 relative group/console",
             div { class: "absolute inset-0 bg-console-bg rounded-t-2xl border-t border-x border-[#222629] shadow-[inset_0_0_20px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col",
@@ -129,8 +138,8 @@ pub fn Console() -> Element {
                 ConsoleHeader {
                     autoscroll: (state.autoscroll)(),
                     count: total_lines(),
-                    is_connected: (state.is_connected)(),
                     onexport,
+                    onclear,
                 }
 
                 div {

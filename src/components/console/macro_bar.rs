@@ -45,12 +45,12 @@ pub fn MacroBar() -> Element {
     };
 
     rsx! {
-        div { class: "flex flex-wrap gap-2 p-2 bg-background-dark border-t border-[#2a2e33] min-h-[40px] items-center",
-            div { class: "flex flex-wrap gap-2 flex-1",
+        div { class: "flex gap-2 p-2 bg-background-dark border-t border-[#2a2e33] min-h-[40px] items-center overflow-x-auto",
+            div { class: "flex gap-2 flex-1 items-center",
                 for item in storage.read().get_items() {
                     button {
                         key: "{item.id}",
-                        class: "px-3 py-1 bg-[#2a2e33] hover:bg-primary hover:text-white rounded text-xs font-mono transition-colors border border-gray-700 select-none",
+                        class: "shrink-0 px-3 py-1 bg-[#2a2e33] hover:bg-primary hover:text-white rounded text-xs font-mono transition-colors border border-gray-700 select-none whitespace-nowrap",
                         onclick: move |_| send_cmd(item.command.clone(), item.is_hex),
                         oncontextmenu: move |evt| {
                             evt.prevent_default();
@@ -63,7 +63,7 @@ pub fn MacroBar() -> Element {
 
                 // Add Button
                 button {
-                    class: "w-6 h-6 flex items-center justify-center bg-[#1a1c1e] text-gray-400 hover:text-white rounded text-xs border border-dashed border-gray-700 hover:border-gray-500 transition-colors",
+                    class: "shrink-0 w-6 h-6 flex items-center justify-center bg-[#1a1c1e] text-gray-400 hover:text-white rounded text-xs border border-dashed border-gray-700 hover:border-gray-500 transition-colors",
                     onclick: move |_| show_form.set(!show_form()),
                     title: "Add Macro",
                     "+"
@@ -71,7 +71,7 @@ pub fn MacroBar() -> Element {
             }
 
             // GitHub Link (Moved from Footer)
-            div { class: "flex items-center gap-4 ml-auto px-2",
+            div { class: "shrink-0 flex items-center gap-4 ml-auto px-2",
                  a {
                     class: "text-gray-500 hover:text-primary transition-colors flex items-center gap-1.5 group text-[11px]",
                     href: "https://github.com/imwoo90/web_serial_monitor",
