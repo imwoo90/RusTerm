@@ -12,17 +12,20 @@ pub fn FilterBar() -> Element {
     let rx_ending = (state.rx_line_ending)();
 
     rsx! {
-        div { class: "shrink-0 p-2 z-10 border-b border-[#2a2e33] bg-[#0d0f10] overflow-x-auto",
+        div { class: "shrink-0 p-2 z-10 border-b border-[#2a2e33] bg-[#0d0f10]",
             div { class: "flex gap-3 items-center w-full min-w-[600px]",
 
-                // --- Left: View Settings & RX (Aligns with Filter Input: flex-[1.8]) ---
-                div { class: "flex-[1.8] flex items-center gap-4 min-w-0 pl-1",
+                // --- Left: View Settings & RX (Aligns with Filter Input: flex-[1.3]) ---
+                div { class: "flex-[1.3] flex items-center gap-4 min-w-0 pl-1",
                     div { class: "flex items-center gap-2",
-                         // Timestamp Button
+                        // Timestamp Button
                         button {
                             class: "px-2 py-1 rounded text-[10px] font-bold border transition-colors select-none",
                             class: if (state.show_timestamps)() { "bg-primary/20 text-primary border-primary/30" } else { "text-gray-500 border-transparent hover:text-gray-300 bg-[#2a2e33]/50" },
-                            onclick: move |_| { let v = (state.show_timestamps)(); state.show_timestamps.set(!v); },
+                            onclick: move |_| {
+                                let v = (state.show_timestamps)();
+                                state.show_timestamps.set(!v);
+                            },
                             "TIME"
                         }
 
@@ -31,14 +34,14 @@ pub fn FilterBar() -> Element {
                             class: "px-2 py-1 rounded text-[10px] font-bold border transition-colors select-none",
                             class: if (state.is_hex_view)() { "bg-primary/20 text-primary border-primary/30" } else { "text-gray-500 border-transparent hover:text-gray-300 bg-[#2a2e33]/50" },
                             onclick: move |_| state.is_hex_view.set(!(state.is_hex_view)()),
-                            "HEX VIEW"
+                            "HEX"
                         }
                     }
 
                     div { class: "w-px h-4 bg-[#2a2e33]" }
 
-                     // RX Line Ending
-                     LineEndSelector {
+                    // RX Line Ending
+                    LineEndSelector {
                         label: "RX PARSE",
                         selected: rx_ending,
                         onselect: move |val| state.rx_line_ending.set(val),
@@ -52,8 +55,8 @@ pub fn FilterBar() -> Element {
 
                 // --- Right: TX Settings & Highlight (Aligns with Send Input: flex-1) ---
                 div { class: "flex-1 flex items-center justify-between min-w-0 pr-1",
-                     // TX Line Ending
-                     LineEndSelector {
+                    // TX Line Ending
+                    LineEndSelector {
                         label: "TX APPEND",
                         selected: (state.line_ending)(),
                         onselect: move |val| state.line_ending.set(val),
@@ -63,7 +66,7 @@ pub fn FilterBar() -> Element {
 
                     // Highlight Panel Toggle
                     div { class: "relative ml-4",
-                         IconButton {
+                        IconButton {
                             icon: "ink_highlighter",
                             active: index_open(),
                             class: "w-8 h-8 rounded-lg border border-[#2a2e33] bg-[#0d0f10] hover:border-gray-500",
@@ -71,7 +74,9 @@ pub fn FilterBar() -> Element {
                             onclick: move |_| {
                                 let cur = index_open();
                                 index_open.set(!cur);
-                                if !cur && !show_highlights { state.show_highlights.set(true); }
+                                if !cur && !show_highlights {
+                                    state.show_highlights.set(true);
+                                }
                             },
                             title: "Highlight Rules",
                         }
@@ -96,9 +101,11 @@ fn HighlightPanel(visible: bool, onclose: EventHandler<()>) -> Element {
     let highlights = (state.highlights)();
 
     rsx! {
-        div { class: "fixed inset-0 z-40 cursor-default", onclick: move |_| onclose.call(()) }
         div {
-            class: "absolute top-full right-0 mt-2 w-80 z-50 bg-[#16181a] rounded-xl border border-white/10 shadow-2xl p-4 animate-in fade-in zoom-in-95 duration-200 origin-top-right",
+            class: "fixed inset-0 z-40 cursor-default",
+            onclick: move |_| onclose.call(()),
+        }
+        div { class: "absolute top-full right-0 mt-2 w-80 z-50 bg-[#16181a] rounded-xl border border-white/10 shadow-2xl p-4 animate-in fade-in zoom-in-95 duration-200 origin-top-right",
             div { class: "flex flex-col gap-3",
                 PanelHeader {
                     title: "Active Highlights",
@@ -116,7 +123,7 @@ fn HighlightPanel(visible: bool, onclose: EventHandler<()>) -> Element {
 
                 div { class: "flex flex-wrap gap-2 min-h-[40px] p-2 bg-[#0d0f10] rounded border border-[#2a2e33]",
                     if highlights.is_empty() {
-                         span { class: "text-xs text-gray-600 italic px-1", "No rules added" }
+                        span { class: "text-xs text-gray-600 italic px-1", "No rules added" }
                     }
                     for h in highlights {
                         HighlightTag {

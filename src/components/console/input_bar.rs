@@ -55,10 +55,10 @@ pub fn InputBar() -> Element {
     };
 
     rsx! {
-        div { class: "shrink-0 p-2 bg-background-dark z-20 relative overflow-x-auto",
+        div { class: "shrink-0 p-2 bg-background-dark z-20 relative",
             div { class: "flex gap-3 h-10 items-stretch min-w-[600px]",
                 // --- Left: Search / Filter (Adjusted) ---
-                div { class: "flex-[1.8] relative group flex items-center min-w-0",
+                div { class: "flex-[1.3] relative group flex items-center min-w-0",
                     span { class: "material-symbols-outlined absolute left-3 text-gray-600 text-[18px] group-focus-within:text-primary transition-colors",
                         "search"
                     }
