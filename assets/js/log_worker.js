@@ -4,6 +4,7 @@ import init, { LogProcessor } from "/wasm/serial_monitor.js";
 let processor;
 let isInitialized = false;
 let searchSessionId = 0;
+let isProcessing = false; // Re-entrancy guard
 
 // Throttling State
 let lastNotifyTime = 0;
@@ -11,10 +12,7 @@ let notifyTimer = null;
 const NOTIFY_INTERVAL = 50;
 
 function scheduleUpdate(count) {
-    if (typeof count !== 'number') {
-        // console.warn("[LogWorker] Invalid count received (not a number):", count);
-        return;
-    }
+    if (typeof count !== 'number') return;
     const now = Date.now();
     if (now - lastNotifyTime > NOTIFY_INTERVAL) {
         self.postMessage({ type: 'TOTAL_LINES', data: count });
@@ -63,15 +61,19 @@ async function start() {
 
 start();
 
-self.onmessage = async (e) => {
+// Use synchronous onmessage to ensure messages are processed strictly in order
+// and to avoid concurrent calls into the WASM instance if the event loop nests.
+self.onmessage = (e) => {
+    if (!isInitialized) return;
+    if (isProcessing) {
+        // This shouldn't happen in a worker unless something synchronous yields
+        console.warn("[LogWorker] Re-entrant message detected, queuing or dropping?", e.data.type);
+    }
+
+    isProcessing = true;
     const msg = e.data;
     const type = msg.type;
     const data = msg.data;
-
-    if (!isInitialized) {
-        console.warn("[LogWorker] Message received before initialization:", type);
-        return;
-    }
 
     try {
         switch (type) {
@@ -81,17 +83,17 @@ self.onmessage = async (e) => {
 
             case 'APPEND_CHUNK':
                 processor.append_chunk(data.chunk, data.is_hex);
-                const total = processor.get_line_count();
-                scheduleUpdate(total);
+                scheduleUpdate(processor.get_line_count());
                 break;
 
-            case 'REQUEST_WINDOW':
+            case 'REQUEST_WINDOW': {
                 const lines = processor.request_window(data.startLine, data.count);
                 self.postMessage({
                     type: 'LOG_WINDOW',
                     data: { startLine: data.startLine, lines }
                 });
                 break;
+            }
 
             case 'SEARCH_LOGS':
                 searchSessionId++;
@@ -103,8 +105,7 @@ self.onmessage = async (e) => {
                     data.invert
                 );
                 if (currentSession === searchSessionId) {
-                    const searchTotal = processor.get_line_count();
-                    self.postMessage({ type: 'TOTAL_LINES', data: searchTotal });
+                    scheduleUpdate(processor.get_line_count());
                 }
                 break;
 
@@ -126,5 +127,7 @@ self.onmessage = async (e) => {
         }
     } catch (err) {
         console.error(`[LogWorker] Runtime Error in ${type}:`, err);
+    } finally {
+        isProcessing = false;
     }
 };

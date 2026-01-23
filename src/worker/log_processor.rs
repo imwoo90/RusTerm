@@ -59,7 +59,9 @@ impl LogProcessor {
     }
 
     pub fn set_sync_handle(&mut self, handle: FileSystemSyncAccessHandle) {
+        web_sys::console::log_1(&"Rust: set_sync_handle called".into());
         self.sync_handle = Some(handle);
+        web_sys::console::log_1(&"Rust: set_sync_handle finished".into());
     }
 
     pub fn get_line_count(&self) -> u32 {
@@ -112,7 +114,7 @@ impl LogProcessor {
             return Ok(self.get_current_total() as u32);
         }
 
-        let now = chrono::Local::now();
+        let now = chrono::Utc::now();
         let time_str = format!(
             "[{:02}:{:02}:{:02}.{:03}] ",
             now.hour(),
