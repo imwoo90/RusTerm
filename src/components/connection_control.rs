@@ -198,7 +198,7 @@ pub fn ConnectionControl() -> Element {
                                     if let Some(w) = state.log_worker.peek().as_ref() {
                                         let _ = w
                                             .post_message(
-                                                &serde_wasm_bindgen::to_value(&WorkerMsg::Clear).unwrap(),
+                                                &serde_wasm_bindgen::to_value(&WorkerMsg::NewSession).unwrap(),
                                             );
                                     }
                                     state.port.set(Some(SerialPortWrapper(port.clone())));

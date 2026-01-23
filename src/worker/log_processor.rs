@@ -4,33 +4,14 @@ use regex::Regex;
 use wasm_bindgen::prelude::*;
 use wasm_streams::ReadableStream;
 use web_sys::{FileSystemSyncAccessHandle, TextDecoder, TextEncoder};
-
-#[wasm_bindgen]
-pub struct LogProcessor {
-    sync_handle: Option<FileSystemSyncAccessHandle>,
-    line_offsets: Vec<u64>,
-    line_count: usize,
-
-    // Filter state
-    is_filtering: bool,
-    filtered_lines: Vec<LineRange>,
-    active_filter: Option<ActiveFilter>,
-
-    // Decoding State
-    leftover_chunk: String,
-    line_ending_mode: LineEnding,
-
-    // Encoding helpers
-    encoder: TextEncoder,
-    decoder: TextDecoder,
-}
-
-#[derive(Clone, Copy)]
+/// Represents a byte range within the log file
+#[derive(Clone, Copy, Debug, PartialEq)]
 struct LineRange {
     start: u64,
     end: u64,
 }
 
+/// Active filtering configuration
 #[derive(Clone)]
 struct ActiveFilter {
     query: String,
@@ -40,64 +21,55 @@ struct ActiveFilter {
     invert: bool,
 }
 
-#[wasm_bindgen]
-impl LogProcessor {
-    #[wasm_bindgen(constructor)]
-    pub fn new() -> Result<LogProcessor, JsValue> {
-        Ok(LogProcessor {
-            sync_handle: None,
+impl ActiveFilter {
+    fn matches(&self, text: &str) -> bool {
+        let mut matched = if let Some(re) = &self.regex {
+            re.is_match(text)
+        } else if self.match_case {
+            text.contains(&self.query)
+        } else {
+            text.to_lowercase().contains(&self.lower_query)
+        };
+
+        if self.invert {
+            matched = !matched;
+        }
+        matched
+    }
+}
+
+/// Core processing logic separated from WASM/IO for testability
+struct CoreProcessor {
+    line_offsets: Vec<u64>,
+    line_count: usize,
+    filtered_lines: Vec<LineRange>,
+    is_filtering: bool,
+    active_filter: Option<ActiveFilter>,
+    leftover_chunk: String,
+}
+
+impl CoreProcessor {
+    fn new() -> Self {
+        Self {
             line_offsets: vec![0],
             line_count: 0,
-            is_filtering: false,
             filtered_lines: Vec::new(),
+            is_filtering: false,
             active_filter: None,
             leftover_chunk: String::new(),
-            line_ending_mode: LineEnding::NL,
-            encoder: TextEncoder::new()?,
-            decoder: TextDecoder::new()?,
-        })
+        }
     }
 
-    pub fn set_sync_handle(&mut self, handle: FileSystemSyncAccessHandle) {
-        web_sys::console::log_1(&"Rust: set_sync_handle called".into());
-        self.sync_handle = Some(handle);
-        web_sys::console::log_1(&"Rust: set_sync_handle finished".into());
-    }
+    /// Processes decoded text and prepares formatted lines with timestamps.
+    /// Returns (Formatted Buffer String, Tuple of (LineOffsetsToAdd, FilteredLinesToAdd))
+    fn prepare_batch(
+        &mut self,
+        chunk_text: String,
+        line_ending_mode: LineEnding,
+    ) -> (String, Vec<u64>, Vec<LineRange>) {
+        let full_text = format!("{}{}", self.leftover_chunk, chunk_text);
 
-    pub fn get_line_count(&self) -> u32 {
-        self.get_current_total() as u32
-    }
-
-    pub fn set_line_ending(&mut self, mode: &str) {
-        self.line_ending_mode = match mode {
-            "None" => LineEnding::None,
-            "NL" => LineEnding::NL,
-            "CR" => LineEnding::CR,
-            "NLCR" => LineEnding::NLCR,
-            _ => LineEnding::NL,
-        };
-    }
-
-    pub fn append_chunk(&mut self, chunk: &[u8], is_hex: bool) -> Result<u32, JsValue> {
-        let handle = self.sync_handle.as_ref().ok_or("No sync handle")?;
-
-        let str_part = if is_hex {
-            let hex = chunk
-                .iter()
-                .map(|b| format!("{:02X}", b))
-                .collect::<Vec<_>>()
-                .join(" ");
-            format!("{}\n", hex)
-        } else {
-            let opts = web_sys::TextDecodeOptions::new();
-            opts.set_stream(true);
-            self.decoder
-                .decode_with_u8_array_and_options(chunk, &opts)?
-        };
-
-        let full_text = format!("{}{}", self.leftover_chunk, str_part);
-
-        let mut lines: Vec<&str> = match self.line_ending_mode {
+        let mut lines: Vec<&str> = match line_ending_mode {
             LineEnding::None => full_text.split('\n').collect(),
             LineEnding::CR => full_text.split('\r').collect(),
             LineEnding::NLCR => full_text.split("\r\n").collect(),
@@ -111,11 +83,11 @@ impl LogProcessor {
         }
 
         if lines.is_empty() {
-            return Ok(self.get_current_total() as u32);
+            return (String::new(), Vec::new(), Vec::new());
         }
 
         let now = chrono::Utc::now();
-        let time_str = format!(
+        let time_prefix = format!(
             "[{:02}:{:02}:{:02}.{:03}] ",
             now.hour(),
             now.minute(),
@@ -124,87 +96,177 @@ impl LogProcessor {
         );
 
         let mut batch_buffer = String::new();
-        for line in &lines {
-            let mut clean_line = *line;
-            if self.line_ending_mode == LineEnding::NL && clean_line.ends_with('\r') {
+        let mut new_offsets = Vec::new();
+        let mut new_filtered = Vec::new();
+
+        // This pos is not accurate here because it depends on file size,
+        // will be adjusted by LogProcessor.
+        let mut relative_pos = 0u64;
+
+        for line in lines {
+            let mut clean_line = line;
+            if line_ending_mode == LineEnding::NL && clean_line.ends_with('\r') {
                 clean_line = &clean_line[..clean_line.len() - 1];
             }
-            if self.line_ending_mode == LineEnding::CR && clean_line.starts_with('\n') {
+            if line_ending_mode == LineEnding::CR && clean_line.starts_with('\n') {
                 clean_line = &clean_line[1..];
             }
-            batch_buffer.push_str(&time_str);
-            batch_buffer.push_str(clean_line);
-            batch_buffer.push('\n');
-        }
 
-        let write_buffer = self.encoder.encode_with_input(&batch_buffer);
-        let pos = handle.get_size()? as u64;
-        let opts = web_sys::FileSystemReadWriteOptions::new();
-        opts.set_at(pos as f64);
-        handle.write_with_u8_array_and_options(write_buffer.as_ref(), &opts)?;
+            let final_line = format!("{}{}\n", time_prefix, clean_line);
+            let bytes_len = final_line.len() as u64;
 
-        // Update offsets
-        let current_offset = pos;
-        let buf: &[u8] = write_buffer.as_ref();
-        for i in 0..buf.len() {
-            if buf[i] == 10 {
-                // \n
-                let line_end = current_offset + i as u64 + 1;
-                self.line_offsets.push(line_end);
-                self.line_count += 1;
-            }
-        }
-
-        // Realtime filtering
-        if self.is_filtering {
-            if let Some(filter) = &self.active_filter {
-                let mut relative_byte_offset = 0;
-                for line in &lines {
-                    let mut clean_line = *line;
-                    if self.line_ending_mode == LineEnding::NL && clean_line.ends_with('\r') {
-                        clean_line = &clean_line[..clean_line.len() - 1];
-                    }
-                    if self.line_ending_mode == LineEnding::CR && clean_line.starts_with('\n') {
-                        clean_line = &clean_line[1..];
-                    }
-                    let final_line_str = format!("{}{}\n", time_str, clean_line);
-                    let line_bytes = self.encoder.encode_with_input(&final_line_str);
-                    let line_byte_len = line_bytes.len() as u64;
-
-                    let start_pos = pos + relative_byte_offset;
-                    let end_pos = start_pos + line_byte_len;
-
-                    let mut matched;
-                    if let Some(re) = &filter.regex {
-                        matched = re.is_match(&final_line_str);
-                    } else {
-                        matched = if filter.match_case {
-                            final_line_str.contains(&filter.query)
-                        } else {
-                            final_line_str.to_lowercase().contains(&filter.lower_query)
-                        };
-                    }
-                    if filter.invert {
-                        matched = !matched;
-                    }
-
-                    if matched {
-                        self.filtered_lines.push(LineRange {
-                            start: start_pos,
-                            end: end_pos,
+            if self.is_filtering {
+                if let Some(filter) = &self.active_filter {
+                    if filter.matches(&final_line) {
+                        new_filtered.push(LineRange {
+                            start: relative_pos,
+                            end: relative_pos + bytes_len,
                         });
                     }
-                    relative_byte_offset += line_byte_len;
                 }
             }
+
+            batch_buffer.push_str(&final_line);
+            relative_pos += bytes_len;
+            new_offsets.push(relative_pos);
         }
 
-        Ok(self.get_current_total() as u32)
+        (batch_buffer, new_offsets, new_filtered)
+    }
+
+    fn get_total_lines(&self) -> usize {
+        if self.is_filtering {
+            self.filtered_lines.len()
+        } else {
+            self.line_count
+        }
+    }
+}
+
+#[wasm_bindgen]
+pub struct LogProcessor {
+    sync_handle: Option<FileSystemSyncAccessHandle>,
+    core: CoreProcessor,
+    encoder: TextEncoder,
+    decoder: TextDecoder,
+    line_ending_mode: LineEnding,
+}
+
+#[wasm_bindgen]
+impl LogProcessor {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Result<LogProcessor, JsValue> {
+        Ok(LogProcessor {
+            sync_handle: None,
+            core: CoreProcessor::new(),
+            encoder: TextEncoder::new()?,
+            decoder: TextDecoder::new()?,
+            line_ending_mode: LineEnding::NL,
+        })
+    }
+
+    pub fn get_line_count(&self) -> u32 {
+        self.core.get_total_lines() as u32
+    }
+
+    pub fn set_line_ending(&mut self, mode: &str) {
+        self.line_ending_mode = match mode {
+            "None" => LineEnding::None,
+            "NL" => LineEnding::NL,
+            "CR" => LineEnding::CR,
+            "NLCR" => LineEnding::NLCR,
+            _ => LineEnding::NL,
+        };
+    }
+
+    pub fn set_sync_handle(&mut self, handle: FileSystemSyncAccessHandle) -> Result<(), JsValue> {
+        self.sync_handle = Some(handle);
+
+        let handle = self.sync_handle.as_ref().unwrap();
+        let file_size = handle.get_size()? as u64;
+
+        if file_size > 0 {
+            // Rebuild indices from existing file
+            self.core.line_offsets.clear();
+            self.core.line_offsets.push(0);
+            self.core.line_count = 0;
+
+            let chunk_size = 64 * 1024;
+            let mut offset = 0;
+            let mut buf = vec![0u8; chunk_size];
+
+            while offset < file_size {
+                let read_len = (file_size - offset).min(chunk_size as u64) as usize;
+                let slice = &mut buf[0..read_len];
+                let opts = web_sys::FileSystemReadWriteOptions::new();
+                opts.set_at(offset as f64);
+
+                handle.read_with_u8_array_and_options(slice, &opts)?;
+
+                for (i, byte) in slice.iter().enumerate() {
+                    if *byte == 10 {
+                        // \n
+                        let global_pos = offset + i as u64 + 1;
+                        self.core.line_offsets.push(global_pos);
+                        self.core.line_count += 1;
+                    }
+                }
+                offset += read_len as u64;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn append_chunk(&mut self, chunk: &[u8], is_hex: bool) -> Result<u32, JsValue> {
+        let handle = self.sync_handle.as_ref().ok_or("No sync handle")?;
+
+        let decoded_text = if is_hex {
+            let hex = chunk
+                .iter()
+                .map(|b| format!("{:02X}", b))
+                .collect::<Vec<_>>()
+                .join(" ");
+            format!("{}\n", hex)
+        } else {
+            let opts = web_sys::TextDecodeOptions::new();
+            opts.set_stream(true);
+            self.decoder
+                .decode_with_u8_array_and_options(chunk, &opts)?
+        };
+
+        let (batch_str, new_offsets, new_filtered) =
+            self.core.prepare_batch(decoded_text, self.line_ending_mode);
+
+        if batch_str.is_empty() {
+            return Ok(self.core.get_total_lines() as u32);
+        }
+
+        let write_buffer = self.encoder.encode_with_input(&batch_str);
+        let start_pos = handle.get_size()? as u64;
+
+        let opts = web_sys::FileSystemReadWriteOptions::new();
+        opts.set_at(start_pos as f64);
+        handle.write_with_u8_array_and_options(write_buffer.as_ref(), &opts)?;
+
+        // Adjust and store offsets
+        for off in new_offsets {
+            self.core.line_offsets.push(start_pos + off);
+            self.core.line_count += 1;
+        }
+
+        // Adjust and store filtered lines
+        for mut range in new_filtered {
+            range.start += start_pos;
+            range.end += start_pos;
+            self.core.filtered_lines.push(range);
+        }
+
+        Ok(self.core.get_total_lines() as u32)
     }
 
     pub fn request_window(&self, start_line: usize, count: usize) -> Result<JsValue, JsValue> {
         let handle = self.sync_handle.as_ref().ok_or("No sync handle")?;
-        let total = self.get_current_total();
+        let total = self.core.get_total_lines();
         let start = start_line.min(total);
         let end = (start + count).min(total);
         let effective_count = end - start;
@@ -214,9 +276,9 @@ impl LogProcessor {
         }
 
         let mut lines = Vec::with_capacity(effective_count);
-        if self.is_filtering {
+        if self.core.is_filtering {
             for i in start..end {
-                let meta = &self.filtered_lines[i];
+                let meta = &self.core.filtered_lines[i];
                 let size = (meta.end - meta.start) as usize;
                 let mut buf = vec![0u8; size];
                 let opts = web_sys::FileSystemReadWriteOptions::new();
@@ -230,8 +292,8 @@ impl LogProcessor {
                 });
             }
         } else {
-            let start_offset = self.line_offsets[start];
-            let end_offset = self.line_offsets[end];
+            let start_offset = self.core.line_offsets[start];
+            let end_offset = self.core.line_offsets[end];
             let size = (end_offset - start_offset) as usize;
             let mut read_buffer = vec![0u8; size];
             let opts = web_sys::FileSystemReadWriteOptions::new();
@@ -259,10 +321,10 @@ impl LogProcessor {
         invert: bool,
     ) -> Result<u32, JsValue> {
         if query.trim().is_empty() {
-            self.is_filtering = false;
-            self.active_filter = None;
-            self.filtered_lines.clear();
-            return Ok(self.line_count as u32);
+            self.core.is_filtering = false;
+            self.core.active_filter = None;
+            self.core.filtered_lines.clear();
+            return Ok(self.core.line_count as u32);
         }
 
         let regex = if use_regex {
@@ -276,7 +338,7 @@ impl LogProcessor {
             None
         };
 
-        self.active_filter = Some(ActiveFilter {
+        self.core.active_filter = Some(ActiveFilter {
             lower_query: if match_case {
                 query.clone()
             } else {
@@ -288,78 +350,53 @@ impl LogProcessor {
             invert,
         });
 
-        self.is_filtering = true;
-        self.filtered_lines.clear();
+        self.core.is_filtering = true;
+        self.core.filtered_lines.clear();
 
-        // Perform full search
+        // Perform full scan from file
         let handle = self.sync_handle.as_ref().ok_or("No sync handle")?;
-        let chunk_size = 5000;
-        let mut i = 0;
-        while i < self.line_count {
-            let batch_end = (i + chunk_size).min(self.line_count);
-            let batch_start_offset = self.line_offsets[i];
-            let batch_end_offset = self.line_offsets[batch_end];
-            let size = (batch_end_offset - batch_start_offset) as usize;
+        let batch_size_lines = 5000;
+        let mut idx = 0;
+        while idx < self.core.line_count {
+            let batch_end = (idx + batch_size_lines).min(self.core.line_count);
+            let start_off = self.core.line_offsets[idx];
+            let end_off = self.core.line_offsets[batch_end];
+            let size = (end_off - start_off) as usize;
 
             let mut buf = vec![0u8; size];
             let opts = web_sys::FileSystemReadWriteOptions::new();
-            opts.set_at(batch_start_offset as f64);
+            opts.set_at(start_off as f64);
             handle.read_with_u8_array_and_options(&mut buf, &opts)?;
-            let batch_text = self.decoder.decode_with_u8_array(&buf)?;
-            let split = if batch_text.ends_with('\n') {
-                &batch_text[..batch_text.len() - 1]
+
+            let text = self.decoder.decode_with_u8_array(&buf)?;
+            let clean_text = if text.ends_with('\n') {
+                &text[..text.len() - 1]
             } else {
-                &batch_text
+                &text
             };
-            let batch_lines: Vec<&str> = split.split('\n').collect();
 
-            let filter = self.active_filter.as_ref().unwrap();
-            for (j, line) in batch_lines.iter().enumerate() {
-                let mut matched;
-                if let Some(re) = &filter.regex {
-                    matched = re.is_match(line);
-                } else {
-                    matched = if filter.match_case {
-                        line.contains(&filter.query)
-                    } else {
-                        line.to_lowercase().contains(&filter.lower_query)
-                    };
-                }
-                if filter.invert {
-                    matched = !matched;
-                }
-
-                if matched {
-                    let glob_idx = i + j;
-                    self.filtered_lines.push(LineRange {
-                        start: self.line_offsets[glob_idx],
-                        end: self.line_offsets[glob_idx + 1],
+            let filter = self.core.active_filter.as_ref().unwrap();
+            for (j, line) in clean_text.split('\n').enumerate() {
+                if filter.matches(line) {
+                    let global_line_idx = idx + j;
+                    self.core.filtered_lines.push(LineRange {
+                        start: self.core.line_offsets[global_line_idx],
+                        end: self.core.line_offsets[global_line_idx + 1],
                     });
                 }
             }
-            i = batch_end;
+            idx = batch_end;
         }
 
-        Ok(self.filtered_lines.len() as u32)
+        Ok(self.core.filtered_lines.len() as u32)
     }
 
     pub fn clear(&mut self) -> Result<(), JsValue> {
         let handle = self.sync_handle.as_ref().ok_or("No sync handle")?;
         handle.truncate_with_f64(0.0)?;
         handle.flush()?;
-        self.line_count = 0;
-        self.line_offsets = vec![0];
-        self.is_filtering = false;
-        self.active_filter = None;
-        self.filtered_lines.clear();
-        self.leftover_chunk.clear();
+        self.core = CoreProcessor::new();
         Ok(())
-    }
-
-    pub fn get_sync_handle(&self) -> Result<FileSystemSyncAccessHandle, JsValue> {
-        self.sync_handle
-            .clone()
-            .ok_or_else(|| JsValue::from_str("No sync handle"))
     }
 
     pub fn export_logs(&self, include_timestamps: bool) -> Result<js_sys::Object, JsValue> {
@@ -369,7 +406,6 @@ impl LogProcessor {
         let encoder = self.encoder.clone();
         let line_ending = self.line_ending_mode;
 
-        // Create a Rust stream that reads the file in chunks
         let stream = futures_util::stream::unfold(0u64, move |offset| {
             let handle = handle.clone();
             let decoder = decoder.clone();
@@ -380,7 +416,7 @@ impl LogProcessor {
                     return None;
                 }
 
-                let chunk_size = 64 * 1024; // 64KB
+                let chunk_size = 64 * 1024;
                 let read_len = (file_size - offset).min(chunk_size as u64) as usize;
                 let mut buf = vec![0u8; read_len];
 
@@ -395,15 +431,13 @@ impl LogProcessor {
                 }
 
                 if include_timestamps {
-                    // Just return the raw chunk
                     let js_buf = js_sys::Uint8Array::from(&buf[..]);
                     Some((Ok(JsValue::from(js_buf)), offset + read_len as u64))
                 } else {
-                    // Strip timestamps [HH:MM:SS.mmm] (15 chars)
                     let text = decoder.decode_with_u8_array(&buf).unwrap_or_default();
                     let separator = match line_ending {
-                        crate::state::LineEnding::CR => "\r",
-                        crate::state::LineEnding::NLCR => "\r\n",
+                        LineEnding::CR => "\r",
+                        LineEnding::NLCR => "\r\n",
                         _ => "\n",
                     };
 
@@ -413,28 +447,81 @@ impl LogProcessor {
                             result.push_str(&line[15..]);
                             result.push_str(separator);
                         } else if !line.is_empty() {
-                            // If it's too short but not empty, just keep it (unlikely with timestamps)
                             result.push_str(line);
                             result.push_str(separator);
                         }
                     }
-
                     let encoded = encoder.encode_with_input(&result);
                     Some((Ok(JsValue::from(encoded)), offset + read_len as u64))
                 }
             }
         });
 
-        // Convert Rust Stream to JS ReadableStream
         let readable = ReadableStream::from_stream(stream);
         Ok(readable.into_raw().into())
     }
+}
 
-    fn get_current_total(&self) -> usize {
-        if self.is_filtering {
-            self.filtered_lines.len()
-        } else {
-            self.line_count
-        }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_active_filter_matches() {
+        let filter = ActiveFilter {
+            query: "ERROR".into(),
+            lower_query: "error".into(),
+            match_case: true,
+            regex: None,
+            invert: false,
+        };
+        assert!(filter.matches("System ERROR occurred"));
+        assert!(!filter.matches("system error occurred"));
+
+        let filter_nocase = ActiveFilter {
+            query: "ERROR".into(),
+            lower_query: "error".into(),
+            match_case: false,
+            regex: None,
+            invert: false,
+        };
+        assert!(filter_nocase.matches("system error occurred"));
+    }
+
+    #[test]
+    fn test_prepare_batch_splitting() {
+        let mut core = CoreProcessor::new();
+        let (batch, offsets, _) =
+            core.prepare_batch("Hello\nWorld\nIncompl".into(), LineEnding::NL);
+
+        // Lines should be timestamped.
+        // We can't predict exact timestamp but check format.
+        let lines: Vec<&str> = batch.lines().collect();
+        assert_eq!(lines.len(), 2);
+        assert!(lines[0].contains("Hello"));
+        assert!(lines[1].contains("World"));
+        assert_eq!(core.leftover_chunk, "Incompl");
+        assert_eq!(offsets.len(), 2);
+    }
+
+    #[test]
+    fn test_filter_integration() {
+        let mut core = CoreProcessor::new();
+        core.is_filtering = true;
+        core.active_filter = Some(ActiveFilter {
+            query: "Critical".into(),
+            lower_query: "critical".into(),
+            match_case: true,
+            regex: None,
+            invert: false,
+        });
+
+        let (batch, _, filtered) =
+            core.prepare_batch("Info: log\nCritical: error\n".into(), LineEnding::NL);
+
+        assert_eq!(filtered.len(), 1);
+        // The second line matches
+        let lines: Vec<&str> = batch.lines().collect();
+        assert!(lines[1].contains("Critical"));
     }
 }

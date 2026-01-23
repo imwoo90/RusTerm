@@ -39,6 +39,8 @@ pub enum WorkerMsg {
     },
     #[serde(rename = "SET_LINE_ENDING")]
     SetLineEnding(String),
+    #[serde(rename = "NEW_SESSION")]
+    NewSession,
 }
 
 pub const LINE_HEIGHT: f64 = 20.0;
