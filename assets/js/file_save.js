@@ -1,3 +1,4 @@
+// File saving utility using File System Access API
 export async function save_stream_to_disk(stream) {
     try {
         // Check if File System Access API is supported

@@ -114,7 +114,6 @@ pub fn process_log_segments(
 
                 // However, splitting logic relies on text.
                 if seg_text.contains(&h.text) {
-                    let parts: Vec<&str> = seg_text.split(&h.text).collect();
                     // Recover delimiters
 
                     // Simple split_once logic was used before:
