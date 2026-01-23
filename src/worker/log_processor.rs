@@ -266,7 +266,12 @@ impl LogProcessor {
         }
 
         let regex = if use_regex {
-            Some(Regex::new(&query).map_err(|e| format!("Invalid regex: {}", e))?)
+            Some(
+                regex::RegexBuilder::new(&query)
+                    .case_insensitive(!match_case)
+                    .build()
+                    .map_err(|e| format!("Invalid regex: {}", e))?,
+            )
         } else {
             None
         };
