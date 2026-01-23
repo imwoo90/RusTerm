@@ -22,6 +22,14 @@ pub fn FilterBar() -> Element {
                     active: (state.show_timestamps)(),
                     onclick: move |_| { let v = (state.show_timestamps)(); state.show_timestamps.set(!v); },
                 }
+
+                // Hex View
+                ToggleSwitch {
+                    label: "HEX VIEW",
+                    active: (state.is_hex_view)(),
+                    onclick: move |_| state.is_hex_view.set(!(state.is_hex_view)()),
+                }
+
                 div { class: "w-px h-4 bg-[#2a2e33]" }
 
                  // RX Line Ending
@@ -34,11 +42,13 @@ pub fn FilterBar() -> Element {
                 }
                 div { class: "w-px h-4 bg-[#2a2e33]" }
 
-                // Hex View
-                ToggleSwitch {
-                    label: "HEX VIEW",
-                    active: (state.is_hex_view)(),
-                    onclick: move |_| state.is_hex_view.set(!(state.is_hex_view)()),
+                 // TX Line Ending (Moved from InputBar)
+                 LineEndSelector {
+                    label: "TX APPEND",
+                    selected: (state.line_ending)(),
+                    onselect: move |val| state.line_ending.set(val),
+                    active_class: "bg-primary/20 text-primary border-primary/20",
+                    is_rx: false,
                 }
             }
 

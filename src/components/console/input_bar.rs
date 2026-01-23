@@ -1,4 +1,4 @@
-use crate::components::common::{FilterOptionButton, LineEndSelector};
+use crate::components::common::FilterOptionButton;
 use crate::serial;
 use crate::state::{AppState, LineEnding};
 use crate::utils::{format_hex_input, parse_hex_string, CommandHistory};
@@ -11,8 +11,6 @@ pub fn InputBar() -> Element {
     let mut history = use_signal(|| CommandHistory::load());
     let mut history_index = use_signal(|| None::<usize>);
     let mut is_hex_input = use_signal(|| false);
-
-    let tx_ending = (state.line_ending)();
 
     let on_send = move || {
         spawn(async move {
@@ -57,12 +55,11 @@ pub fn InputBar() -> Element {
     };
 
     rsx! {
-        div { class: "shrink-0 p-2 bg-background-dark border-t border-[#2a2e33] z-20 relative",
+        div { class: "shrink-0 p-2 bg-background-dark z-20 relative",
             div { class: "flex gap-3 h-10 items-stretch",
-
-                // --- Left: Search / Filter ---
-                div { class: "flex-[0.4] relative group flex items-center min-w-[200px]",
-                     span { class: "material-symbols-outlined absolute left-3 text-gray-600 text-[18px] group-focus-within:text-primary transition-colors",
+                // --- Left: Search / Filter (Adjusted) ---
+                div { class: "flex-[1.8] relative group flex items-center min-w-0",
+                    span { class: "material-symbols-outlined absolute left-3 text-gray-600 text-[18px] group-focus-within:text-primary transition-colors",
                         "search"
                     }
                     input {
@@ -72,19 +69,33 @@ pub fn InputBar() -> Element {
                         value: "{state.filter_query}",
                         oninput: move |evt| state.filter_query.set(evt.value()),
                     }
-                    // Filter Options inside input
                     div { class: "absolute right-1 flex items-center gap-0.5",
                         FilterOptionButton {
-                            title: "Match Case", label: "Aa", active: (state.match_case)(),
-                            onclick: move |_| { let v = (state.match_case)(); state.match_case.set(!v); }
+                            title: "Match Case",
+                            label: "Aa",
+                            active: (state.match_case)(),
+                            onclick: move |_| {
+                                let v = (state.match_case)();
+                                state.match_case.set(!v);
+                            },
                         }
                         FilterOptionButton {
-                            title: "Regex", label: ".*", active: (state.use_regex)(),
-                            onclick: move |_| { let v = (state.use_regex)(); state.use_regex.set(!v); }
+                            title: "Regex",
+                            label: ".*",
+                            active: (state.use_regex)(),
+                            onclick: move |_| {
+                                let v = (state.use_regex)();
+                                state.use_regex.set(!v);
+                            },
                         }
                         FilterOptionButton {
-                            title: "Invert", label: "!", active: (state.invert_filter)(),
-                            onclick: move |_| { let v = (state.invert_filter)(); state.invert_filter.set(!v); }
+                            title: "Invert",
+                            label: "!",
+                            active: (state.invert_filter)(),
+                            onclick: move |_| {
+                                let v = (state.invert_filter)();
+                                state.invert_filter.set(!v);
+                            },
                         }
                     }
                 }
@@ -92,8 +103,8 @@ pub fn InputBar() -> Element {
                 // --- Divider ---
                 div { class: "w-px bg-[#2a2e33] my-1" }
 
-                // --- Right: TX Input ---
-                div { class: "flex-1 relative flex gap-2",
+                // --- Right: TX Input (50%) ---
+                div { class: "flex-1 relative flex gap-2 min-w-0",
                     div { class: "relative flex-1 group",
                         input {
                             class: "w-full h-full bg-[#0d0f10] text-sm text-white placeholder-gray-600 px-4 pr-16 rounded-lg border border-[#2a2e33] focus:border-primary/50 focus:shadow-glow outline-none shadow-inset-input transition-all font-mono",
@@ -101,8 +112,11 @@ pub fn InputBar() -> Element {
                             "type": "text",
                             value: "{input_value}",
                             oninput: move |evt| {
-                                if is_hex_input() { input_value.set(format_hex_input(&evt.value())); }
-                                else { input_value.set(evt.value()); }
+                                if is_hex_input() {
+                                    input_value.set(format_hex_input(&evt.value()));
+                                } else {
+                                    input_value.set(evt.value());
+                                }
                             },
                             onkeydown: move |evt| {
                                 match evt.key() {
@@ -110,29 +124,35 @@ pub fn InputBar() -> Element {
                                     Key::ArrowUp => {
                                         let h = history.read();
                                         if h.len() > 0 {
-                                            let idx = history_index().map(|i| if i > 0 { i - 1 } else { 0 }).unwrap_or(h.len() - 1);
+                                            let idx = history_index()
+                                                .map(|i| if i > 0 { i - 1 } else { 0 })
+                                                .unwrap_or(h.len() - 1);
                                             history_index.set(Some(idx));
-                                            if let Some(c) = h.get_at(idx) { input_value.set(c.clone()); }
-                                        }
-                                        evt.prevent_default();
-                                    },
-                                    Key::ArrowDown => {
-                                        if let Some(i) = history_index() {
-                                            let h = history.read();
-                                            if i + 1 >= h.len() { history_index.set(None); input_value.set(String::new()); }
-                                            else {
-                                                history_index.set(Some(i + 1));
-                                                if let Some(c) = h.get_at(i + 1) { input_value.set(c.clone()); }
+                                            if let Some(c) = h.get_at(idx) {
+                                                input_value.set(c.clone());
                                             }
                                         }
                                         evt.prevent_default();
-                                    },
+                                    }
+                                    Key::ArrowDown => {
+                                        if let Some(i) = history_index() {
+                                            let h = history.read();
+                                            if i + 1 >= h.len() {
+                                                history_index.set(None);
+                                                input_value.set(String::new());
+                                            } else {
+                                                history_index.set(Some(i + 1));
+                                                if let Some(c) = h.get_at(i + 1) {
+                                                    input_value.set(c.clone());
+                                                }
+                                            }
+                                        }
+                                        evt.prevent_default();
+                                    }
                                     _ => {}
                                 }
-                            }
+                            },
                         }
-
-                        // Hex Toggle inside TX Input
                         button {
                             class: "absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded text-[10px] font-bold border transition-colors",
                             class: if is_hex_input() { "bg-primary/20 text-primary border-primary/30" } else { "text-gray-500 border-transparent hover:text-gray-300" },
@@ -141,20 +161,11 @@ pub fn InputBar() -> Element {
                         }
                     }
 
-                    // TX Settings & Send
-                    div { class: "flex gap-2 items-center",
-                         LineEndSelector {
-                            label: "",
-                            selected: tx_ending,
-                            onselect: move |val| state.line_ending.set(val),
-                            active_class: "bg-primary/20 text-primary border-primary/20",
-                            is_rx: false,
-                        }
-
-                        button {
-                            class: "h-full aspect-square bg-primary text-surface rounded-lg flex items-center justify-center hover:bg-white transition-all hover:shadow-[0_0_15px_rgba(255,255,255,0.4)] active:scale-95 group",
-                            onclick: move |_| on_send(),
-                            span { class: "material-symbols-outlined text-[20px] group-hover:rotate-45 transition-transform duration-300", "send" }
+                    button {
+                        class: "h-full aspect-square bg-primary text-surface rounded-lg flex items-center justify-center hover:bg-white transition-all hover:shadow-[0_0_15px_rgba(255,255,255,0.4)] active:scale-95 group",
+                        onclick: move |_| on_send(),
+                        span { class: "material-symbols-outlined text-[20px] group-hover:rotate-45 transition-transform duration-300",
+                            "send"
                         }
                     }
                 }
