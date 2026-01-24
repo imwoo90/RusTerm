@@ -23,23 +23,20 @@ pub fn start_worker() {
 
         let scope = js_sys::global().unchecked_into::<web_sys::DedicatedWorkerGlobalScope>();
         let root = get_opfs_root().await.expect("Failed to get OPFS root");
-        let (proc_ptr, file_ptr) = (
+        let (p_ptr, f_ptr) = (
             std::rc::Rc::new(std::cell::RefCell::new(proc)),
             std::rc::Rc::new(std::cell::RefCell::new(filename)),
         );
 
         let onmessage = {
-            let (p, f, r, s) = (
-                proc_ptr.clone(),
-                file_ptr.clone(),
-                root.clone(),
-                scope.clone(),
-            );
+            let (p, f, r, s) = (p_ptr.clone(), f_ptr.clone(), root.clone(), scope.clone());
             Closure::wrap(Box::new(move |event: web_sys::MessageEvent| {
                 let data = event.data();
                 if let Some(msg_str) = data.as_string() {
                     if let Ok(msg) = serde_json::from_str::<WorkerMsg>(&msg_str) {
-                        dispatch_msg(msg, &p, &f, &r, &s);
+                        if let Err(e) = dispatch_msg(msg, &p, &f, &r, &s) {
+                            send_error(&s, e);
+                        }
                     }
                 } else if data.is_object() {
                     let cmd = js_sys::Reflect::get(&data, &"cmd".into())
@@ -52,7 +49,9 @@ pub fn start_worker() {
                                 .ok()
                                 .and_then(|v| v.as_bool())
                                 .unwrap_or(false);
-                            let _ = p.borrow_mut().append_chunk(&chunk, is_hex);
+                            if let Err(e) = p.borrow_mut().append_chunk(&chunk, is_hex) {
+                                send_error(&s, e);
+                            }
                         }
                     }
                 }
@@ -64,7 +63,7 @@ pub fn start_worker() {
         let mut last_count = 0;
         loop {
             gloo_timers::future::TimeoutFuture::new(50).await;
-            let current = proc_ptr.borrow().get_line_count();
+            let current = p_ptr.borrow().get_line_count();
             if current != last_count {
                 last_count = current;
                 let _ = scope.post_message(
@@ -83,7 +82,7 @@ fn dispatch_msg(
     f: &std::rc::Rc<std::cell::RefCell<Option<String>>>,
     r: &web_sys::FileSystemDirectoryHandle,
     s: &web_sys::DedicatedWorkerGlobalScope,
-) {
+) -> Result<(), JsValue> {
     let mut proc = p.borrow_mut();
     match msg {
         WorkerMsg::NewSession => {
@@ -102,21 +101,23 @@ fn dispatch_msg(
             });
         }
         WorkerMsg::AppendChunk { chunk, is_hex } => {
-            let _ = proc.append_chunk(&chunk, is_hex);
+            proc.append_chunk(&chunk, is_hex)?;
+        }
+        WorkerMsg::AppendLog(text) => {
+            proc.append_log(text)?;
         }
         WorkerMsg::RequestWindow { start_line, count } => {
-            if let Ok(val) = proc.request_window(start_line, count) {
-                if let Ok(lines) = serde_wasm_bindgen::from_value::<Vec<String>>(val) {
-                    let _ = s.post_message(
-                        &serde_json::to_string(&WorkerMsg::LogWindow { start_line, lines })
-                            .unwrap()
-                            .into(),
-                    );
-                }
-            }
+            let val = proc.request_window(start_line, count)?;
+            let lines = serde_wasm_bindgen::from_value::<Vec<String>>(val)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+            let _ = s.post_message(
+                &serde_json::to_string(&WorkerMsg::LogWindow { start_line, lines })
+                    .unwrap()
+                    .into(),
+            );
         }
         WorkerMsg::Clear => {
-            let _ = proc.clear();
+            proc.clear()?;
             let _ = s.post_message(
                 &serde_json::to_string(&WorkerMsg::TotalLines(0))
                     .unwrap()
@@ -130,39 +131,43 @@ fn dispatch_msg(
             use_regex,
             invert,
         } => {
-            if let Ok(c) = proc.search_logs(query, match_case, use_regex, invert) {
-                let _ = s.post_message(
-                    &serde_json::to_string(&WorkerMsg::TotalLines(c as usize))
-                        .unwrap()
-                        .into(),
-                );
-            }
+            let c = proc.search_logs(query, match_case, use_regex, invert)?;
+            let _ = s.post_message(
+                &serde_json::to_string(&WorkerMsg::TotalLines(c as usize))
+                    .unwrap()
+                    .into(),
+            );
         }
         WorkerMsg::ExportLogs { include_timestamp } => {
-            if let Ok(stream) = proc.export_logs(include_timestamp) {
-                let resp = js_sys::Object::new();
-                let _ = js_sys::Reflect::set(&resp, &"type".into(), &"EXPORT_STREAM".into());
-                let _ = js_sys::Reflect::set(&resp, &"stream".into(), &stream);
-                let _ = s.post_message_with_transfer(&resp, &js_sys::Array::of1(&stream));
-            }
+            let stream = proc.export_logs(include_timestamp)?;
+            let resp = js_sys::Object::new();
+            let _ = js_sys::Reflect::set(&resp, &"type".into(), &"EXPORT_STREAM".into());
+            let _ = js_sys::Reflect::set(&resp, &"stream".into(), &stream);
+            let _ = s.post_message_with_transfer(&resp, &js_sys::Array::of1(&stream));
         }
         _ => {}
     }
+    Ok(())
+}
+
+fn send_error(scope: &web_sys::DedicatedWorkerGlobalScope, err: JsValue) {
+    let msg = format!("{:?}", err);
+    let _ = scope.post_message(
+        &serde_json::to_string(&WorkerMsg::Error(msg))
+            .unwrap()
+            .into(),
+    );
 }
 
 pub fn get_app_script_path() -> String {
     let window = web_sys::window().expect("no global window instance found");
     let document = window.document().expect("should have a document on window");
-
-    // Find all module scripts
     if let Ok(scripts) = document.query_selector_all("script[type='module']") {
         for i in 0..scripts.length() {
             if let Some(node) = scripts.item(i) {
                 let script: web_sys::HtmlScriptElement = node.unchecked_into();
                 let src = script.src();
                 let s = src.to_lowercase();
-
-                // Pure Rust logic: find our main app and exclude wasm-bindgen snippets
                 if (s.contains("serial_monitor") || s.contains("web_serial_monitor"))
                     && !s.contains("snippets")
                     && s.ends_with(".js")
@@ -172,7 +177,5 @@ pub fn get_app_script_path() -> String {
             }
         }
     }
-
-    // Fallback
-    "./serial_monitor.js".to_string()
+    "./serial_monitor.js".into()
 }
