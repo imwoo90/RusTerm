@@ -1,7 +1,7 @@
 use crate::components::common::{ToastMessage, ToastType};
 use dioxus::prelude::*;
 use gloo_timers::future::TimeoutFuture;
-use web_sys::{ReadableStreamDefaultReader, SerialPort, Worker};
+use web_sys::{ReadableStreamDefaultReader, SerialPort};
 
 #[derive(Clone, Debug)]
 pub struct SerialPortWrapper(pub SerialPort);
@@ -66,7 +66,9 @@ pub struct AppState {
     pub reader: Signal<Option<ReaderWrapper>>,
     pub is_connected: Signal<bool>,
     pub is_simulating: Signal<bool>,
-    pub log_worker: Signal<Option<Worker>>,
+    pub log_worker: Signal<Option<web_sys::Worker>>,
+    pub total_lines: Signal<usize>,
+    pub visible_logs: Signal<Vec<String>>,
     pub toasts: Signal<Vec<ToastMessage>>,
 }
 

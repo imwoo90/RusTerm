@@ -11,18 +11,15 @@ use super::types::{
     WorkerMsg, BOTTOM_BUFFER_EXTRA, CONSOLE_BOTTOM_PADDING, CONSOLE_TOP_PADDING, LINE_HEIGHT,
     TOP_BUFFER,
 };
-use super::worker::{use_data_request, use_log_worker};
+use super::worker::use_data_request;
 
 #[component]
 pub fn Console() -> Element {
     let mut state = use_context::<AppState>();
-
-    // 1. Signals & Setup
-    // worker is now in AppState
-    let mut visible_logs = use_signal(|| Vec::<String>::new());
-    let mut total_lines = use_signal(|| 0usize);
     let mut start_index = use_signal(|| 0usize);
     let mut console_height = use_signal(|| 600.0);
+    let mut total_lines = state.total_lines;
+    let mut visible_logs = state.visible_logs;
 
     let window_size = calculate_window_size(
         console_height(),
@@ -34,7 +31,7 @@ pub fn Console() -> Element {
     let mut sentinel_handle = use_signal(|| None::<Rc<MountedData>>);
 
     // 2. Effects
-    use_log_worker(total_lines, visible_logs, state.log_worker);
+    // use_log_worker is now handled in SerialMonitor bridge callback
 
     // Reset virtual scroll state when logs are cleared or filtered out of view
     use_effect(move || {
@@ -89,11 +86,8 @@ pub fn Console() -> Element {
     // RX Line Ending Sync Effect
     use_effect(move || {
         let ending = (state.rx_line_ending)();
-        if let Some(w) = state.log_worker.peek().as_ref() {
-            let msg = WorkerMsg::SetLineEnding(format!("{:?}", ending));
-            if let Ok(js_obj) = serde_wasm_bindgen::to_value(&msg) {
-                let _ = w.post_message(&js_obj);
-            }
+        if let Some(w) = state.log_worker.read().as_ref() {
+            crate::utils::send_worker_msg(w, WorkerMsg::SetLineEnding(format!("{:?}", ending)));
         }
     });
 
@@ -110,38 +104,34 @@ pub fn Console() -> Element {
             // Wait 300ms for debounce
             gloo_timers::future::TimeoutFuture::new(300).await;
 
-            if let Some(w) = worker_sig.peek().as_ref() {
-                let msg = WorkerMsg::SearchLogs {
-                    query,
-                    match_case,
-                    use_regex,
-                    invert,
-                };
-                if let Ok(js_obj) = serde_wasm_bindgen::to_value(&msg) {
-                    let _ = w.post_message(&js_obj);
-                }
+            if let Some(w) = worker_sig.read().as_ref() {
+                crate::utils::send_worker_msg(
+                    w,
+                    WorkerMsg::SearchLogs {
+                        query,
+                        match_case,
+                        use_regex,
+                        invert,
+                    },
+                );
             }
         });
     });
 
     let onexport = move |_evt: MouseEvent| {
-        let worker = state.log_worker.read().clone();
-        if let Some(w) = worker {
-            let msg = WorkerMsg::ExportLogs {
-                include_timestamp: (state.show_timestamps)(),
-            };
-            if let Ok(js_obj) = serde_wasm_bindgen::to_value(&msg) {
-                let _ = w.post_message(&js_obj);
-            }
+        if let Some(w) = state.log_worker.read().as_ref() {
+            crate::utils::send_worker_msg(
+                w,
+                WorkerMsg::ExportLogs {
+                    include_timestamp: (state.show_timestamps)(),
+                },
+            );
         }
     };
 
     let onclear = move |_evt: MouseEvent| {
-        if let Some(w) = (state.log_worker)() {
-            let _ = w.post_message(
-                &serde_wasm_bindgen::to_value(&crate::components::console::types::WorkerMsg::Clear)
-                    .unwrap(),
-            );
+        if let Some(w) = state.log_worker.read().as_ref() {
+            crate::utils::send_worker_msg(w, WorkerMsg::Clear);
             // reset UI signals immediately
             total_lines.set(0);
             start_index.set(0);

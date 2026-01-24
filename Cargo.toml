@@ -12,6 +12,7 @@ chrono = { version = "0.4.43", features = ["wasmbind"] }
 dioxus = { version = "0.7.1", features = ["document", "asset", "web", "html", "macro", "hooks", "signals"] }
 futures-util = "0.3.31"
 gloo-timers = { version = "0.3.0", features = ["futures"] }
+gloo-worker = "0.5.0"
 js-sys = "0.3.85"
 regex = "1.12.2"
 serde = { version = "1.0.228", features = ["derive"] }
@@ -48,6 +49,14 @@ web-sys = { version = "0.3.85", features = [
     "WorkerType",
     "File",
     "Blob",
+    "BlobPropertyBag",
+    "Url",
+    "Document",
+    "DedicatedWorkerGlobalScope",
+    "HtmlScriptElement",
+    "HtmlCollection",
+    "Element",
+    "NodeList",
 ] }
 
 [features]

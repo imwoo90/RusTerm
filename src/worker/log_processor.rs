@@ -1,9 +1,36 @@
+use crate::components::console::types::WorkerMsg;
 use crate::state::LineEnding;
 use chrono::Timelike;
 use regex::Regex;
 use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
+use wasm_bindgen_futures::spawn_local;
 use wasm_streams::ReadableStream;
-use web_sys::{FileSystemSyncAccessHandle, TextDecoder, TextEncoder};
+use web_sys::{
+    FileSystemDirectoryHandle, FileSystemFileHandle, FileSystemSyncAccessHandle, TextDecoder,
+    TextEncoder,
+};
+
+/// Helper to detect the current app script path for worker spawning
+pub fn get_app_script_path() -> String {
+    if let Some(window) = web_sys::window() {
+        if let Some(document) = window.document() {
+            if let Ok(scripts) = document.query_selector_all("script") {
+                for i in 0..scripts.length() {
+                    if let Some(item) = scripts.item(i) {
+                        let script = item.unchecked_into::<web_sys::HtmlScriptElement>();
+                        let src = script.src();
+                        if !src.is_empty() && !src.contains("tailwindcss") && src.ends_with(".js") {
+                            return src;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // Fallback to a common default if detection fails
+    "./serial_monitor.js".to_string()
+}
 /// Represents a byte range within the log file
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct LineRange {
@@ -506,8 +533,164 @@ impl LogProcessor {
     }
 }
 
+async fn get_opfs_root() -> Result<FileSystemDirectoryHandle, JsValue> {
+    let global = js_sys::global();
+    let navigator = js_sys::Reflect::get(&global, &"navigator".into())?;
+    let storage = js_sys::Reflect::get(&navigator, &"storage".into())?;
+    let storage: web_sys::StorageManager = storage.unchecked_into();
+    let root = wasm_bindgen_futures::JsFuture::from(storage.get_directory()).await?;
+    Ok(root.into())
+}
+
+async fn get_lock(
+    file_handle: FileSystemFileHandle,
+) -> Result<FileSystemSyncAccessHandle, JsValue> {
+    for _ in 0..20 {
+        match wasm_bindgen_futures::JsFuture::from(file_handle.create_sync_access_handle()).await {
+            Ok(h) => return Ok(h.into()),
+            Err(e) => {
+                let error_name = js_sys::Reflect::get(&e, &"name".into()).unwrap_or_default();
+                if error_name == "NoModificationAllowedError" || error_name == "InvalidStateError" {
+                    gloo_timers::future::sleep(std::time::Duration::from_millis(100)).await;
+                    continue;
+                }
+                return Err(e);
+            }
+        }
+    }
+    Err("Failed to acquire OPFS lock after retries".into())
+}
+
+async fn new_session(
+    root: &FileSystemDirectoryHandle,
+    _cleanup: bool,
+) -> Result<FileSystemSyncAccessHandle, JsValue> {
+    let filename = format!("logs_{}.txt", chrono::Utc::now().timestamp_millis());
+    let opts = web_sys::FileSystemGetDirectoryOptions::new();
+    opts.set_create(true);
+    let get_file_handle_fn = js_sys::Reflect::get(root, &"getFileHandle".into())?;
+    let args = js_sys::Array::new();
+    args.push(&filename.into());
+    args.push(opts.as_ref());
+    let promise = js_sys::Function::from(get_file_handle_fn).apply(root, &args)?;
+    let file_handle =
+        wasm_bindgen_futures::JsFuture::from(promise.unchecked_into::<js_sys::Promise>()).await?;
+    let file_handle: FileSystemFileHandle = file_handle.into();
+
+    let lock = get_lock(file_handle).await?;
+    Ok(lock)
+}
+
+async fn setup_opfs_manual(processor: &mut LogProcessor) -> Result<(), JsValue> {
+    let root = get_opfs_root().await?;
+    let handle = new_session(&root, false).await?;
+    processor.set_sync_handle(handle)?;
+    Ok(())
+}
+
+#[wasm_bindgen]
+pub fn start_worker() {
+    let global = js_sys::global();
+    let is_worker = js_sys::Reflect::has(&global, &"WorkerGlobalScope".into()).unwrap_or(false);
+
+    if !is_worker {
+        return;
+    }
+
+    spawn_local(async move {
+        let mut processor = LogProcessor::new().expect("Failed to create LogProcessor");
+        let _ = setup_opfs_manual(&mut processor).await;
+
+        let scope = js_sys::global().unchecked_into::<web_sys::DedicatedWorkerGlobalScope>();
+        let mut last_count = 0;
+
+        let processor_ptr = std::rc::Rc::new(std::cell::RefCell::new(processor));
+        let scope_clone = scope.clone();
+
+        let onmessage = Closure::wrap(Box::new({
+            let processor = processor_ptr.clone();
+            let scope = scope_clone.clone();
+            move |event: web_sys::MessageEvent| {
+                if let Some(msg_str) = event.data().as_string() {
+                    if let Ok(msg) = serde_json::from_str::<WorkerMsg>(&msg_str) {
+                        let mut p = processor.borrow_mut();
+                        match msg {
+                            WorkerMsg::AppendLog(text) => {
+                                let _ = p.append_log(text);
+                            }
+                            WorkerMsg::AppendChunk { chunk, is_hex } => {
+                                let _ = p.append_chunk(&chunk, is_hex);
+                            }
+                            WorkerMsg::RequestWindow { start_line, count } => {
+                                if let Ok(val) = p.request_window(start_line, count) {
+                                    if let Ok(lines) =
+                                        serde_wasm_bindgen::from_value::<Vec<String>>(val)
+                                    {
+                                        let resp = WorkerMsg::LogWindow { start_line, lines };
+                                        let _ = scope.post_message(
+                                            &serde_json::to_string(&resp).unwrap().into(),
+                                        );
+                                    }
+                                }
+                            }
+                            WorkerMsg::Clear => {
+                                let _ = p.clear();
+                                let _ = scope.post_message(
+                                    &serde_json::to_string(&WorkerMsg::TotalLines(0))
+                                        .unwrap()
+                                        .into(),
+                                );
+                            }
+                            WorkerMsg::SetLineEnding(mode) => {
+                                p.set_line_ending(&mode);
+                            }
+                            WorkerMsg::SearchLogs {
+                                query,
+                                match_case,
+                                use_regex,
+                                invert,
+                            } => {
+                                if let Ok(count) =
+                                    p.search_logs(query, match_case, use_regex, invert)
+                                {
+                                    let _ = scope.post_message(
+                                        &serde_json::to_string(&WorkerMsg::TotalLines(
+                                            count as usize,
+                                        ))
+                                        .unwrap()
+                                        .into(),
+                                    );
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+        }) as Box<dyn FnMut(_)>);
+
+        scope.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
+        onmessage.forget();
+
+        // Interval for line count updates
+        loop {
+            gloo_timers::future::TimeoutFuture::new(50).await;
+            let current = processor_ptr.borrow().get_line_count();
+            if current != last_count {
+                last_count = current;
+                let _ = scope_clone.post_message(
+                    &serde_json::to_string(&WorkerMsg::TotalLines(current as usize))
+                        .unwrap()
+                        .into(),
+                );
+            }
+        }
+    });
+}
+
 #[cfg(test)]
 mod tests {
+    // ... (rest of tests)
     use super::*;
 
     #[test]

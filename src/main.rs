@@ -11,6 +11,9 @@ const FAVICON: Asset = asset!("/assets/favicon.ico");
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 
 fn main() {
+    #[cfg(target_arch = "wasm32")]
+    crate::worker::log_processor::start_worker();
+
     dioxus::launch(App);
 }
 

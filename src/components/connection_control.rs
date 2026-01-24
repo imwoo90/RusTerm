@@ -85,10 +85,7 @@ pub fn ConnectionControl() -> Element {
 
                         // Clear logs if starting
                         if let Some(w) = state.log_worker.peek().as_ref() {
-                            let _ = w
-                                .post_message(
-                                    &serde_wasm_bindgen::to_value(&WorkerMsg::Clear).unwrap(),
-                                );
+                            crate::utils::format::send_worker_msg(w, WorkerMsg::Clear);
                         }
                         let worker_sig = state.log_worker;
                         let sim_sig = state.is_simulating;
@@ -196,10 +193,7 @@ pub fn ConnectionControl() -> Element {
                                 {
                                     // Clear logs before connecting
                                     if let Some(w) = state.log_worker.peek().as_ref() {
-                                        let _ = w
-                                            .post_message(
-                                                &serde_wasm_bindgen::to_value(&WorkerMsg::NewSession).unwrap(),
-                                            );
+                                        crate::utils::format::send_worker_msg(w, WorkerMsg::NewSession);
                                     }
                                     state.port.set(Some(SerialPortWrapper(port.clone())));
                                     state.is_connected.set(true);

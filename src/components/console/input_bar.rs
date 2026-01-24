@@ -53,11 +53,9 @@ pub fn InputBar() -> Element {
                 if serial::send_data(&wrapper.0, &data).await.is_ok() {
                     if *(state.tx_local_echo).peek() {
                         if let Some(w) = state.log_worker.peek().as_ref() {
-                            let _ = w.post_message(
-                                &serde_wasm_bindgen::to_value(
-                                    &crate::components::console::types::WorkerMsg::AppendLog(text),
-                                )
-                                .unwrap(),
+                            crate::utils::send_worker_msg(
+                                w,
+                                crate::components::console::types::WorkerMsg::AppendLog(text),
                             );
                         }
                     }

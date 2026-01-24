@@ -1,46 +1,37 @@
 use serde::{Deserialize, Serialize};
 
 /// Message protocol for communicating with Web Worker
+/// Note: Do NOT use #[serde(tag = "...")] or #[serde(rename = "...")]
+/// as gloo-worker's default Bincode codec does not support them.
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(tag = "type", content = "data")]
 pub enum WorkerMsg {
-    #[serde(rename = "INITIALIZED")]
-    Initialized(String),
-    #[serde(rename = "TOTAL_LINES")]
     TotalLines(usize),
-    #[serde(rename = "LOG_WINDOW")]
     LogWindow {
-        #[serde(rename = "startLine")]
         start_line: usize,
         lines: Vec<String>,
     },
-    #[serde(rename = "APPEND_LOG")]
     AppendLog(String),
-    #[serde(rename = "REQUEST_WINDOW")]
     RequestWindow {
-        #[serde(rename = "startLine")]
         start_line: usize,
         count: usize,
     },
-    #[serde(rename = "EXPORT_LOGS")]
-    ExportLogs { include_timestamp: bool },
-    #[serde(rename = "EXPORT_READY")]
-    ExportReady(String),
-    #[serde(rename = "CLEAR")]
+    ExportLogs {
+        include_timestamp: bool,
+    },
     Clear,
-    #[serde(rename = "ERROR")]
     Error(String),
-    #[serde(rename = "SEARCH_LOGS")]
     SearchLogs {
         query: String,
         match_case: bool,
         use_regex: bool,
         invert: bool,
     },
-    #[serde(rename = "SET_LINE_ENDING")]
     SetLineEnding(String),
-    #[serde(rename = "NEW_SESSION")]
     NewSession,
+    AppendChunk {
+        chunk: Vec<u8>,
+        is_hex: bool,
+    },
 }
 
 pub const LINE_HEIGHT: f64 = 20.0;

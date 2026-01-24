@@ -35,22 +35,16 @@ pub fn format_hex_input(input: &str) -> String {
         .join(" ")
 }
 
-/// Helper to send raw byte chunk to worker using Zero-Copy transfer
+/// Helper to send raw byte chunk to worker
 pub fn send_chunk_to_worker(worker: &web_sys::Worker, data: &[u8], is_hex: bool) {
-    let uint8_array = js_sys::Uint8Array::from(data);
-
-    let msg = js_sys::Object::new();
-    let _ = js_sys::Reflect::set(&msg, &"type".into(), &"APPEND_CHUNK".into());
-
-    let payload = js_sys::Object::new();
-    let _ = js_sys::Reflect::set(&payload, &"chunk".into(), &uint8_array);
-    let _ = js_sys::Reflect::set(&payload, &"is_hex".into(), &is_hex.into());
-    let _ = js_sys::Reflect::set(&msg, &"data".into(), &payload);
-
-    let transfer = js_sys::Array::new();
-    transfer.push(&uint8_array.buffer());
-
-    let _ = worker.post_message_with_transfer(&msg, &transfer);
+    if let Ok(msg) =
+        serde_json::to_string(&crate::components::console::types::WorkerMsg::AppendChunk {
+            chunk: data.to_vec(),
+            is_hex,
+        })
+    {
+        let _ = worker.post_message(&msg.into());
+    }
 }
 
 /// Helper to send general control messages to worker
@@ -58,8 +52,8 @@ pub fn send_worker_msg(
     worker: &web_sys::Worker,
     msg: crate::components::console::types::WorkerMsg,
 ) {
-    if let Ok(js_value) = serde_wasm_bindgen::to_value(&msg) {
-        let _ = worker.post_message(&js_value);
+    if let Ok(msg_str) = serde_json::to_string(&msg) {
+        let _ = worker.post_message(&msg_str.into());
     }
 }
 

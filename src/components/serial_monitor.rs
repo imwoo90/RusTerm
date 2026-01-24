@@ -3,7 +3,10 @@ use crate::state::{AppState, LineEnding};
 use dioxus::prelude::*;
 
 use super::console::{Console, FilterBar, InputBar, MacroBar};
-use super::header::Header;
+use crate::components::console::types::WorkerMsg;
+use crate::components::header::Header;
+use wasm_bindgen::prelude::Closure;
+use wasm_bindgen::JsCast;
 
 #[component]
 pub fn SerialMonitor() -> Element {
@@ -34,14 +37,46 @@ pub fn SerialMonitor() -> Element {
     let is_simulating = use_signal(|| false);
     let mut log_worker = use_signal(|| None::<web_sys::Worker>);
     let toasts = use_signal(Vec::new);
+    let total_lines = use_signal(|| 0usize);
+    let visible_logs = use_signal(|| Vec::<String>::new());
 
     use_effect(move || {
-        if log_worker.peek().is_none() {
-            let worker_path = asset!("/assets/js/log_worker.js").to_string();
-            let opts = web_sys::WorkerOptions::new();
-            opts.set_type(web_sys::WorkerType::Module);
-            if let Ok(w) = web_sys::Worker::new_with_options(&worker_path, &opts) {
-                log_worker.set(Some(w));
+        if log_worker.read().is_none() {
+            let script_path = crate::worker::log_processor::get_app_script_path();
+
+            let options = web_sys::WorkerOptions::new();
+            options.set_type(web_sys::WorkerType::Module);
+
+            if let Ok(worker) = web_sys::Worker::new_with_options(&script_path, &options) {
+                let mut tl = total_lines;
+                let mut vl = visible_logs;
+
+                let callback = Closure::wrap(Box::new(move |event: web_sys::MessageEvent| {
+                    if let Some(msg_str) = event.data().as_string() {
+                        if let Ok(msg) = serde_json::from_str::<WorkerMsg>(&msg_str) {
+                            match msg {
+                                WorkerMsg::TotalLines(count) => {
+                                    tl.set(count);
+                                    if count == 0 {
+                                        vl.set(Vec::new());
+                                    }
+                                }
+                                WorkerMsg::LogWindow { lines, .. } => vl.set(lines),
+                                WorkerMsg::Error(msg) => {
+                                    if let Some(win) = web_sys::window() {
+                                        let _ = win
+                                            .alert_with_message(&format!("Worker Error: {}", msg));
+                                    }
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                }) as Box<dyn FnMut(_)>);
+
+                worker.set_onmessage(Some(callback.as_ref().unchecked_ref()));
+                callback.forget();
+                log_worker.set(Some(worker));
             }
         }
     });
@@ -87,6 +122,8 @@ pub fn SerialMonitor() -> Element {
         is_connected,
         is_simulating,
         log_worker,
+        total_lines,
+        visible_logs,
         toasts,
     });
 
