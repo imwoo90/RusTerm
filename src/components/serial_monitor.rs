@@ -38,8 +38,24 @@ pub fn SerialMonitor() -> Element {
     use_effect(move || {
         if log_worker.peek().is_none() {
             let worker_path = asset!("/assets/js/log_worker.js").to_string();
-            let opts = web_sys::WorkerOptions::new();
+
+            // Determine WASM Glue URL
+            let mut wasm_url = web_sys::window()
+                .and_then(|win| win.document())
+                .and_then(|doc| {
+                    doc.query_selector("script[src*='serial_monitor']")
+                        .ok()
+                        .flatten()
+                })
+                .and_then(|script| script.get_attribute("src"))
+                .unwrap_or_else(|| "/wasm/serial_monitor.js".to_string());
+
+            wasm_url = wasm_url.replace("./", "/").replace("//", "/");
+
+            let mut opts = web_sys::WorkerOptions::new();
             opts.set_type(web_sys::WorkerType::Module);
+            opts.set_name(&wasm_url); // Store WASM URL in Worker Name
+
             if let Ok(w) = web_sys::Worker::new_with_options(&worker_path, &opts) {
                 log_worker.set(Some(w));
             }
