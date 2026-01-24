@@ -1,9 +1,30 @@
 use regex::Regex;
+use std::ops::{Add, Sub};
+
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Eq, Ord)]
+pub struct ByteOffset(pub u64);
+
+impl Add<u64> for ByteOffset {
+    type Output = Self;
+    fn add(self, rhs: u64) -> Self {
+        ByteOffset(self.0 + rhs)
+    }
+}
+
+impl Sub<ByteOffset> for ByteOffset {
+    type Output = u64;
+    fn sub(self, rhs: ByteOffset) -> u64 {
+        self.0 - rhs.0
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Eq, Ord)]
+pub struct LineIndex(pub usize);
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct LineRange {
-    pub start: u64,
-    pub end: u64,
+    pub start: ByteOffset,
+    pub end: ByteOffset,
 }
 
 #[derive(Clone)]
@@ -12,6 +33,59 @@ pub struct ActiveFilter {
     pub match_case: bool,
     pub regex: Option<Regex>,
     pub invert: bool,
+}
+
+pub struct ActiveFilterBuilder {
+    query: String,
+    match_case: bool,
+    use_regex: bool,
+    invert: bool,
+}
+
+impl ActiveFilterBuilder {
+    pub fn new(query: String) -> Self {
+        Self {
+            query,
+            match_case: true,
+            use_regex: false,
+            invert: false,
+        }
+    }
+
+    pub fn case_sensitive(mut self, yes: bool) -> Self {
+        self.match_case = yes;
+        self
+    }
+
+    pub fn regex(mut self, yes: bool) -> Self {
+        self.use_regex = yes;
+        self
+    }
+
+    pub fn invert(mut self, yes: bool) -> Self {
+        self.invert = yes;
+        self
+    }
+
+    pub fn build(self) -> Result<ActiveFilter, String> {
+        let regex = if self.use_regex {
+            Some(
+                regex::RegexBuilder::new(&self.query)
+                    .case_insensitive(!self.match_case)
+                    .build()
+                    .map_err(|e| e.to_string())?,
+            )
+        } else {
+            None
+        };
+
+        Ok(ActiveFilter {
+            query: self.query,
+            match_case: self.match_case,
+            regex,
+            invert: self.invert,
+        })
+    }
 }
 
 impl ActiveFilter {
@@ -32,7 +106,7 @@ impl ActiveFilter {
 }
 
 pub struct LogIndex {
-    pub line_offsets: Vec<u64>,
+    pub line_offsets: Vec<ByteOffset>,
     pub line_count: usize,
     pub filtered_lines: Vec<LineRange>,
     pub is_filtering: bool,
@@ -42,7 +116,7 @@ pub struct LogIndex {
 impl LogIndex {
     pub fn new() -> Self {
         Self {
-            line_offsets: vec![0],
+            line_offsets: vec![ByteOffset(0)],
             line_count: 0,
             filtered_lines: Vec::new(),
             is_filtering: false,
@@ -51,12 +125,12 @@ impl LogIndex {
     }
 
     pub fn reset_base(&mut self) {
-        self.line_offsets = vec![0];
+        self.line_offsets = vec![ByteOffset(0)];
         self.line_count = 0;
         self.filtered_lines.clear();
     }
 
-    pub fn push_line(&mut self, absolute_end_offset: u64) {
+    pub fn push_line(&mut self, absolute_end_offset: ByteOffset) {
         self.line_offsets.push(absolute_end_offset);
         self.line_count += 1;
     }
@@ -73,14 +147,14 @@ impl LogIndex {
         }
     }
 
-    pub fn get_line_range(&self, index: usize) -> Option<LineRange> {
+    pub fn get_line_range(&self, index: LineIndex) -> Option<LineRange> {
         if self.is_filtering {
-            self.filtered_lines.get(index).cloned()
+            self.filtered_lines.get(index.0).cloned()
         } else {
-            if index < self.line_count {
+            if index.0 < self.line_count {
                 Some(LineRange {
-                    start: self.line_offsets[index],
-                    end: self.line_offsets[index + 1],
+                    start: self.line_offsets[index.0],
+                    end: self.line_offsets[index.0 + 1],
                 })
             } else {
                 None
