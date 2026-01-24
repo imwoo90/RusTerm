@@ -40,17 +40,27 @@ pub fn SerialMonitor() -> Element {
             let worker_path = asset!("/assets/js/log_worker.js").to_string();
 
             // Determine WASM Glue URL
-            let mut wasm_url = web_sys::window()
+            let wasm_url = web_sys::window()
                 .and_then(|win| win.document())
                 .and_then(|doc| {
                     doc.query_selector("script[src*='serial_monitor']")
                         .ok()
                         .flatten()
                 })
-                .and_then(|script| script.get_attribute("src"))
+                .and_then(|script| {
+                    use wasm_bindgen::JsCast;
+                    script.dyn_into::<web_sys::HtmlScriptElement>().ok()
+                })
+                .map(|s| s.src())
                 .unwrap_or_else(|| "/wasm/serial_monitor.js".to_string());
 
-            wasm_url = wasm_url.replace("./", "/").replace("//", "/");
+            web_sys::console::log_1(
+                &format!(
+                    "Initializing worker with absolute WASM glue URL: {}",
+                    wasm_url
+                )
+                .into(),
+            );
 
             let mut opts = web_sys::WorkerOptions::new();
             opts.set_type(web_sys::WorkerType::Module);
