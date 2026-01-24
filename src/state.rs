@@ -90,6 +90,12 @@ impl AppState {
         });
     }
 
+    pub fn clear_logs(&self) {
+        let (mut total, mut visible) = (self.total_lines, self.visible_logs);
+        total.set(0);
+        visible.set(Vec::new());
+    }
+
     pub fn success(&self, msg: &str) {
         self.add_toast(msg, ToastType::Success);
     }

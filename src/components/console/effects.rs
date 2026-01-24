@@ -1,0 +1,30 @@
+use crate::components::console::bridge::WorkerBridge;
+use crate::state::AppState;
+use dioxus::prelude::*;
+
+pub fn use_settings_sync(bridge: WorkerBridge) {
+    let state = use_context::<AppState>();
+
+    // RX Line Ending Sync
+    use_effect(move || {
+        let ending = (state.rx_line_ending)();
+        bridge.set_line_ending(format!("{:?}", ending));
+    });
+}
+
+pub fn use_search_sync(bridge: WorkerBridge) {
+    let state = use_context::<AppState>();
+
+    use_effect(move || {
+        let query = (state.filter_query)();
+        let match_case = (state.match_case)();
+        let use_regex = (state.use_regex)();
+        let invert = (state.invert_filter)();
+
+        spawn(async move {
+            // Debounce 300ms
+            gloo_timers::future::TimeoutFuture::new(300).await;
+            bridge.search(query, match_case, use_regex, invert);
+        });
+    });
+}

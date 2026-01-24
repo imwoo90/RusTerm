@@ -11,6 +11,7 @@ pub fn InputBar() -> Element {
     let mut history = use_signal(|| CommandHistory::load());
     let mut history_index = use_signal(|| None::<usize>);
     let mut is_hex_input = use_signal(|| false);
+    let bridge = crate::components::console::bridge::use_worker_bridge();
 
     let on_send = move || {
         spawn(async move {
@@ -52,12 +53,7 @@ pub fn InputBar() -> Element {
             if let Some(wrapper) = (state.port).peek().as_ref() {
                 if serial::send_data(&wrapper.0, &data).await.is_ok() {
                     if *(state.tx_local_echo).peek() {
-                        if let Some(w) = state.log_worker.peek().as_ref() {
-                            crate::utils::send_worker_msg(
-                                w,
-                                crate::components::console::types::WorkerMsg::AppendLog(text),
-                            );
-                        }
+                        bridge.append_log(text);
                     }
                     input_value.set(String::new());
                 }
