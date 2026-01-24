@@ -53,28 +53,6 @@ const newSession = async (root, cleanup = false) => {
     }
 
     try {
-        // Fix for GitHub Pages subpaths:
-        // Dioxus glue code might try to fetch WASM from "/./assets/..." which fails on subpaths.
-        // We intercept fetch and redirect it to the correct relative path.
-        const wasmUrlObj = new URL(wasmUrl, self.location.origin);
-        const pathParts = wasmUrlObj.pathname.split('/');
-        // Assuming structure: /subpath/assets/script.js or /assets/script.js
-        const assetsIdx = pathParts.indexOf('assets');
-        const basePath = assetsIdx > 0 ? pathParts.slice(0, assetsIdx).join('/') + '/' : '/';
-
-        console.log("Detected base path for worker:", basePath);
-
-        const originalFetch = self.fetch;
-        self.fetch = async (url, options) => {
-            let targetUrl = url;
-            if (typeof url === 'string' && url.startsWith('/./assets/')) {
-                const fixedPath = basePath + url.substring(3); // remove "/./"
-                targetUrl = new URL(fixedPath, self.location.origin).toString();
-                console.log("Intercepted WASM fetch. Redirecting", url, "to", targetUrl);
-            }
-            return originalFetch(targetUrl, options);
-        };
-
         const { default: init, LogProcessor } = await import(wasmUrl);
         await init();
         console.log("WASM Initialized in worker");
