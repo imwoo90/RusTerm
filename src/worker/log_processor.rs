@@ -62,6 +62,9 @@ impl ActiveFilter {
     }
 }
 
+use std::borrow::Cow;
+use std::fmt::Write;
+
 /// Core processing logic separated from WASM/IO for testability
 struct CoreProcessor {
     line_offsets: Vec<u64>,
@@ -88,51 +91,42 @@ impl CoreProcessor {
     /// Returns (Formatted Buffer String, Tuple of (LineOffsetsToAdd, FilteredLinesToAdd))
     fn prepare_batch(
         &mut self,
-        chunk_text: String,
+        chunk_text: &str,
         line_ending_mode: LineEnding,
     ) -> (String, Vec<u64>, Vec<LineRange>) {
-        if self.leftover_chunk.len() > 4 * 1024 {
+        if !self.leftover_chunk.is_empty() && self.leftover_chunk.len() > 4 * 1024 {
             // Safety: If buffer grows too large without newline, force a flush (e.g. 4KB)
             self.leftover_chunk.push('\n');
         }
 
-        let full_text = format!("{}{}", self.leftover_chunk, chunk_text);
-
-        let mut lines: Vec<&str> = match line_ending_mode {
-            LineEnding::None => full_text.split('\n').collect(),
-            LineEnding::CR => full_text.split('\r').collect(),
-            LineEnding::NLCR => full_text.split("\r\n").collect(),
-            LineEnding::NL => full_text.split('\n').collect(),
+        let full_text = if self.leftover_chunk.is_empty() {
+            Cow::Borrowed(chunk_text)
+        } else {
+            Cow::Owned(format!("{}{}", self.leftover_chunk, chunk_text))
         };
 
-        if let Some(last) = lines.pop() {
-            self.leftover_chunk = last.to_string();
-        } else {
-            self.leftover_chunk.clear();
-        }
+        let lines_iter = match line_ending_mode {
+            LineEnding::None | LineEnding::NL => full_text.split("\n"),
+            LineEnding::CR => full_text.split("\r"),
+            LineEnding::NLCR => full_text.split("\r\n"),
+        };
+        let mut lines_iter = lines_iter.peekable();
 
-        if lines.is_empty() {
-            return (String::new(), Vec::new(), Vec::new());
-        }
-
-        let now = chrono::Utc::now();
-        let time_prefix = format!(
-            "[{:02}:{:02}:{:02}.{:03}] ",
-            now.hour(),
-            now.minute(),
-            now.second(),
-            now.timestamp_subsec_millis()
+        let estimated_line_overhead = 24;
+        let mut batch_buffer = String::with_capacity(
+            chunk_text.len() + chunk_text.len() / 20 * estimated_line_overhead,
         );
-
-        let mut batch_buffer = String::new();
         let mut new_offsets = Vec::new();
         let mut new_filtered = Vec::new();
 
-        // This pos is not accurate here because it depends on file size,
-        // will be adjusted by LogProcessor.
         let mut relative_pos = 0u64;
 
-        for line in lines {
+        while let Some(line) = lines_iter.next() {
+            if lines_iter.peek().is_none() {
+                self.leftover_chunk = line.to_string();
+                break;
+            }
+
             let mut clean_line = line;
             if line_ending_mode == LineEnding::NL && clean_line.ends_with('\r') {
                 clean_line = &clean_line[..clean_line.len() - 1];
@@ -141,22 +135,35 @@ impl CoreProcessor {
                 clean_line = &clean_line[1..];
             }
 
-            let final_line = format!("{}{}\n", time_prefix, clean_line);
-            let bytes_len = final_line.len() as u64;
+            let start_len = batch_buffer.len();
+            let now = chrono::Utc::now();
+            let _ = write!(
+                batch_buffer,
+                "[{:02}:{:02}:{:02}.{:03}] ",
+                now.hour(),
+                now.minute(),
+                now.second(),
+                now.timestamp_subsec_millis()
+            );
+
+            batch_buffer.push_str(clean_line);
+            batch_buffer.push('\n');
+
+            let added_len = (batch_buffer.len() - start_len) as u64;
 
             if self.is_filtering {
+                let final_line = &batch_buffer[start_len..];
                 if let Some(filter) = &self.active_filter {
-                    if filter.matches(&final_line) {
+                    if filter.matches(final_line) {
                         new_filtered.push(LineRange {
                             start: relative_pos,
-                            end: relative_pos + bytes_len,
+                            end: relative_pos + added_len,
                         });
                     }
                 }
             }
 
-            batch_buffer.push_str(&final_line);
-            relative_pos += bytes_len;
+            relative_pos += added_len;
             new_offsets.push(relative_pos);
         }
 
@@ -263,8 +270,9 @@ impl LogProcessor {
                 .decode_with_u8_array_and_options(chunk, &opts)?
         };
 
-        let (batch_str, new_offsets, new_filtered) =
-            self.core.prepare_batch(decoded_text, self.line_ending_mode);
+        let (batch_str, new_offsets, new_filtered) = self
+            .core
+            .prepare_batch(&decoded_text, self.line_ending_mode);
 
         if batch_str.is_empty() {
             return Ok(self.core.get_total_lines() as u32);
@@ -425,18 +433,24 @@ impl LogProcessor {
         let handle = self.sync_handle.as_ref().ok_or("No sync handle")?;
         let batch_size_lines = 5000;
         let mut idx = 0;
+        let mut buf = Vec::with_capacity(1024 * 512); // Start with 512KB
+
         while idx < self.core.line_count {
             let batch_end = (idx + batch_size_lines).min(self.core.line_count);
             let start_off = self.core.line_offsets[idx];
             let end_off = self.core.line_offsets[batch_end];
             let size = (end_off - start_off) as usize;
 
-            let mut buf = vec![0u8; size];
+            if buf.len() < size {
+                buf.resize(size, 0);
+            }
+            let slice = &mut buf[0..size];
+
             let opts = web_sys::FileSystemReadWriteOptions::new();
             opts.set_at(start_off as f64);
-            handle.read_with_u8_array_and_options(&mut buf, &opts)?;
+            handle.read_with_u8_array_and_options(slice, &opts)?;
 
-            let text = web_sys::TextDecoder::new()?.decode_with_u8_array(&buf)?;
+            let text = web_sys::TextDecoder::new()?.decode_with_u8_array(slice)?;
             let clean_text = if text.ends_with('\n') {
                 &text[..text.len() - 1]
             } else {
@@ -669,96 +683,47 @@ pub fn start_worker() {
         let filename_ptr = std::rc::Rc::new(std::cell::RefCell::new(current_filename));
 
         // Closures and clones for message handling
-        let processor = processor_ptr.clone();
-        let filename = filename_ptr.clone();
-        let root = root.clone();
+        let processor_for_msg = processor_ptr.clone();
+        let filename_for_msg = filename_ptr.clone();
+        let root_for_msg = root.clone();
         let scope_for_msg = scope.clone();
         let scope_for_loop = scope.clone();
 
         let onmessage = Closure::wrap(Box::new(move |event: web_sys::MessageEvent| {
-            if let Some(msg_str) = event.data().as_string() {
+            let data = event.data();
+
+            // 1. Try generic JSON string (Control messages)
+            if let Some(msg_str) = data.as_string() {
                 if let Ok(msg) = serde_json::from_str::<WorkerMsg>(&msg_str) {
-                    let mut p = processor.borrow_mut();
-                    match msg {
-                        WorkerMsg::NewSession => {
-                            let filename_rc = filename.clone();
-                            let root_rc = root.clone();
-                            let scope_rc = scope_for_msg.clone();
-                            let proc_for_spawn = processor.clone();
-                            spawn_local(async move {
-                                let lock_res = {
-                                    let mut f = filename_rc.borrow_mut();
-                                    new_session(&root_rc, true, &mut f).await
-                                };
-                                if let Ok(lock) = lock_res {
-                                    let mut pp = proc_for_spawn.borrow_mut();
-                                    let _ = pp.set_sync_handle(lock);
-                                    let _ = pp.clear();
-                                    let _ = scope_rc.post_message(
-                                        &serde_json::to_string(&WorkerMsg::TotalLines(0))
-                                            .unwrap()
-                                            .into(),
-                                    );
-                                }
-                            });
-                        }
-                        WorkerMsg::AppendLog(text) => {
-                            let _ = p.append_log(text);
-                        }
-                        WorkerMsg::AppendChunk { chunk, is_hex } => {
-                            let _ = p.append_chunk(&chunk, is_hex);
-                        }
-                        WorkerMsg::RequestWindow { start_line, count } => {
-                            if let Ok(val) = p.request_window(start_line, count) {
-                                if let Ok(lines) =
-                                    serde_wasm_bindgen::from_value::<Vec<String>>(val)
-                                {
-                                    let resp = WorkerMsg::LogWindow { start_line, lines };
-                                    let _ = scope_for_msg.post_message(
-                                        &serde_json::to_string(&resp).unwrap().into(),
-                                    );
-                                }
-                            }
-                        }
-                        WorkerMsg::Clear => {
-                            let _ = p.clear();
-                            let _ = scope_for_msg.post_message(
-                                &serde_json::to_string(&WorkerMsg::TotalLines(0))
-                                    .unwrap()
-                                    .into(),
-                            );
-                        }
-                        WorkerMsg::SetLineEnding(mode) => {
-                            p.set_line_ending(&mode);
-                        }
-                        WorkerMsg::SearchLogs {
-                            query,
-                            match_case,
-                            use_regex,
-                            invert,
-                        } => {
-                            if let Ok(count) = p.search_logs(query, match_case, use_regex, invert) {
-                                let _ = scope_for_msg.post_message(
-                                    &serde_json::to_string(&WorkerMsg::TotalLines(count as usize))
-                                        .unwrap()
-                                        .into(),
-                                );
-                            }
-                        }
-                        WorkerMsg::ExportLogs { include_timestamp } => {
-                            if let Ok(stream) = p.export_logs(include_timestamp) {
-                                let resp = js_sys::Object::new();
-                                let _ = js_sys::Reflect::set(
-                                    &resp,
-                                    &"type".into(),
-                                    &"EXPORT_STREAM".into(),
-                                );
-                                let _ = js_sys::Reflect::set(&resp, &"stream".into(), &stream);
-                                let transfer = js_sys::Array::of1(&stream);
-                                let _ = scope_for_msg.post_message_with_transfer(&resp, &transfer);
-                            }
-                        }
-                        _ => {}
+                    process_worker_msg(
+                        msg,
+                        &processor_for_msg,
+                        &filename_for_msg,
+                        &root_for_msg,
+                        &scope_for_msg,
+                    );
+                }
+                return;
+            }
+
+            // 2. Try Binary/Object optimized messages (Optimized AppendChunk)
+            if data.is_object() {
+                // Check if it's our optimized AppendChunk object
+                // format: { cmd: "AppendChunk", chunk: Uint8Array, is_hex: bool }
+                let cmd = js_sys::Reflect::get(&data, &"cmd".into())
+                    .ok()
+                    .and_then(|v| v.as_string());
+
+                if let Some("AppendChunk") = cmd.as_deref() {
+                    if let Ok(chunk_val) = js_sys::Reflect::get(&data, &"chunk".into()) {
+                        let chunk = js_sys::Uint8Array::new(&chunk_val).to_vec();
+                        let is_hex = js_sys::Reflect::get(&data, &"is_hex".into())
+                            .ok()
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false);
+
+                        let mut p = processor_for_msg.borrow_mut();
+                        let _ = p.append_chunk(&chunk, is_hex);
                     }
                 }
             }
@@ -781,6 +746,92 @@ pub fn start_worker() {
             }
         }
     });
+}
+
+fn process_worker_msg(
+    msg: WorkerMsg,
+    processor: &std::rc::Rc<std::cell::RefCell<LogProcessor>>,
+    filename: &std::rc::Rc<std::cell::RefCell<Option<String>>>,
+    root: &web_sys::FileSystemDirectoryHandle,
+    scope: &web_sys::DedicatedWorkerGlobalScope,
+) {
+    let mut p = processor.borrow_mut();
+    match msg {
+        WorkerMsg::NewSession => {
+            let filename_rc = filename.clone();
+            let root_rc = root.clone();
+            let scope_rc = scope.clone();
+            let proc_for_spawn = processor.clone();
+            spawn_local(async move {
+                let lock_res = {
+                    let mut f = filename_rc.borrow_mut();
+                    match new_session(&root_rc, true, &mut f).await {
+                        Ok(lock) => Ok(lock),
+                        Err(e) => Err(e),
+                    }
+                };
+                if let Ok(lock) = lock_res {
+                    let mut pp = proc_for_spawn.borrow_mut();
+                    let _ = pp.set_sync_handle(lock);
+                    let _ = pp.clear();
+                    let _ = scope_rc.post_message(
+                        &serde_json::to_string(&WorkerMsg::TotalLines(0))
+                            .unwrap()
+                            .into(),
+                    );
+                }
+            });
+        }
+        WorkerMsg::AppendLog(text) => {
+            let _ = p.append_log(text);
+        }
+        WorkerMsg::AppendChunk { chunk, is_hex } => {
+            let _ = p.append_chunk(&chunk, is_hex);
+        }
+        WorkerMsg::RequestWindow { start_line, count } => {
+            if let Ok(val) = p.request_window(start_line, count) {
+                if let Ok(lines) = serde_wasm_bindgen::from_value::<Vec<String>>(val) {
+                    let resp = WorkerMsg::LogWindow { start_line, lines };
+                    let _ = scope.post_message(&serde_json::to_string(&resp).unwrap().into());
+                }
+            }
+        }
+        WorkerMsg::Clear => {
+            let _ = p.clear();
+            let _ = scope.post_message(
+                &serde_json::to_string(&WorkerMsg::TotalLines(0))
+                    .unwrap()
+                    .into(),
+            );
+        }
+        WorkerMsg::SetLineEnding(mode) => {
+            p.set_line_ending(&mode);
+        }
+        WorkerMsg::SearchLogs {
+            query,
+            match_case,
+            use_regex,
+            invert,
+        } => {
+            if let Ok(count) = p.search_logs(query, match_case, use_regex, invert) {
+                let _ = scope.post_message(
+                    &serde_json::to_string(&WorkerMsg::TotalLines(count as usize))
+                        .unwrap()
+                        .into(),
+                );
+            }
+        }
+        WorkerMsg::ExportLogs { include_timestamp } => {
+            if let Ok(stream) = p.export_logs(include_timestamp) {
+                let resp = js_sys::Object::new();
+                let _ = js_sys::Reflect::set(&resp, &"type".into(), &"EXPORT_STREAM".into());
+                let _ = js_sys::Reflect::set(&resp, &"stream".into(), &stream);
+                let transfer = js_sys::Array::of1(&stream);
+                let _ = scope.post_message_with_transfer(&resp, &transfer);
+            }
+        }
+        _ => {}
+    }
 }
 
 #[cfg(test)]
@@ -813,8 +864,7 @@ mod tests {
     #[test]
     fn test_prepare_batch_splitting() {
         let mut core = CoreProcessor::new();
-        let (batch, offsets, _) =
-            core.prepare_batch("Hello\nWorld\nIncompl".into(), LineEnding::NL);
+        let (batch, offsets, _) = core.prepare_batch("Hello\nWorld\nIncompl", LineEnding::NL);
 
         // Lines should be timestamped.
         // We can't predict exact timestamp but check format.
@@ -839,7 +889,7 @@ mod tests {
         });
 
         let (batch, _, filtered) =
-            core.prepare_batch("Info: log\nCritical: error\n".into(), LineEnding::NL);
+            core.prepare_batch("Info: log\nCritical: error\n", LineEnding::NL);
 
         assert_eq!(filtered.len(), 1);
         // The second line matches

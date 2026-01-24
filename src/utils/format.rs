@@ -37,14 +37,21 @@ pub fn format_hex_input(input: &str) -> String {
 
 /// Helper to send raw byte chunk to worker
 pub fn send_chunk_to_worker(worker: &web_sys::Worker, data: &[u8], is_hex: bool) {
-    if let Ok(msg) =
-        serde_json::to_string(&crate::components::console::types::WorkerMsg::AppendChunk {
-            chunk: data.to_vec(),
-            is_hex,
-        })
-    {
-        let _ = worker.post_message(&msg.into());
-    }
+    // 1. Rust Memory -> JS Heap (Copy is inevitable here)
+    let arr = js_sys::Uint8Array::from(data);
+    let buffer = arr.buffer(); // Get buffer before moving arr
+
+    // 2. Prepare Message Object
+    let obj = js_sys::Object::new();
+    let _ = js_sys::Reflect::set(&obj, &"cmd".into(), &"AppendChunk".into());
+    let _ = js_sys::Reflect::set(&obj, &"is_hex".into(), &is_hex.into());
+    let _ = js_sys::Reflect::set(&obj, &"chunk".into(), &arr.into()); // arr moved here
+
+    // 3. Thread -> Thread (Zero-Copy using Transferable)
+    // We transfer the underlying ArrayBuffer ownership to the worker.
+    let transfer = js_sys::Array::of1(&buffer);
+
+    let _ = worker.post_message_with_transfer(&obj, &transfer);
 }
 
 /// Helper to send general control messages to worker
