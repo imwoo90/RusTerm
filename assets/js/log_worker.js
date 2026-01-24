@@ -72,17 +72,26 @@ const newSession = async (root, cleanup = false) => {
         // Only send total lines if we successfully processed existing logs
         if (processor.get_line_count() > 0) self.postMessage({ type: 'TOTAL_LINES', data: processor.get_line_count() });
 
-        self.onmessage = async ({ data: { type, data } }) => {
+        self.onmessage = async (event) => {
             try {
-                if (type === 'NEW_SESSION') { await newSession(root, true); self.postMessage({ type: 'TOTAL_LINES', data: 0 }); }
+                const { type, data } = event.data;
+                if (type === 'NEW_SESSION') { await newSession(root, true); lastNotifiedCount = 0; self.postMessage({ type: 'TOTAL_LINES', data: 0 }); }
                 else if (type === 'APPEND_CHUNK') { processor.append_chunk(data.chunk, data.is_hex); }
                 else if (type === 'APPEND_LOG') { processor.append_log(data); }
                 else if (type === 'REQUEST_WINDOW') self.postMessage({ type: 'LOG_WINDOW', data: { startLine: data.startLine, lines: processor.request_window(data.startLine, data.count) } });
                 else if (type === 'SEARCH_LOGS') { processor.search_logs(data.query, data.match_case, data.use_regex, data.invert); }
                 else if (type === 'EXPORT_LOGS') { const s = processor.export_logs(!(data?.include_timestamp === false)); self.postMessage({ type: 'EXPORT_STREAM', stream: s }, [s]); }
-                else if (type === 'CLEAR') { processor.clear(); self.postMessage({ type: 'TOTAL_LINES', data: 0 }); }
+                else if (type === 'CLEAR') {
+                    try {
+                        processor.clear();
+                    } catch (e) {
+                        console.error("Rust clear failed:", e);
+                    }
+                    lastNotifiedCount = 0;
+                    self.postMessage({ type: 'TOTAL_LINES', data: 0 });
+                }
                 else if (type === 'SET_LINE_ENDING') processor.set_line_ending(data);
-            } catch (e) { console.error(e); }
+            } catch (e) { console.error("Worker msg processing failed:", e); }
         };
     } catch (e) { console.error("Worker Init Failed", e); }
 })();

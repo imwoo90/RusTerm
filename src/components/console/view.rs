@@ -19,8 +19,8 @@ pub fn Console() -> Element {
 
     // 1. Signals & Setup
     // worker is now in AppState
-    let visible_logs = use_signal(|| Vec::<String>::new());
-    let total_lines = use_signal(|| 0usize);
+    let mut visible_logs = use_signal(|| Vec::<String>::new());
+    let mut total_lines = use_signal(|| 0usize);
     let mut start_index = use_signal(|| 0usize);
     let mut console_height = use_signal(|| 600.0);
 
@@ -139,8 +139,13 @@ pub fn Console() -> Element {
     let onclear = move |_evt: MouseEvent| {
         if let Some(w) = (state.log_worker)() {
             let _ = w.post_message(
-                &serde_wasm_bindgen::to_value(&serde_json::json!({ "type": "CLEAR" })).unwrap(),
+                &serde_wasm_bindgen::to_value(&crate::components::console::types::WorkerMsg::Clear)
+                    .unwrap(),
             );
+            // reset UI signals immediately
+            total_lines.set(0);
+            start_index.set(0);
+            visible_logs.set(Vec::new());
             state.success("Logs Cleared");
         }
     };
@@ -196,8 +201,7 @@ pub fn Console() -> Element {
 
                     // Virtual Scroll Spacer & Content
                     div { style: "height: {total_height}px; width: 100%; position: absolute; top: 0; left: 0; pointer-events: none;" }
-                    div {
-                        style: "position: absolute; top: 0; left: 0; right: 0; transform: translateY({offset_top}px); padding: {CONSOLE_TOP_PADDING}px 1rem {CONSOLE_BOTTOM_PADDING}px 1rem; pointer-events: auto; min-width: 100%; width: max-content;",
+                    div { style: "position: absolute; top: 0; left: 0; right: 0; transform: translateY({offset_top}px); padding: {CONSOLE_TOP_PADDING}px 1rem {CONSOLE_BOTTOM_PADDING}px 1rem; pointer-events: auto; min-width: 100%; width: max-content;",
                         {
                             let highlights = (state.highlights)().clone();
                             let show_timestamps = (state.show_timestamps)();
