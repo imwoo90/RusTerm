@@ -142,14 +142,14 @@ impl LogProcessor {
             if let Some(range) = self.index.get_line_range(LineIndex(i)) {
                 let mut buf = vec![0u8; (range.end.0 - range.start.0) as usize];
                 self.storage.backend.read_at(range.start, &mut buf)?;
-                lines.push(
-                    self.storage
-                        .decoder
-                        .decode_with_u8_array(&buf)
-                        .map_err(LogError::from)?
-                        .trim_end_matches('\n')
-                        .to_string(),
-                );
+                let text = self
+                    .storage
+                    .decoder
+                    .decode_with_u8_array(&buf)
+                    .map_err(LogError::from)?
+                    .trim_end_matches('\n')
+                    .to_string();
+                lines.push((i, text));
             }
         }
         serde_wasm_bindgen::to_value(&lines).map_err(|e| LogError::Encoding(e.to_string()))

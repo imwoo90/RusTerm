@@ -1,4 +1,5 @@
 use crate::components::ui::{ToastMessage, ToastType};
+pub use crate::types::*;
 use dioxus::prelude::*;
 use gloo_timers::future::TimeoutFuture;
 use web_sys::{ReadableStreamDefaultReader, SerialPort};
@@ -21,56 +22,6 @@ unsafe impl Sync for ReaderWrapper {}
 impl PartialEq for ReaderWrapper {
     fn eq(&self, other: &Self) -> bool {
         self.0 == other.0
-    }
-}
-
-#[derive(Clone, PartialEq, Debug)]
-pub struct Highlight {
-    pub id: usize,
-    pub text: String,
-    pub color: &'static str,
-}
-
-#[derive(Clone, Copy, PartialEq, Debug, Default)]
-pub enum LineEnding {
-    #[default]
-    None,
-    NL,
-    CR,
-    NLCR,
-}
-
-#[derive(Clone, Copy, PartialEq, Debug, Default)]
-pub enum Parity {
-    #[default]
-    None,
-    Even,
-    Odd,
-}
-
-impl ToString for Parity {
-    fn to_string(&self) -> String {
-        match self {
-            Parity::None => "none".to_string(),
-            Parity::Even => "even".to_string(),
-            Parity::Odd => "odd".to_string(),
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Debug, Default)]
-pub enum FlowControl {
-    #[default]
-    None,
-    Hardware,
-}
-
-impl ToString for FlowControl {
-    fn to_string(&self) -> String {
-        match self {
-            FlowControl::None => "none".to_string(),
-            FlowControl::Hardware => "hardware".to_string(),
-        }
     }
 }
 
@@ -107,7 +58,7 @@ pub struct ConnectionState {
 #[derive(Clone, Copy)]
 pub struct LogState {
     pub total_lines: Signal<usize>,
-    pub visible_logs: Signal<Vec<String>>,
+    pub visible_logs: Signal<Vec<(usize, String)>>,
     pub filter_query: Signal<String>,
     pub match_case: Signal<bool>,
     pub use_regex: Signal<bool>,
@@ -261,7 +212,7 @@ pub fn use_provide_app_state() -> AppState {
     let log_worker = use_signal(|| None::<web_sys::Worker>);
 
     let total_lines = use_signal(|| 0usize);
-    let visible_logs = use_signal(|| Vec::<String>::new());
+    let visible_logs = use_signal(|| Vec::<(usize, String)>::new());
     let filter_query = use_signal(|| String::new());
     let match_case = use_signal(|| false);
     let use_regex = use_signal(|| false);
@@ -329,8 +280,3 @@ impl AppState {
         self.add_toast(msg, ToastType::Info);
     }
 }
-
-pub const HIGHLIGHT_COLORS: &[&str] = &[
-    "red", "blue", "yellow", "green", "purple", "orange", "teal", "pink", "indigo", "lime", "cyan",
-    "rose", "fuchsia", "amber", "emerald", "sky", "violet",
-];

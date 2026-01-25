@@ -4,6 +4,7 @@ mod components;
 mod config;
 mod hooks;
 mod state;
+pub mod types;
 mod utils;
 mod worker;
 use components::serial_monitor::SerialMonitor;

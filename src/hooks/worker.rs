@@ -1,6 +1,6 @@
 use crate::state::AppState;
+use crate::types::{LineEnding, WorkerMsg};
 use crate::utils::{send_chunk_to_worker, send_worker_msg};
-use crate::worker::types::WorkerMsg;
 use dioxus::prelude::*;
 use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::JsCast;
@@ -38,8 +38,14 @@ impl WorkerController {
         self.send(WorkerMsg::ExportLogs { include_timestamp });
     }
 
-    pub fn set_line_ending(&self, ending: String) {
-        self.send(WorkerMsg::SetLineEnding(ending));
+    pub fn set_line_ending(&self, ending: LineEnding) {
+        let mode_str = match ending {
+            LineEnding::None => "None",
+            LineEnding::NL => "NL",
+            LineEnding::CR => "CR",
+            LineEnding::NLCR => "NLCR",
+        };
+        self.send(WorkerMsg::SetLineEnding(mode_str.to_string()));
     }
 
     pub fn append_log(&self, text: String) {
@@ -64,6 +70,7 @@ impl WorkerController {
 pub fn use_worker_controller() -> WorkerController {
     let mut state = use_context::<AppState>();
 
+    // Worker Initialization
     use_effect(move || {
         if state.conn.log_worker.read().is_none() {
             let script_path = crate::worker::get_app_script_path();
@@ -71,47 +78,7 @@ pub fn use_worker_controller() -> WorkerController {
             options.set_type(web_sys::WorkerType::Module);
 
             if let Ok(worker) = web_sys::Worker::new_with_options(&script_path, &options) {
-                let mut tl = state.log.total_lines;
-                let mut vl = state.log.visible_logs;
-
-                let callback = Closure::wrap(Box::new(move |event: web_sys::MessageEvent| {
-                    let data = event.data();
-
-                    if let Ok(obj) = data.clone().dyn_into::<js_sys::Object>() {
-                        if let Ok(msg_type) = js_sys::Reflect::get(&obj, &"type".into()) {
-                            if msg_type.as_string() == Some("EXPORT_STREAM".to_string()) {
-                                if let Ok(stream) = js_sys::Reflect::get(&obj, &"stream".into()) {
-                                    crate::utils::file_save::save_stream_to_disk(stream);
-                                    return;
-                                }
-                            }
-                        }
-                    }
-
-                    if let Some(msg_str) = data.as_string() {
-                        if let Ok(msg) = serde_json::from_str::<WorkerMsg>(&msg_str) {
-                            match msg {
-                                WorkerMsg::TotalLines(count) => {
-                                    tl.set(count);
-                                    if count == 0 {
-                                        vl.set(Vec::new());
-                                    }
-                                }
-                                WorkerMsg::LogWindow { lines, .. } => vl.set(lines),
-                                WorkerMsg::Error(msg) => {
-                                    if let Some(win) = web_sys::window() {
-                                        let _ = win
-                                            .alert_with_message(&format!("Worker Error: {}", msg));
-                                    }
-                                }
-                                _ => {}
-                            }
-                        }
-                    }
-                }) as Box<dyn FnMut(_)>);
-
-                worker.set_onmessage(Some(callback.as_ref().unchecked_ref()));
-                callback.forget();
+                setup_worker_message_handler(&worker, state);
                 state.conn.log_worker.set(Some(worker));
             }
         }
@@ -120,16 +87,54 @@ pub fn use_worker_controller() -> WorkerController {
     // RX Line Ending Sync
     use_effect(move || {
         let ending = (state.serial.rx_line_ending)();
-        if let Some(w) = state.conn.log_worker.read().as_ref() {
-            let mode_str = match ending {
-                crate::state::LineEnding::None => "None",
-                crate::state::LineEnding::NL => "NL",
-                crate::state::LineEnding::CR => "CR",
-                crate::state::LineEnding::NLCR => "NLCR",
-            };
-            crate::utils::send_worker_msg(w, WorkerMsg::SetLineEnding(mode_str.to_string()));
-        }
+        let controller = WorkerController::new(state.conn.log_worker);
+        controller.set_line_ending(ending);
     });
 
     WorkerController::new(state.conn.log_worker)
+}
+
+fn setup_worker_message_handler(worker: &web_sys::Worker, state: AppState) {
+    let mut tl = state.log.total_lines;
+    let mut vl = state.log.visible_logs;
+
+    let callback = Closure::wrap(Box::new(move |event: web_sys::MessageEvent| {
+        let data = event.data();
+
+        // 1. Handle Binary/Object Messages (Stream Exports)
+        if let Ok(obj) = data.clone().dyn_into::<js_sys::Object>() {
+            if let Ok(msg_type) = js_sys::Reflect::get(&obj, &"type".into()) {
+                if msg_type.as_string() == Some("EXPORT_STREAM".to_string()) {
+                    if let Ok(stream) = js_sys::Reflect::get(&obj, &"stream".into()) {
+                        crate::utils::file_save::save_stream_to_disk(stream);
+                        return;
+                    }
+                }
+            }
+        }
+
+        // 2. Handle Structured Messages (WorkerMsg)
+        if let Some(msg_str) = data.as_string() {
+            if let Ok(msg) = serde_json::from_str::<WorkerMsg>(&msg_str) {
+                match msg {
+                    WorkerMsg::TotalLines(count) => {
+                        tl.set(count);
+                        if count == 0 {
+                            vl.set(Vec::new());
+                        }
+                    }
+                    WorkerMsg::LogWindow { lines, .. } => {
+                        vl.set(lines);
+                    }
+                    WorkerMsg::Error(msg) => {
+                        state.error(&format!("Worker Error: {}", msg));
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }) as Box<dyn FnMut(_)>);
+
+    worker.set_onmessage(Some(callback.as_ref().unchecked_ref()));
+    callback.forget();
 }

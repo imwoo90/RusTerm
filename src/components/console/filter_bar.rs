@@ -1,5 +1,6 @@
 use crate::components::ui::{IconButton, LineEndSelector, PanelHeader};
-use crate::state::{AppState, HIGHLIGHT_COLORS};
+use crate::config::HIGHLIGHT_COLORS;
+use crate::state::AppState;
 use dioxus::prelude::*;
 
 #[component]

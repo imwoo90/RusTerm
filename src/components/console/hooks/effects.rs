@@ -2,14 +2,8 @@ use crate::hooks::WorkerController;
 use crate::state::AppState;
 use dioxus::prelude::*;
 
-pub fn use_settings_sync(bridge: WorkerController) {
-    let state = use_context::<AppState>();
-
-    // RX Line Ending Sync
-    use_effect(move || {
-        let ending = (state.serial.rx_line_ending)();
-        bridge.set_line_ending(format!("{:?}", ending));
-    });
+pub fn use_settings_sync(_bridge: WorkerController) {
+    // Other settings sync can go here
 }
 
 pub fn use_search_sync(bridge: WorkerController) {

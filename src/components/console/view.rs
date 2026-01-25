@@ -2,80 +2,21 @@ use crate::components::console::hooks::effects::{use_search_sync, use_settings_s
 use crate::components::console::viewport::LogViewport;
 use crate::hooks::use_worker_controller;
 use crate::state::AppState;
-use crate::utils::calculate_window_size;
 use dioxus::prelude::*;
-use std::rc::Rc;
 
 use crate::components::console::console_header::ConsoleHeader;
-use crate::components::console::hooks::data_request::use_data_request;
-use crate::components::console::utils::constants::{
-    BOTTOM_BUFFER_EXTRA, CONSOLE_BOTTOM_PADDING, CONSOLE_TOP_PADDING, LINE_HEIGHT, TOP_BUFFER,
-};
-use crate::components::console::utils::layout_utils::{
-    calculate_scroll_state, use_auto_scroller, use_window_resize,
-};
+use crate::components::console::hooks::virtual_scroll::use_virtual_scroll;
+use crate::components::console::utils::layout_utils::calculate_scroll_state;
 
 #[component]
 pub fn Console() -> Element {
     let state = use_context::<AppState>();
     let bridge = use_worker_controller();
-
-    let mut start_index = use_signal(|| 0usize);
-    let mut console_height = use_signal(|| 600.0);
-    let total_lines = state.log.total_lines;
-
-    let window_size = calculate_window_size(
-        console_height(),
-        LINE_HEIGHT,
-        TOP_BUFFER + BOTTOM_BUFFER_EXTRA,
-    );
-
-    let mut console_handle = use_signal(|| None::<Rc<MountedData>>);
-    let mut sentinel_handle = use_signal(|| None::<Rc<MountedData>>);
+    let mut vs = use_virtual_scroll();
 
     // Initial log sync and effects
     use_settings_sync(bridge);
     use_search_sync(bridge);
-
-    // Reset virtual scroll state when logs are cleared or filtered out of view
-    use_effect(move || {
-        let total = total_lines();
-        let start = start_index();
-
-        if total == 0 {
-            if start != 0 {
-                start_index.set(0);
-            }
-            return;
-        }
-
-        if start >= total {
-            if (state.ui.autoscroll)() {
-                let page_size = (console_height() / LINE_HEIGHT).ceil() as usize;
-                let new_start = total.saturating_sub(page_size);
-                if start != new_start {
-                    start_index.set(new_start);
-                }
-            } else if start != 0 {
-                start_index.set(0);
-                // Reset scroll via JS for non-autoscroll out-of-bounds
-                if let Some(el) = web_sys::window()
-                    .and_then(|w| w.document())
-                    .and_then(|d| d.get_element_by_id("console-output"))
-                {
-                    el.set_scroll_top(0);
-                }
-            }
-        }
-    });
-
-    use_window_resize(console_height, state.ui.autoscroll, sentinel_handle);
-    use_data_request(start_index, window_size, total_lines);
-    use_auto_scroller(state.ui.autoscroll, total_lines, sentinel_handle);
-
-    let total_height =
-        (total_lines() as f64) * LINE_HEIGHT + CONSOLE_TOP_PADDING + CONSOLE_BOTTOM_PADDING;
-    let offset_top = (start_index() as f64) * LINE_HEIGHT;
 
     rsx! {
         main { class: "flex-1 min-h-0 mx-4 mb-0 mt-0 relative group/console",
@@ -84,42 +25,43 @@ pub fn Console() -> Element {
 
                 ConsoleHeader {
                     autoscroll: (state.ui.autoscroll)(),
-                    count: total_lines(),
+                    count: (state.log.total_lines)(),
                     onexport: move |_| bridge.export((state.ui.show_timestamps)()),
                     onclear: move |_| {
                         bridge.clear();
                         state.clear_logs();
-                        start_index.set(0);
+                        vs.start_index.set(0);
                         state.success("Logs Cleared");
                     },
                     ontoggle_autoscroll: move |_| state.ui.toggle_autoscroll(),
                 }
 
                 LogViewport {
-                    total_height,
-                    offset_top,
+                    total_height: vs.total_height,
+                    offset_top: vs.offset_top,
                     onmounted_console: move |evt: MountedEvent| {
                         let handle = evt.data();
                         let h_clone = handle.clone();
                         spawn(async move {
                             if let Ok(rect) = h_clone.get_client_rect().await {
-                                console_height.set(rect.height());
+                                vs.console_height.set(rect.height());
                             }
                         });
-                        console_handle.set(Some(handle));
+                        vs.console_handle.set(Some(handle));
                     },
                     onscroll: move |_: ScrollEvent| {
-                        let handle = console_handle.peek().as_ref().cloned();
+                        let handle = vs.console_handle.peek().as_ref().cloned();
+                        let total_lines = (state.log.total_lines)();
                         spawn(async move {
                             if let Some(handle) = handle {
                                 if let Ok(offset) = handle.get_scroll_offset().await {
                                     let (new_index, is_at_bottom) = calculate_scroll_state(
                                         offset.y,
-                                        console_height(),
-                                        total_lines(),
+                                        vs.console_height.read().clone(),
+                                        total_lines,
                                     );
-                                    if start_index() != new_index {
-                                        start_index.set(new_index);
+                                    if (vs.start_index)() != new_index {
+                                        vs.start_index.set(new_index);
                                     }
                                     if (state.ui.autoscroll)() != is_at_bottom {
                                         state.ui.set_autoscroll(is_at_bottom);
@@ -128,7 +70,7 @@ pub fn Console() -> Element {
                             }
                         });
                     },
-                    onmounted_sentinel: move |evt: MountedEvent| sentinel_handle.set(Some(evt.data())),
+                    onmounted_sentinel: move |evt: MountedEvent| vs.sentinel_handle.set(Some(evt.data())),
                 }
 
                 if !(state.ui.autoscroll)() {

@@ -1,5 +1,5 @@
 use crate::components::console::log_line::LogLine;
-use crate::components::console::utils::constants::{CONSOLE_BOTTOM_PADDING, CONSOLE_TOP_PADDING};
+use crate::config::{CONSOLE_BOTTOM_PADDING, CONSOLE_TOP_PADDING};
 use crate::state::AppState;
 use dioxus::prelude::*;
 
@@ -34,11 +34,10 @@ pub fn LogViewport(
                     visible_logs
                         .read()
                         .iter()
-                        .enumerate()
-                        .map(move |(idx, text)| {
+                        .map(move |(line_idx, text)| {
                             rsx! {
                                 LogLine {
-                                    key: "{idx}",
+                                    key: "{line_idx}",
                                     text: text.clone(),
                                     highlights: highlights.clone(),
                                     show_timestamps,

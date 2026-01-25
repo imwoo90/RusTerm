@@ -1,4 +1,4 @@
-use crate::components::console::utils::constants::LINE_HEIGHT;
+use crate::config::LINE_HEIGHT;
 use crate::state::Highlight;
 use crate::utils::process_log_segments;
 use dioxus::prelude::*;

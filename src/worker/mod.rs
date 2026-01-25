@@ -71,7 +71,7 @@ impl WorkerState {
             }
             WorkerMsg::RequestWindow { start_line, count } => {
                 let val = self.proc.request_window(start_line, count)?;
-                let lines = serde_wasm_bindgen::from_value::<Vec<String>>(val)
+                let lines = serde_wasm_bindgen::from_value::<Vec<(usize, String)>>(val)
                     .map_err(|e| JsValue::from_str(&e.to_string()))?;
                 self.send_msg(WorkerMsg::LogWindow { start_line, lines });
             }
