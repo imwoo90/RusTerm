@@ -10,30 +10,47 @@ pub fn use_window_resize(
     sentinel: Signal<Option<Rc<MountedData>>>,
 ) {
     use_effect(move || {
+        let window = match web_sys::window() {
+            Some(w) => w,
+            None => return,
+        };
+
         let mut update = move || {
-            if let Ok(Some(h)) = web_sys::window()
-                .unwrap()
-                .inner_height()
-                .map(|jv| jv.as_f64())
-            {
-                console_height.set((h - HEADER_OFFSET).max(100.0));
-                // Force scroll to bottom during resize if autoscroll is enabled
-                if (autoscroll)() {
-                    if let Some(s) = sentinel.peek().as_ref() {
-                        let s = s.clone();
-                        spawn(async move {
-                            let _ = s.scroll_to(ScrollBehavior::Instant).await;
-                        });
-                    }
+            let window = match web_sys::window() {
+                Some(w) => w,
+                None => return,
+            };
+
+            if let Ok(Some(h)) = window.inner_height().map(|jv| jv.as_f64()) {
+                let new_height = (h - HEADER_OFFSET).max(100.0);
+
+                // Only update if height changed significantly
+                // Using peek() here ensures this effect runs ONLY ONCE on mount
+                if (*console_height.peek() - new_height).abs() > 0.1 {
+                    console_height.set(new_height);
                 }
             }
         };
+
         update(); // Initial execution
         let onresize = Closure::wrap(Box::new(update) as Box<dyn FnMut()>);
-        web_sys::window()
-            .unwrap()
-            .set_onresize(Some(onresize.as_ref().unchecked_ref()));
+        window.set_onresize(Some(onresize.as_ref().unchecked_ref()));
         onresize.forget();
+    });
+    // Use use_resource to handle scrolling reactively.
+    // This is more efficient as it automatically cancels previous tasks if a new change occurs
+    // while we are waiting (TimeoutFuture).
+    let _ = use_resource(move || async move {
+        console_height(); // Subscribe to height changes
+        let auto = autoscroll(); // Subscribe to autoscroll changes
+
+        if auto {
+            // Wait a tick for the DOM to update with new height
+            gloo_timers::future::TimeoutFuture::new(10).await;
+            if let Some(s) = sentinel.peek().as_ref() {
+                let _ = s.scroll_to(ScrollBehavior::Instant).await;
+            }
+        }
     });
 }
 
