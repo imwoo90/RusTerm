@@ -1,25 +1,26 @@
 use crate::state::LineEnding;
+use crate::worker::chunk_handler::ChunkHandler;
 use crate::worker::error::LogError;
+use crate::worker::export::LogExporter;
 use crate::worker::formatter::{
     DefaultFormatter, HexFormatter, LogFormatter, LogFormatterStrategy,
 };
 use crate::worker::index::{ByteOffset, LineIndex, LineRange, LogIndex};
+use crate::worker::line_writer::LineWriter;
 use crate::worker::search::LogSearcher;
 use crate::worker::storage::{LogStorage, StorageBackend};
 
-use std::borrow::Cow;
 use wasm_bindgen::prelude::*;
-use wasm_streams::ReadableStream;
-use web_sys::{FileSystemReadWriteOptions, FileSystemSyncAccessHandle};
+use web_sys::FileSystemSyncAccessHandle;
 
-use crate::config::{EXPORT_CHUNK_SIZE, MAX_LINE_BYTES, READ_BUFFER_SIZE};
+use crate::config::{MAX_LINE_BYTES, READ_BUFFER_SIZE};
 
 #[wasm_bindgen]
 pub struct LogProcessor {
     storage: LogStorage,
     index: LogIndex,
     formatter: LogFormatter,
-    leftover_chunk: String,
+    chunk_handler: ChunkHandler,
 }
 
 #[wasm_bindgen]
@@ -34,7 +35,7 @@ impl LogProcessor {
             storage: LogStorage::new()?,
             index: LogIndex::new(),
             formatter: LogFormatter::new(LineEnding::NL),
-            leftover_chunk: String::new(),
+            chunk_handler: ChunkHandler::new(),
         })
     }
 
@@ -99,10 +100,27 @@ impl LogProcessor {
             self.decode_with_streaming_internal(chunk)?
         };
 
-        let (batch, offsets, filtered) = self.prepare_batch_with_formatter(&text, &*formatter);
+        let timestamp = self.formatter.get_timestamp();
+        let is_filtering = self.index.is_filtering;
+        let active_filter = self.index.active_filter.clone();
+
+        let (batch, offsets, filtered) = self.chunk_handler.prepare_batch_with_formatter(
+            &text,
+            &*formatter,
+            &timestamp,
+            is_filtering,
+            |text: &str| is_filtering && active_filter.as_ref().is_some_and(|f| f.matches(text)),
+        );
+
         if !batch.is_empty() {
-            self.write_and_update_internal(&batch, offsets, filtered)
-                .map_err(JsValue::from)?;
+            LineWriter::write_and_update(
+                &mut self.storage,
+                &mut self.index,
+                &batch,
+                offsets,
+                filtered,
+            )
+            .map_err(JsValue::from)?;
         }
         Ok(self.get_line_count())
     }
@@ -124,8 +142,14 @@ impl LogProcessor {
         } else {
             vec![]
         };
-        self.write_and_update_internal(&log, vec![len], filtered)
-            .map_err(JsValue::from)?;
+        LineWriter::write_and_update(
+            &mut self.storage,
+            &mut self.index,
+            &log,
+            vec![len],
+            filtered,
+        )
+        .map_err(JsValue::from)?;
         Ok(self.get_line_count())
     }
 
@@ -181,6 +205,7 @@ impl LogProcessor {
         self.storage.backend.truncate(0)?;
         self.storage.backend.flush()?;
         self.index.reset_base();
+        self.chunk_handler.clear();
         Ok(())
     }
 
@@ -190,186 +215,22 @@ impl LogProcessor {
 
     fn export_logs_internal(&self, ts: bool) -> Result<js_sys::Object, LogError> {
         let size = self.storage.backend.get_file_size()?;
-        let (dec, enc, mode, backend) = (
+        let handle = self
+            .storage
+            .backend
+            .handle
+            .as_ref()
+            .cloned()
+            .ok_or_else(|| LogError::Storage("OPFS handle missing for export".into()))?;
+
+        LogExporter::export_logs(
+            handle,
             self.storage.decoder.clone(),
             self.storage.encoder.clone(),
             self.formatter.line_ending_mode,
-            self.storage
-                .backend
-                .handle
-                .as_ref()
-                .cloned()
-                .ok_or_else(|| LogError::Storage("OPFS handle missing for export".into()))?,
-        );
-
-        let stream = futures_util::stream::unfold(ByteOffset(0), move |off| {
-            let (h, d, e) = (backend.clone(), dec.clone(), enc.clone());
-            async move {
-                if off.0 >= size.0 {
-                    return None;
-                }
-                let len = (size.0 - off.0).min(EXPORT_CHUNK_SIZE) as usize;
-                let mut buf = vec![0u8; len];
-                let opts = FileSystemReadWriteOptions::new();
-                opts.set_at(off.0 as f64);
-                if h.read_with_u8_array_and_options(&mut buf, &opts).is_err() {
-                    return None;
-                }
-
-                let res = if ts {
-                    JsValue::from(js_sys::Uint8Array::from(&buf[..]))
-                } else {
-                    let text = d.decode_with_u8_array(&buf).unwrap_or_default();
-                    let sep = match mode {
-                        LineEnding::CR => "\r",
-                        LineEnding::NLCR => "\r\n",
-                        _ => "\n",
-                    };
-                    let out = text
-                        .split(sep)
-                        .map(|l| if l.len() > 15 { &l[15..] } else { l })
-                        .collect::<Vec<_>>()
-                        .join(sep);
-                    JsValue::from(e.encode_with_input(&out))
-                };
-                Some((Ok(res), ByteOffset(off.0 + len as u64)))
-            }
-        });
-        Ok(ReadableStream::from_stream(stream).into_raw().into())
-    }
-
-    // --- Private Log Logic ---
-    fn write_and_update_internal(
-        &mut self,
-        text: &str,
-        offsets: Vec<ByteOffset>,
-        filtered: Vec<LineRange>,
-    ) -> Result<(), LogError> {
-        let start = self.storage.backend.get_file_size()?;
-        self.storage
-            .backend
-            .write_at(start, self.storage.encoder.encode_with_input(text).as_ref())?;
-        for off in offsets {
-            self.index.push_line(start + off.0);
-        }
-        for mut r in filtered {
-            r.start = start + r.start.0;
-            r.end = start + r.end.0;
-            self.index.push_filtered(r);
-        }
-        Ok(())
-    }
-
-    fn prepare_batch_with_formatter(
-        &mut self,
-        chunk: &str,
-        formatter: &dyn LogFormatterStrategy,
-    ) -> (String, Vec<ByteOffset>, Vec<LineRange>) {
-        let max_len = formatter.max_line_length();
-
-        // 1. If leftover is already too long, force a split before even adding new chunk
-        if !self.leftover_chunk.is_empty() && self.leftover_chunk.len() >= max_len {
-            self.leftover_chunk.push('\n');
-        }
-
-        let full_text = if self.leftover_chunk.is_empty() {
-            Cow::Borrowed(chunk)
-        } else {
-            Cow::Owned(format!("{}{}", self.leftover_chunk, chunk))
-        };
-
-        let mut raw_lines: Vec<&str> = match self.formatter.line_ending_mode {
-            LineEnding::None | LineEnding::NL => full_text.split('\n'),
-            LineEnding::CR => full_text.split('\x0D'),
-            LineEnding::NLCR => full_text.split('\n'),
-        }
-        .collect();
-
-        // The last part is the new leftover
-        self.leftover_chunk = raw_lines.pop().unwrap_or("").to_string();
-
-        let mut batch = String::with_capacity(full_text.len() * 2);
-        let mut offsets = Vec::with_capacity(raw_lines.len());
-        let mut filtered = Vec::new();
-        let mut relative_offset = ByteOffset(0);
-        let timestamp = self.formatter.get_timestamp();
-
-        for line in raw_lines {
-            let cleaned = formatter.clean_line_ending(line);
-            self.process_single_line(
-                cleaned,
-                formatter,
-                &timestamp,
-                &mut batch,
-                &mut offsets,
-                &mut filtered,
-                &mut relative_offset,
-            );
-        }
-
-        (batch, offsets, filtered)
-    }
-
-    fn process_single_line(
-        &self,
-        line: &str,
-        formatter: &dyn LogFormatterStrategy,
-        timestamp: &str,
-        batch: &mut String,
-        offsets: &mut Vec<ByteOffset>,
-        filtered: &mut Vec<LineRange>,
-        current_relative_offset: &mut ByteOffset,
-    ) {
-        let max_len = formatter.max_line_length();
-        let mut start = 0;
-
-        // Handle empty line case (if any, though split usually gives empty str for consecutive delims)
-        if line.is_empty() {
-            let start_pos = batch.len();
-            let formatted = formatter.format("", timestamp);
-            batch.push_str(&formatted);
-            let line_len = (batch.len() - start_pos) as u64;
-
-            if self.is_filter_match(&batch[start_pos..]) {
-                filtered.push(LineRange {
-                    start: *current_relative_offset,
-                    end: *current_relative_offset + line_len,
-                });
-            }
-            *current_relative_offset = *current_relative_offset + line_len;
-            offsets.push(*current_relative_offset);
-            return;
-        }
-
-        while start < line.len() {
-            let end = (start + max_len).min(line.len());
-            let sub_line = &line[start..end];
-
-            let start_pos = batch.len();
-            let formatted = formatter.format(sub_line, timestamp);
-            batch.push_str(&formatted);
-            let line_len = (batch.len() - start_pos) as u64;
-
-            if self.is_filter_match(&batch[start_pos..]) {
-                filtered.push(LineRange {
-                    start: *current_relative_offset,
-                    end: *current_relative_offset + line_len,
-                });
-            }
-
-            *current_relative_offset = *current_relative_offset + line_len;
-            offsets.push(*current_relative_offset);
-            start = end;
-        }
-    }
-
-    fn is_filter_match(&self, text: &str) -> bool {
-        self.index.is_filtering
-            && self
-                .index
-                .active_filter
-                .as_ref()
-                .is_some_and(|f| f.matches(text))
+            size,
+            ts,
+        )
     }
 
     fn decode_with_streaming_internal(&self, chunk: &[u8]) -> Result<String, JsValue> {

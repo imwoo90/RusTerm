@@ -1,5 +1,5 @@
+use crate::worker::state::WorkerState;
 use crate::worker::types::WorkerMsg;
-use crate::worker::WorkerState;
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;

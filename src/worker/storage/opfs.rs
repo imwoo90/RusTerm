@@ -1,17 +1,12 @@
 use crate::worker::error::LogError;
 use crate::worker::index::ByteOffset;
+use crate::worker::storage::backend::StorageBackend;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{TextDecoder, TextEncoder};
+use web_sys::TextDecoder;
+use web_sys::TextEncoder;
 
-pub trait StorageBackend {
-    fn read_at(&self, offset: ByteOffset, buf: &mut [u8]) -> Result<usize, LogError>;
-    fn write_at(&self, offset: ByteOffset, data: &[u8]) -> Result<usize, LogError>;
-    fn get_file_size(&self) -> Result<ByteOffset, LogError>;
-    fn truncate(&self, size: u64) -> Result<(), LogError>;
-    fn flush(&self) -> Result<(), LogError>;
-}
-
+/// OPFS-based storage backend
 pub struct OpfsBackend {
     pub handle: Option<web_sys::FileSystemSyncAccessHandle>,
 }
@@ -69,6 +64,7 @@ impl StorageBackend for OpfsBackend {
     }
 }
 
+/// Log storage wrapper with encoder/decoder
 pub struct LogStorage {
     pub backend: OpfsBackend,
     pub encoder: TextEncoder,
@@ -85,6 +81,7 @@ impl LogStorage {
     }
 }
 
+/// Gets the OPFS root directory handle
 pub async fn get_opfs_root() -> Result<web_sys::FileSystemDirectoryHandle, JsValue> {
     let global = js_sys::global();
     let navigator = js_sys::Reflect::get(&global, &"navigator".into())?;
@@ -94,6 +91,7 @@ pub async fn get_opfs_root() -> Result<web_sys::FileSystemDirectoryHandle, JsVal
     Ok(root.into())
 }
 
+/// Acquires a lock on a file handle with retries
 pub async fn get_lock(
     file_handle: web_sys::FileSystemFileHandle,
 ) -> Result<web_sys::FileSystemSyncAccessHandle, JsValue> {
@@ -113,6 +111,7 @@ pub async fn get_lock(
     Err("Failed to acquire OPFS lock after retries".into())
 }
 
+/// Gets all log files from the root directory
 async fn get_files(
     root: &web_sys::FileSystemDirectoryHandle,
 ) -> Result<Vec<(String, web_sys::FileSystemFileHandle)>, JsValue> {
@@ -150,6 +149,7 @@ async fn get_files(
     Ok(files)
 }
 
+/// Creates a new OPFS session
 pub async fn new_session(
     root: &web_sys::FileSystemDirectoryHandle,
     cleanup_current: bool,
@@ -174,7 +174,7 @@ pub async fn new_session(
     Ok(lock)
 }
 
-// Redefine setup_opfs_manual properly to return the handle
+/// Initializes an OPFS session, reusing existing file if possible
 pub async fn init_opfs_session(
     current_filename: &mut Option<String>,
 ) -> Result<web_sys::FileSystemSyncAccessHandle, JsValue> {
