@@ -65,22 +65,28 @@ pub fn calculate_scroll_state(
     offset_y: f64,
     viewport_height: f64,
     total_lines: usize,
+    scale_factor: f64,
 ) -> (usize, bool) {
     use crate::config::{CONSOLE_BOTTOM_PADDING, CONSOLE_TOP_PADDING, LINE_HEIGHT, TOP_BUFFER};
     use crate::utils::calculate_start_index;
 
     // 1. Calculate Virtual Scroll Index
-    let new_index = calculate_start_index(offset_y, LINE_HEIGHT, TOP_BUFFER);
+    // We need to un-scale the offset to get the "real" pixel position
+    let real_offset_y = offset_y / scale_factor;
+    let new_index = calculate_start_index(real_offset_y, LINE_HEIGHT, TOP_BUFFER);
 
     // 2. Autoscroll Detection (Math-based)
-    let content_height =
+    // We compare against the "rendered" height (virtual height)
+    let real_content_height =
         (total_lines as f64) * LINE_HEIGHT + CONSOLE_TOP_PADDING + CONSOLE_BOTTOM_PADDING;
+    let virtual_content_height = real_content_height * scale_factor;
 
     // Allow small buffer (e.g. 10px) for precision
-    let is_at_bottom = if content_height <= viewport_height {
+    let is_at_bottom = if virtual_content_height <= viewport_height {
         true
     } else {
-        offset_y + viewport_height >= content_height - 10.0
+        // Check if we are at the bottom of the "virtual" container
+        offset_y + viewport_height >= virtual_content_height - 10.0
     };
 
     (new_index, is_at_bottom)

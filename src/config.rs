@@ -14,6 +14,7 @@ pub const TOP_BUFFER: usize = 10;
 pub const BOTTOM_BUFFER_EXTRA: usize = 40;
 pub const CONSOLE_TOP_PADDING: f64 = 8.0; // 0.5rem
 pub const CONSOLE_BOTTOM_PADDING: f64 = 20.0;
+pub const MAX_VIRTUAL_HEIGHT: f64 = 15_000_000.0; // Safe limit under 16.7M (2^24)
 
 pub const HIGHLIGHT_COLORS: &[&str] = &[
     "red", "blue", "yellow", "green", "purple", "orange", "teal", "pink", "indigo", "lime", "cyan",

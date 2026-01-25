@@ -13,6 +13,7 @@ pub struct VirtualScroll {
     pub offset_top: f64,
     pub console_handle: Signal<Option<Rc<MountedData>>>,
     pub sentinel_handle: Signal<Option<Rc<MountedData>>>,
+    pub scale_factor: f64,
 }
 
 pub fn use_virtual_scroll() -> VirtualScroll {
@@ -61,10 +62,21 @@ pub fn use_virtual_scroll() -> VirtualScroll {
     use_data_request(start_index, window_size, total_lines);
     use_auto_scroller(state.ui.autoscroll, total_lines, sentinel_handle);
 
-    let total_height = (total_lines() as f64) * LINE_HEIGHT
+    let real_total_height = (total_lines() as f64) * LINE_HEIGHT
         + crate::config::CONSOLE_TOP_PADDING
         + crate::config::CONSOLE_BOTTOM_PADDING;
-    let offset_top = (start_index() as f64) * LINE_HEIGHT;
+
+    let (total_height, scale_factor) = if real_total_height > crate::config::MAX_VIRTUAL_HEIGHT {
+        let scale = crate::config::MAX_VIRTUAL_HEIGHT / real_total_height;
+        (crate::config::MAX_VIRTUAL_HEIGHT, scale)
+    } else {
+        (real_total_height, 1.0)
+    };
+
+    // Calculate offset_top (scaled)
+    // start_index * LINE_HEIGHT gives the "real" unscaled pixel offset of the first visible line.
+    // We multiply by scale_factor to position it correctly in the scaled container.
+    let offset_top = ((start_index() as f64) * LINE_HEIGHT) * scale_factor;
 
     VirtualScroll {
         start_index,
@@ -73,5 +85,6 @@ pub fn use_virtual_scroll() -> VirtualScroll {
         offset_top,
         console_handle,
         sentinel_handle,
+        scale_factor,
     }
 }
