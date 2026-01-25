@@ -1,5 +1,5 @@
 use crate::worker::error::LogError;
-use crate::worker::index::ByteOffset;
+use crate::worker::repository::index::ByteOffset;
 
 /// Trait for storage backend operations
 pub trait StorageBackend {

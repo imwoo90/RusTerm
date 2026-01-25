@@ -1,6 +1,6 @@
 use crate::worker::error::LogError;
-use crate::worker::index::{ActiveFilterBuilder, LineRange, LogIndex};
-use crate::worker::storage::{LogStorage, StorageBackend};
+use crate::worker::repository::index::{ActiveFilterBuilder, LineRange, LogIndex};
+use crate::worker::repository::storage::{LogStorage, StorageBackend};
 
 pub struct LogSearcher;
 

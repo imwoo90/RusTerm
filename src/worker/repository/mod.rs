@@ -1,7 +1,10 @@
+pub mod index;
+pub mod storage;
+
+use self::index::{ByteOffset, LineIndex, LineRange, LogIndex};
+use self::storage::{LogStorage, StorageBackend};
 use crate::config::READ_BUFFER_SIZE;
 use crate::worker::error::LogError;
-use crate::worker::index::{ByteOffset, LineIndex, LineRange, LogIndex};
-use crate::worker::storage::{LogStorage, StorageBackend};
 use web_sys::FileSystemSyncAccessHandle;
 
 /// Repository that manages log storage and indexing together
@@ -116,5 +119,15 @@ impl LogRepository {
             .active_filter
             .as_ref()
             .is_some_and(|f| f.matches(text))
+    }
+
+    /// Decodes a chunk of bytes using the storage's decoder with streaming enabled
+    pub fn decode_chunk(&self, chunk: &[u8]) -> Result<String, LogError> {
+        let opts = web_sys::TextDecodeOptions::new();
+        opts.set_stream(true);
+        self.storage
+            .decoder
+            .decode_with_u8_array_and_options(chunk, &opts)
+            .map_err(LogError::from)
     }
 }

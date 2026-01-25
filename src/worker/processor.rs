@@ -3,7 +3,7 @@ use crate::worker::chunk_handler::StreamingLineProcessor;
 use crate::worker::error::LogError;
 
 use crate::worker::formatter::LogFormatter;
-use crate::worker::index::{ByteOffset, LineRange};
+use crate::worker::repository::index::{ByteOffset, LineRange};
 use crate::worker::repository::LogRepository;
 
 use wasm_bindgen::prelude::*;
@@ -121,12 +121,6 @@ impl LogProcessor {
     }
 
     fn decode_with_streaming(&self, chunk: &[u8]) -> Result<String, LogError> {
-        let opts = web_sys::TextDecodeOptions::new();
-        opts.set_stream(true);
-        self.repository
-            .storage
-            .decoder
-            .decode_with_u8_array_and_options(chunk, &opts)
-            .map_err(LogError::from)
+        self.repository.decode_chunk(chunk)
     }
 }

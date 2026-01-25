@@ -1,5 +1,5 @@
 use crate::worker::formatter::LogFormatterStrategy;
-use crate::worker::index::{ByteOffset, LineRange};
+use crate::worker::repository::index::{ByteOffset, LineRange};
 use std::borrow::Cow;
 
 /// Handles streaming line processing with leftover buffer management
@@ -67,14 +67,16 @@ impl StreamingLineProcessor {
     fn split_by_line_ending<'a>(
         &self,
         text: &'a str,
-        _formatter: &dyn LogFormatterStrategy,
+        formatter: &dyn LogFormatterStrategy,
     ) -> Vec<&'a str> {
-        // We need to get the line ending mode from the formatter
-        // For now, we'll use a heuristic based on the formatter type
-        // This is a temporary solution - ideally formatter should expose line_ending
+        use crate::state::LineEnding;
 
-        // Default to NL split
-        text.split('\n').collect()
+        match formatter.get_line_ending() {
+            LineEnding::NL => text.split('\n').collect(),
+            LineEnding::CR => text.split('\r').collect(),
+            LineEnding::NLCR => text.split("\r\n").collect(),
+            LineEnding::None => vec![text],
+        }
     }
 
     fn process_single_line(

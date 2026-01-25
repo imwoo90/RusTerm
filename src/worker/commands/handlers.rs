@@ -1,10 +1,10 @@
 use crate::worker::commands::command::WorkerCommand;
 use crate::worker::error::LogError;
 use crate::worker::export::LogExporter;
-use crate::worker::index::LineIndex;
+use crate::worker::repository::index::LineIndex;
+use crate::worker::repository::storage::StorageBackend;
 use crate::worker::search::LogSearcher;
 use crate::worker::state::WorkerState;
-use crate::worker::storage::StorageBackend;
 use crate::worker::types::WorkerMsg;
 use wasm_bindgen::prelude::JsValue;
 

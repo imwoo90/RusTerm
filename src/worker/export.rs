@@ -1,7 +1,7 @@
 use crate::config::EXPORT_CHUNK_SIZE;
 use crate::state::LineEnding;
 use crate::worker::error::LogError;
-use crate::worker::index::ByteOffset;
+use crate::worker::repository::index::ByteOffset;
 use wasm_bindgen::prelude::*;
 use wasm_streams::ReadableStream;
 use web_sys::{FileSystemReadWriteOptions, FileSystemSyncAccessHandle, TextDecoder, TextEncoder};

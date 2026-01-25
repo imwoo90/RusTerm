@@ -1,6 +1,6 @@
 use crate::worker::error::LogError;
-use crate::worker::index::ByteOffset;
-use crate::worker::storage::backend::StorageBackend;
+use crate::worker::repository::index::ByteOffset;
+use crate::worker::repository::storage::backend::StorageBackend;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::TextDecoder;

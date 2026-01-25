@@ -1,5 +1,5 @@
-use crate::worker::index::filter::ActiveFilter;
-use crate::worker::index::types::{ByteOffset, LineIndex, LineRange};
+use crate::worker::repository::index::filter::ActiveFilter;
+use crate::worker::repository::index::types::{ByteOffset, LineIndex, LineRange};
 
 /// Log index that tracks line offsets and filtering state
 pub struct LogIndex {

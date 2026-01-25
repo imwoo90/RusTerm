@@ -19,6 +19,7 @@ pub trait LogFormatterStrategy {
     fn format_chunk(&self, chunk: &[u8]) -> String;
     fn clean_line_ending<'a>(&self, line: &'a str) -> &'a str;
     fn max_line_length(&self) -> usize;
+    fn get_line_ending(&self) -> LineEnding;
 }
 
 pub struct DefaultFormatter {
@@ -41,6 +42,10 @@ impl LogFormatterStrategy for DefaultFormatter {
 
     fn max_line_length(&self) -> usize {
         self.max_bytes
+    }
+
+    fn get_line_ending(&self) -> LineEnding {
+        self.line_ending
     }
 }
 
@@ -76,6 +81,10 @@ impl LogFormatterStrategy for HexFormatter {
 
     fn max_line_length(&self) -> usize {
         self.max_bytes * 3 // 3 chars per byte ("XX ")
+    }
+
+    fn get_line_ending(&self) -> LineEnding {
+        self.line_ending
     }
 }
 
