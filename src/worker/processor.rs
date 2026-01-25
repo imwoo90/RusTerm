@@ -133,7 +133,7 @@ impl LogProcessor {
                 .index
                 .active_filter
                 .as_ref()
-                .map_or(false, |f| f.matches(&log))
+                .is_some_and(|f| f.matches(&log))
         {
             vec![LineRange {
                 start: ByteOffset(0),
@@ -170,7 +170,7 @@ impl LogProcessor {
                 );
             }
         }
-        Ok(serde_wasm_bindgen::to_value(&lines).map_err(|e| LogError::Encoding(e.to_string()))?)
+        serde_wasm_bindgen::to_value(&lines).map_err(|e| LogError::Encoding(e.to_string()))
     }
 
     pub fn search_logs(
@@ -227,7 +227,12 @@ impl LogProcessor {
                 .decoder
                 .decode_with_u8_array(&buf[..size])
                 .map_err(LogError::Js)?;
-            let filter = self.index.active_filter.as_ref().unwrap().clone();
+            let filter = self
+                .index
+                .active_filter
+                .as_ref()
+                .ok_or_else(|| LogError::Regex("Filter missing during search".into()))?
+                .clone();
 
             for (j, line) in text.trim_end_matches('\n').split('\n').enumerate() {
                 if filter.matches(line) {
@@ -265,7 +270,12 @@ impl LogProcessor {
             self.storage.decoder.clone(),
             self.storage.encoder.clone(),
             self.formatter.line_ending_mode,
-            self.storage.backend.handle.as_ref().cloned().unwrap(),
+            self.storage
+                .backend
+                .handle
+                .as_ref()
+                .cloned()
+                .ok_or_else(|| LogError::Storage("OPFS handle missing for export".into()))?,
         );
 
         let stream = futures_util::stream::unfold(ByteOffset(0), move |off| {
@@ -379,7 +389,7 @@ impl LogProcessor {
                         .index
                         .active_filter
                         .as_ref()
-                        .map_or(false, |f| f.matches(&batch[start_pos..]))
+                        .is_some_and(|f| f.matches(&batch[start_pos..]))
                 {
                     filtered.push(LineRange {
                         start: relative_offset,

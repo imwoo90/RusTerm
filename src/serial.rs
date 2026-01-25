@@ -62,10 +62,17 @@ pub async fn read_loop(
         match JsFuture::from(promise).await {
             Ok(result) => {
                 let done = js_sys::Reflect::get(&result, &"done".into())
-                    .unwrap()
-                    .as_bool()
+                    .ok()
+                    .and_then(|v| v.as_bool())
                     .unwrap_or(false);
-                let value = js_sys::Reflect::get(&result, &"value".into()).unwrap();
+                let value = match js_sys::Reflect::get(&result, &"value".into()) {
+                    Ok(v) => v,
+                    Err(_) => {
+                        on_error("Failed to get read value".to_string());
+                        let _ = reader.release_lock();
+                        break;
+                    }
+                };
 
                 if done {
                     let _ = reader.release_lock();

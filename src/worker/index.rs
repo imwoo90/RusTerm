@@ -150,15 +150,13 @@ impl LogIndex {
     pub fn get_line_range(&self, index: LineIndex) -> Option<LineRange> {
         if self.is_filtering {
             self.filtered_lines.get(index.0).cloned()
+        } else if index.0 < self.line_count {
+            Some(LineRange {
+                start: self.line_offsets[index.0],
+                end: self.line_offsets[index.0 + 1],
+            })
         } else {
-            if index.0 < self.line_count {
-                Some(LineRange {
-                    start: self.line_offsets[index.0],
-                    end: self.line_offsets[index.0 + 1],
-                })
-            } else {
-                None
-            }
+            None
         }
     }
 

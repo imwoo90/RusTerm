@@ -169,9 +169,8 @@ pub async fn init_opfs_session(
             Ok(lock) => {
                 *current_filename = Some(name);
                 // Cleanup others
-                for i in 1..files.len() {
-                    let _ =
-                        wasm_bindgen_futures::JsFuture::from(root.remove_entry(&files[i].0)).await;
+                for file in files.iter().skip(1) {
+                    let _ = wasm_bindgen_futures::JsFuture::from(root.remove_entry(&file.0)).await;
                 }
                 Ok(lock)
             }
@@ -179,9 +178,8 @@ pub async fn init_opfs_session(
                 // If lock fails, start new
                 let res = new_session(&root, false, current_filename).await;
                 // Cleanup all including the failed one
-                for i in 0..files.len() {
-                    let _ =
-                        wasm_bindgen_futures::JsFuture::from(root.remove_entry(&files[i].0)).await;
+                for file in &files {
+                    let _ = wasm_bindgen_futures::JsFuture::from(root.remove_entry(&file.0)).await;
                 }
                 res
             }

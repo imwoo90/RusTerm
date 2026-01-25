@@ -33,7 +33,11 @@ pub fn process_log_segments(
 
     ANSI_RE.with(|re| {
         for cap in re.captures_iter(content) {
-            let m = cap.get(0).unwrap();
+            let m = if let Some(m) = cap.get(0) {
+                m
+            } else {
+                continue;
+            };
             let start = m.start();
             let end = m.end();
 
