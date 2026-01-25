@@ -6,9 +6,8 @@ use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 
 pub fn handle_message(state_rc: Rc<RefCell<WorkerState>>, data: JsValue) {
-    let mut state = state_rc.borrow_mut();
-
     if let Some(msg_str) = data.as_string() {
+        let mut state = state_rc.borrow_mut();
         if let Ok(msg) = serde_json::from_str::<WorkerMsg>(&msg_str) {
             let command = create_command_from_msg(msg);
             match command.execute(&mut state, &state_rc) {
@@ -26,7 +25,7 @@ pub fn handle_message(state_rc: Rc<RefCell<WorkerState>>, data: JsValue) {
     } else if data.is_object() {
         // Optimized path for binary chunks
         if let Err(e) = handle_object_message(&state_rc, &data) {
-            state.send_error(e);
+            state_rc.borrow().send_error(e);
         }
     }
 }
