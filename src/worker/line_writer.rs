@@ -2,9 +2,14 @@ use crate::worker::error::LogError;
 use crate::worker::index::{ByteOffset, LineRange, LogIndex};
 use crate::worker::storage::{LogStorage, StorageBackend};
 
-/// Handles writing lines to storage and updating the index
+/// Handles writing lines to storage and updating the index  
+/// DEPRECATED: This functionality has been inlined directly into LogProcessor
+#[deprecated(note = "Functionality inlined into LogProcessor")]
+#[allow(dead_code)]
 pub struct LineWriter;
 
+#[allow(dead_code)]
+#[allow(deprecated)]
 impl LineWriter {
     pub fn new() -> Self {
         Self
@@ -37,6 +42,7 @@ impl LineWriter {
     }
 }
 
+#[allow(deprecated)]
 impl Default for LineWriter {
     fn default() -> Self {
         Self::new()

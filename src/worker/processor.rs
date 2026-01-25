@@ -1,12 +1,11 @@
 use crate::state::LineEnding;
-use crate::worker::chunk_handler::ChunkHandler;
+use crate::worker::chunk_handler::StreamingLineProcessor;
 use crate::worker::error::LogError;
 use crate::worker::export::LogExporter;
 use crate::worker::formatter::{
     DefaultFormatter, HexFormatter, LogFormatter, LogFormatterStrategy,
 };
 use crate::worker::index::{ByteOffset, LineIndex, LineRange, LogIndex};
-use crate::worker::line_writer::LineWriter;
 use crate::worker::search::LogSearcher;
 use crate::worker::storage::{LogStorage, StorageBackend};
 
@@ -20,7 +19,7 @@ pub struct LogProcessor {
     storage: LogStorage,
     index: LogIndex,
     formatter: LogFormatter,
-    chunk_handler: ChunkHandler,
+    chunk_handler: StreamingLineProcessor,
 }
 
 #[wasm_bindgen]
@@ -35,7 +34,7 @@ impl LogProcessor {
             storage: LogStorage::new()?,
             index: LogIndex::new(),
             formatter: LogFormatter::new(LineEnding::NL),
-            chunk_handler: ChunkHandler::new(),
+            chunk_handler: StreamingLineProcessor::new(),
         })
     }
 
@@ -82,6 +81,11 @@ impl LogProcessor {
     }
 
     pub fn append_chunk(&mut self, chunk: &[u8], is_hex: bool) -> Result<u32, JsValue> {
+        self.append_chunk_internal(chunk, is_hex)
+            .map_err(JsValue::from)
+    }
+
+    fn append_chunk_internal(&mut self, chunk: &[u8], is_hex: bool) -> Result<u32, LogError> {
         let formatter: Box<dyn LogFormatterStrategy> = if is_hex {
             Box::new(HexFormatter {
                 line_ending: self.formatter.line_ending_mode,
@@ -97,14 +101,14 @@ impl LogProcessor {
         let text = if is_hex {
             formatter.format_chunk(chunk)
         } else {
-            self.decode_with_streaming_internal(chunk)?
+            self.decode_with_streaming(chunk)?
         };
 
         let timestamp = self.formatter.get_timestamp();
         let is_filtering = self.index.is_filtering;
         let active_filter = self.index.active_filter.clone();
 
-        let (batch, offsets, filtered) = self.chunk_handler.prepare_batch_with_formatter(
+        let (batch, offsets, filtered) = self.chunk_handler.process_chunk(
             &text,
             &*formatter,
             &timestamp,
@@ -113,19 +117,31 @@ impl LogProcessor {
         );
 
         if !batch.is_empty() {
-            LineWriter::write_and_update(
-                &mut self.storage,
-                &mut self.index,
-                &batch,
-                offsets,
-                filtered,
-            )
-            .map_err(JsValue::from)?;
+            // Write to storage and update index
+            let start = self.storage.backend.get_file_size()?;
+            self.storage.backend.write_at(
+                start,
+                self.storage.encoder.encode_with_input(&batch).as_ref(),
+            )?;
+
+            for off in offsets {
+                self.index.push_line(start + off.0);
+            }
+
+            for mut r in filtered {
+                r.start = start + r.start.0;
+                r.end = start + r.end.0;
+                self.index.push_filtered(r);
+            }
         }
         Ok(self.get_line_count())
     }
 
     pub fn append_log(&mut self, text: String) -> Result<u32, JsValue> {
+        self.append_log_internal(text).map_err(JsValue::from)
+    }
+
+    fn append_log_internal(&mut self, text: String) -> Result<u32, LogError> {
         let log = format!("[TX] {} {}\n", self.formatter.get_timestamp(), text);
         let len = ByteOffset(log.len() as u64);
         let filtered = if self.index.is_filtering
@@ -142,14 +158,20 @@ impl LogProcessor {
         } else {
             vec![]
         };
-        LineWriter::write_and_update(
-            &mut self.storage,
-            &mut self.index,
-            &log,
-            vec![len],
-            filtered,
-        )
-        .map_err(JsValue::from)?;
+        // Write to storage and update index
+        let start = self.storage.backend.get_file_size()?;
+        self.storage
+            .backend
+            .write_at(start, self.storage.encoder.encode_with_input(&log).as_ref())?;
+
+        self.index.push_line(start + len.0);
+
+        if !filtered.is_empty() {
+            let mut r = filtered[0];
+            r.start = start + r.start.0;
+            r.end = start + r.end.0;
+            self.index.push_filtered(r);
+        }
         Ok(self.get_line_count())
     }
 
@@ -233,11 +255,12 @@ impl LogProcessor {
         )
     }
 
-    fn decode_with_streaming_internal(&self, chunk: &[u8]) -> Result<String, JsValue> {
+    fn decode_with_streaming(&self, chunk: &[u8]) -> Result<String, LogError> {
         let opts = web_sys::TextDecodeOptions::new();
         opts.set_stream(true);
         self.storage
             .decoder
             .decode_with_u8_array_and_options(chunk, &opts)
+            .map_err(LogError::from)
     }
 }

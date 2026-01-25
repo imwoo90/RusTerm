@@ -2,20 +2,20 @@ use crate::worker::formatter::LogFormatterStrategy;
 use crate::worker::index::{ByteOffset, LineRange};
 use std::borrow::Cow;
 
-/// Handles chunk processing and line splitting logic
-pub struct ChunkHandler {
-    pub leftover_chunk: String,
+/// Handles streaming line processing with leftover buffer management
+pub struct StreamingLineProcessor {
+    pub leftover_buffer: String,
 }
 
-impl ChunkHandler {
+impl StreamingLineProcessor {
     pub fn new() -> Self {
         Self {
-            leftover_chunk: String::new(),
+            leftover_buffer: String::new(),
         }
     }
 
-    /// Prepares a batch of formatted lines from a chunk
-    pub fn prepare_batch_with_formatter(
+    /// Processes a chunk and prepares a batch of formatted lines with filtering
+    pub fn process_chunk(
         &mut self,
         chunk: &str,
         formatter: &dyn LogFormatterStrategy,
@@ -26,20 +26,20 @@ impl ChunkHandler {
         let max_len = formatter.max_line_length();
 
         // 1. If leftover is already too long, force a split before even adding new chunk
-        if !self.leftover_chunk.is_empty() && self.leftover_chunk.len() >= max_len {
-            self.leftover_chunk.push('\n');
+        if !self.leftover_buffer.is_empty() && self.leftover_buffer.len() >= max_len {
+            self.leftover_buffer.push('\n');
         }
 
-        let full_text = if self.leftover_chunk.is_empty() {
+        let full_text = if self.leftover_buffer.is_empty() {
             Cow::Borrowed(chunk)
         } else {
-            Cow::Owned(format!("{}{}", self.leftover_chunk, chunk))
+            Cow::Owned(format!("{}{}", self.leftover_buffer, chunk))
         };
 
         let mut raw_lines: Vec<&str> = self.split_by_line_ending(&full_text, formatter);
 
         // The last part is the new leftover
-        self.leftover_chunk = raw_lines.pop().unwrap_or("").to_string();
+        self.leftover_buffer = raw_lines.pop().unwrap_or("").to_string();
 
         let mut batch = String::with_capacity(full_text.len() * 2);
         let mut offsets = Vec::with_capacity(raw_lines.len());
@@ -133,11 +133,11 @@ impl ChunkHandler {
     }
 
     pub fn clear(&mut self) {
-        self.leftover_chunk.clear();
+        self.leftover_buffer.clear();
     }
 }
 
-impl Default for ChunkHandler {
+impl Default for StreamingLineProcessor {
     fn default() -> Self {
         Self::new()
     }

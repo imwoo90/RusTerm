@@ -2,6 +2,18 @@ use crate::state::LineEnding;
 use chrono::Timelike;
 use std::fmt::Write;
 
+/// Helper function to clean line endings based on the line ending mode
+pub fn clean_line_ending(line: &str, ending: LineEnding) -> &str {
+    let mut clean = line;
+    if ending == LineEnding::NL && clean.ends_with('\r') {
+        clean = &clean[..clean.len() - 1];
+    }
+    if ending == LineEnding::CR && clean.starts_with('\n') {
+        clean = &clean[1..];
+    }
+    clean
+}
+
 pub trait LogFormatterStrategy {
     fn format(&self, text: &str, timestamp: &str) -> String;
     fn format_chunk(&self, chunk: &[u8]) -> String;
@@ -24,14 +36,7 @@ impl LogFormatterStrategy for DefaultFormatter {
     }
 
     fn clean_line_ending<'a>(&self, line: &'a str) -> &'a str {
-        let mut clean = line;
-        if self.line_ending == LineEnding::NL && clean.ends_with('\r') {
-            clean = &clean[..clean.len() - 1];
-        }
-        if self.line_ending == LineEnding::CR && clean.starts_with('\n') {
-            clean = &clean[1..];
-        }
-        clean
+        clean_line_ending(line, self.line_ending)
     }
 
     fn max_line_length(&self) -> usize {
@@ -66,14 +71,7 @@ impl LogFormatterStrategy for HexFormatter {
     }
 
     fn clean_line_ending<'a>(&self, line: &'a str) -> &'a str {
-        let mut clean = line;
-        if self.line_ending == LineEnding::NL && clean.ends_with('\r') {
-            clean = &clean[..clean.len() - 1];
-        }
-        if self.line_ending == LineEnding::CR && clean.starts_with('\n') {
-            clean = &clean[1..];
-        }
-        clean
+        clean_line_ending(line, self.line_ending)
     }
 
     fn max_line_length(&self) -> usize {
