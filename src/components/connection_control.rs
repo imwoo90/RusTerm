@@ -1,8 +1,7 @@
 use crate::components::common::{CustomInputSelect, CustomSelect, IconButton};
-use crate::components::console::types::WorkerMsg;
+use crate::components::console::bridge::use_worker_bridge;
 use crate::serial;
 use crate::state::{AppState, SerialPortWrapper};
-use crate::utils::send_chunk_to_worker;
 use dioxus::prelude::*;
 use gloo_timers::future::TimeoutFuture;
 use wasm_bindgen::JsCast;
@@ -11,6 +10,7 @@ use web_sys::ReadableStreamDefaultReader;
 #[component]
 pub fn ConnectionControl() -> Element {
     let mut state = use_context::<AppState>();
+    let bridge = use_worker_bridge();
     let is_open = (state.show_settings)();
 
     let settings_icon_class = if is_open {
@@ -84,10 +84,7 @@ pub fn ConnectionControl() -> Element {
                         state.info("Simulation Started");
 
                         // Clear logs if starting
-                        if let Some(w) = state.log_worker.peek().as_ref() {
-                            crate::utils::format::send_worker_msg(w, WorkerMsg::Clear);
-                        }
-                        let worker_sig = state.log_worker;
+                        bridge.clear();
                         let sim_sig = state.is_simulating;
                         let hex_sig = state.is_hex_view;
 
@@ -96,32 +93,29 @@ pub fn ConnectionControl() -> Element {
                                 if !sim_sig() {
                                     break;
                                 }
-                                if let Some(w) = worker_sig.peek().as_ref() {
-                                    // Generate dummy content
-                                    let rnd = js_sys::Math::random();
-                                    let content = if rnd < 0.1 {
-                                        format!(
-                                            "Error: System overheat at {:.1}°C\n",
-                                            80.0 + rnd * 20.0,
-                                        )
-                                    } else if rnd < 0.3 {
-                                        format!(
-                                            "Warning: Voltage fluctuation detected: {:.2}V\n",
-                                            3.0 + rnd,
-                                        )
-                                    } else {
-                                        format!(
-                                            "Info: Sensor reading: A={:.2}, B={:.2}, C={:.2}\n",
-                                            rnd * 100.0,
-                                            rnd * 50.0,
-                                            rnd * 10.0,
-                                        )
-                                    };
+                                // Generate dummy content
+                                let rnd = js_sys::Math::random();
+                                let content = if rnd < 0.1 {
+                                    format!(
+                                        "Error: System overheat at {:.1}°C\n",
+                                        80.0 + rnd * 20.0,
+                                    )
+                                } else if rnd < 0.3 {
+                                    format!(
+                                        "Warning: Voltage fluctuation detected: {:.2}V\n",
+                                        3.0 + rnd,
+                                    )
+                                } else {
+                                    format!(
+                                        "Info: Sensor reading: A={:.2}, B={:.2}, C={:.2}\n",
+                                        rnd * 100.0,
+                                        rnd * 50.0,
+                                        rnd * 10.0,
+                                    )
+                                };
 
-                                    // Worker now handles formatting. Just send raw bytes.
-                                    let is_hex = hex_sig();
-                                    send_chunk_to_worker(w, content.as_bytes(), is_hex);
-                                }
+                                // Worker now handles formatting. Just send raw bytes.
+                                bridge.append_chunk(content.as_bytes(), hex_sig());
                                 gloo_timers::future::TimeoutFuture::new(1).await;
                             }
                         });
@@ -192,9 +186,7 @@ pub fn ConnectionControl() -> Element {
                                     .is_ok()
                                 {
                                     // Clear logs before connecting
-                                    if let Some(w) = state.log_worker.peek().as_ref() {
-                                        crate::utils::format::send_worker_msg(w, WorkerMsg::NewSession);
-                                    }
+                                    bridge.new_session();
                                     state.port.set(Some(SerialPortWrapper(port.clone())));
                                     state.is_connected.set(true);
 
@@ -210,10 +202,8 @@ pub fn ConnectionControl() -> Element {
                                             reader,
                                             move |data| {
                                                 // data is Vec<u8>
-                                                if let Some(w) = state.log_worker.peek().as_ref() {
-                                                    let is_hex = (state.is_hex_view)();
-                                                    send_chunk_to_worker(w, &data, is_hex);
-                                                }
+                                                let is_hex = (state.is_hex_view)();
+                                                bridge.append_chunk(&data, is_hex);
                                             },
                                             move |_| {
                                                 // If we manually disconnected, is_connected will be false by the time this runs (maybe?)

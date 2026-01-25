@@ -143,9 +143,9 @@ pub fn SerialMonitor() -> Element {
     });
 
     rsx! {
-        div { class: "bg-background-light dark:bg-background-dark h-screen w-full font-display text-white selection:bg-primary/30 selection:text-primary overflow-x-auto overflow-y-hidden",
+        div { class: "bg-background-dark h-screen w-full font-display text-white selection:bg-primary/30 selection:text-primary overflow-x-auto overflow-y-hidden",
             div { class: "flex flex-col h-full min-w-[600px]",
-                div { class: "relative shrink-0 z-30", Header {} }
+                Header {}
                 InputBar {}
                 FilterBar {}
                 Console {}

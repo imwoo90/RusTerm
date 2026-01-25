@@ -69,7 +69,7 @@ pub fn Console() -> Element {
     });
 
     use_window_resize(console_height, state.autoscroll, sentinel_handle);
-    use_data_request(start_index, window_size, total_lines, state.log_worker);
+    use_data_request(start_index, window_size, total_lines);
     use_auto_scroller(state.autoscroll, total_lines, sentinel_handle);
 
     let total_height =
