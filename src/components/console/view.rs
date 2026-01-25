@@ -10,9 +10,8 @@ use super::constants::{
     BOTTOM_BUFFER_EXTRA, CONSOLE_BOTTOM_PADDING, CONSOLE_TOP_PADDING, LINE_HEIGHT, TOP_BUFFER,
 };
 use super::data_request::use_data_request;
-use super::layout_utils::{
-    calculate_scroll_state, use_auto_scroller, use_window_resize, ConsoleHeader, ResumeScrollButton,
-};
+use super::header::ConsoleHeader;
+use super::layout_utils::{calculate_scroll_state, use_auto_scroller, use_window_resize};
 
 #[component]
 pub fn Console() -> Element {
@@ -132,6 +131,20 @@ pub fn Console() -> Element {
                 if !(state.autoscroll)() {
                     ResumeScrollButton { onclick: move |_| state.autoscroll.set(true) }
                 }
+            }
+        }
+    }
+}
+
+#[component]
+pub fn ResumeScrollButton(onclick: EventHandler<MouseEvent>) -> Element {
+    rsx! {
+        button {
+            class: "absolute bottom-6 right-6 bg-primary text-surface rounded-full w-10 h-10 shadow-lg shadow-black/50 hover:bg-white active:scale-95 transition-all duration-300 z-20 flex items-center justify-center cursor-pointer group/fab",
+            onclick: move |evt| onclick.call(evt),
+            span { class: "material-symbols-outlined text-[20px] font-bold", "arrow_downward" }
+            span { class: "absolute -top-8 right-0 bg-surface text-[9px] font-bold text-gray-300 px-2 py-1 rounded border border-white/5 opacity-0 group-hover/fab:opacity-100 transition-opacity whitespace-nowrap pointer-events-none uppercase tracking-widest",
+                "Resume Scroll"
             }
         }
     }

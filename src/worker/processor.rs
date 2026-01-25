@@ -4,33 +4,17 @@ use crate::worker::formatter::{
     DefaultFormatter, HexFormatter, LogFormatter, LogFormatterStrategy,
 };
 use crate::worker::index::{ActiveFilterBuilder, ByteOffset, LineIndex, LineRange, LogIndex};
-use crate::worker::storage::{OpfsBackend, StorageBackend};
+use crate::worker::storage::{LogStorage, StorageBackend};
 
 use std::borrow::Cow;
 use wasm_bindgen::prelude::*;
 use wasm_streams::ReadableStream;
-use web_sys::{FileSystemReadWriteOptions, FileSystemSyncAccessHandle, TextDecoder, TextEncoder};
+use web_sys::{FileSystemReadWriteOptions, FileSystemSyncAccessHandle};
 
 const READ_BUFFER_SIZE: usize = 64 * 1024;
 const SEARCH_BATCH_SIZE: usize = 5000;
 const EXPORT_CHUNK_SIZE: u64 = 64 * 1024;
 pub const MAX_LINE_BYTES: usize = 256;
-
-struct LogStorage {
-    backend: OpfsBackend,
-    encoder: TextEncoder,
-    decoder: TextDecoder,
-}
-
-impl LogStorage {
-    fn new() -> Result<Self, LogError> {
-        Ok(Self {
-            backend: OpfsBackend { handle: None },
-            encoder: TextEncoder::new().map_err(LogError::from)?,
-            decoder: TextDecoder::new().map_err(LogError::from)?,
-        })
-    }
-}
 
 #[wasm_bindgen]
 pub struct LogProcessor {

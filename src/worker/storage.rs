@@ -2,6 +2,7 @@ use crate::worker::error::LogError;
 use crate::worker::index::ByteOffset;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
+use web_sys::{TextDecoder, TextEncoder};
 
 pub trait StorageBackend {
     fn read_at(&self, offset: ByteOffset, buf: &mut [u8]) -> Result<usize, LogError>;
@@ -65,6 +66,22 @@ impl StorageBackend for OpfsBackend {
             .ok_or_else(|| LogError::Storage("No handle".into()))?
             .flush()
             .map_err(LogError::from)
+    }
+}
+
+pub struct LogStorage {
+    pub backend: OpfsBackend,
+    pub encoder: TextEncoder,
+    pub decoder: TextDecoder,
+}
+
+impl LogStorage {
+    pub fn new() -> Result<Self, LogError> {
+        Ok(Self {
+            backend: OpfsBackend { handle: None },
+            encoder: TextEncoder::new().map_err(LogError::from)?,
+            decoder: TextDecoder::new().map_err(LogError::from)?,
+        })
     }
 }
 

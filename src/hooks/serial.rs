@@ -1,4 +1,4 @@
-use crate::components::console::bridge::use_worker_bridge;
+use crate::components::console::use_worker_bridge;
 use crate::serial;
 use crate::state::{AppState, ReaderWrapper, SerialPortWrapper};
 use dioxus::prelude::*;

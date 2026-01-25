@@ -1,20 +1,19 @@
-pub mod bridge;
-pub mod constants;
-pub mod data_request;
-pub mod effects;
-pub mod filter_bar;
-pub mod layout_utils;
-pub mod log_line;
+mod bridge;
+mod constants;
+mod data_request;
+mod effects;
+mod filter_bar;
+mod header;
+mod input_bar;
+mod layout_utils;
+mod log_line;
+mod macro_bar;
+mod search_bar;
+mod transmit_bar;
+mod view;
+mod viewport;
 
-pub mod view;
-pub mod viewport;
-
-pub mod input_bar;
-pub mod macro_bar;
-pub mod search_bar;
-pub mod transmit_bar;
-
-// Re-export main components
+pub use bridge::use_worker_bridge;
 pub use filter_bar::FilterBar;
 pub use input_bar::InputBar;
 pub use macro_bar::MacroBar;
