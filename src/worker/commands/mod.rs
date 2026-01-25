@@ -40,6 +40,7 @@ impl WorkerCommand for NoOpCommand {
     fn execute(
         &self,
         _state: &mut crate::worker::state::WorkerState,
+        _state_rc: &std::rc::Rc<std::cell::RefCell<crate::worker::state::WorkerState>>,
     ) -> Result<bool, wasm_bindgen::prelude::JsValue> {
         Ok(true)
     }

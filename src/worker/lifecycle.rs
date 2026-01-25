@@ -1,6 +1,5 @@
 use crate::worker::dispatcher;
 use crate::worker::state::WorkerState;
-use crate::worker::types::WorkerMsg;
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
@@ -22,6 +21,9 @@ pub fn start_worker() {
             }
         };
 
+        // Start periodic updates for total line count
+        WorkerState::start_periodic_updates(state.clone());
+
         let onmessage = {
             let s_ptr = state.clone();
             Closure::wrap(Box::new(move |event: web_sys::MessageEvent| {
@@ -32,18 +34,6 @@ pub fn start_worker() {
         let scope = state.borrow().scope.clone();
         scope.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
         onmessage.forget();
-
-        let mut last_count = 0;
-        loop {
-            gloo_timers::future::TimeoutFuture::new(crate::config::WORKER_STATUS_INTERVAL_MS).await;
-            let current = state.borrow().proc.get_line_count();
-            if current != last_count {
-                last_count = current;
-                state
-                    .borrow()
-                    .send_msg(WorkerMsg::TotalLines(current as usize));
-            }
-        }
     });
 }
 

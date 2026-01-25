@@ -5,7 +5,7 @@ pub const MAX_LINE_BYTES: usize = 256;
 
 /// --- UI Timing & Intervals ---
 pub const TOAST_DURATION_MS: u32 = 3000;
-pub const WORKER_STATUS_INTERVAL_MS: u32 = 50;
+pub const WORKER_UPDATE_INTERVAL_MS: u32 = 16;
 
 /// --- Layout & Virtual Scroll ---
 pub const LINE_HEIGHT: f64 = 20.0;

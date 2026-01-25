@@ -6,12 +6,19 @@ use crate::worker::repository::storage::StorageBackend;
 use crate::worker::search::LogSearcher;
 use crate::worker::state::WorkerState;
 use crate::worker::types::WorkerMsg;
+use std::cell::RefCell;
+use std::rc::Rc;
 use wasm_bindgen::prelude::JsValue;
+use wasm_bindgen_futures::spawn_local;
 
 pub struct NewSessionCommand;
 
 impl WorkerCommand for NewSessionCommand {
-    fn execute(&self, _state: &mut WorkerState) -> Result<bool, JsValue> {
+    fn execute(
+        &self,
+        _state: &mut WorkerState,
+        _state_rc: &Rc<RefCell<WorkerState>>,
+    ) -> Result<bool, JsValue> {
         // Needs async handling by caller
         Ok(false)
     }
@@ -23,7 +30,11 @@ pub struct AppendChunkCommand {
 }
 
 impl WorkerCommand for AppendChunkCommand {
-    fn execute(&self, state: &mut WorkerState) -> Result<bool, JsValue> {
+    fn execute(
+        &self,
+        state: &mut WorkerState,
+        _state_rc: &Rc<RefCell<WorkerState>>,
+    ) -> Result<bool, JsValue> {
         state.proc.append_chunk(&self.chunk, self.is_hex)?;
         Ok(true)
     }
@@ -34,7 +45,11 @@ pub struct AppendLogCommand {
 }
 
 impl WorkerCommand for AppendLogCommand {
-    fn execute(&self, state: &mut WorkerState) -> Result<bool, JsValue> {
+    fn execute(
+        &self,
+        state: &mut WorkerState,
+        _state_rc: &Rc<RefCell<WorkerState>>,
+    ) -> Result<bool, JsValue> {
         state.proc.append_log(self.text.clone())?;
         Ok(true)
     }
@@ -46,7 +61,11 @@ pub struct RequestWindowCommand {
 }
 
 impl WorkerCommand for RequestWindowCommand {
-    fn execute(&self, state: &mut WorkerState) -> Result<bool, JsValue> {
+    fn execute(
+        &self,
+        state: &mut WorkerState,
+        _state_rc: &Rc<RefCell<WorkerState>>,
+    ) -> Result<bool, JsValue> {
         let total = state.proc.get_line_count() as usize;
         let (s, e) = (
             self.start_line.min(total),
@@ -81,7 +100,11 @@ impl WorkerCommand for RequestWindowCommand {
 pub struct ClearCommand;
 
 impl WorkerCommand for ClearCommand {
-    fn execute(&self, state: &mut WorkerState) -> Result<bool, JsValue> {
+    fn execute(
+        &self,
+        state: &mut WorkerState,
+        _state_rc: &Rc<RefCell<WorkerState>>,
+    ) -> Result<bool, JsValue> {
         state.proc.clear()?;
         state.send_msg(WorkerMsg::TotalLines(0));
         Ok(true)
@@ -93,7 +116,11 @@ pub struct SetLineEndingCommand {
 }
 
 impl WorkerCommand for SetLineEndingCommand {
-    fn execute(&self, state: &mut WorkerState) -> Result<bool, JsValue> {
+    fn execute(
+        &self,
+        state: &mut WorkerState,
+        _state_rc: &Rc<RefCell<WorkerState>>,
+    ) -> Result<bool, JsValue> {
         state.proc.set_line_ending(&self.mode);
         Ok(true)
     }
@@ -107,19 +134,34 @@ pub struct SearchLogsCommand {
 }
 
 impl WorkerCommand for SearchLogsCommand {
-    fn execute(&self, state: &mut WorkerState) -> Result<bool, JsValue> {
-        let repo = &mut state.proc.repository;
-        let count = LogSearcher::search(
-            &mut repo.storage,
-            &mut repo.index,
-            self.query.clone(),
-            self.match_case,
-            self.use_regex,
-            self.invert,
-        )
-        .map_err(JsValue::from)?;
+    fn execute(
+        &self,
+        state: &mut WorkerState,
+        state_rc: &Rc<RefCell<WorkerState>>,
+    ) -> Result<bool, JsValue> {
+        let query = self.query.clone();
+        let match_case = self.match_case;
+        let use_regex = self.use_regex;
+        let invert = self.invert;
+        let state_rc_clone = state_rc.clone();
 
-        state.send_msg(WorkerMsg::TotalLines(count as usize));
+        // Cancel previous search by incrementing search_id
+        state.current_search_id += 1;
+
+        spawn_local(async move {
+            if let Err(e) = LogSearcher::search_async(
+                state_rc_clone.clone(),
+                query,
+                match_case,
+                use_regex,
+                invert,
+            )
+            .await
+            {
+                state_rc_clone.borrow().send_error(JsValue::from(e));
+            }
+        });
+
         Ok(true)
     }
 }
@@ -129,7 +171,11 @@ pub struct ExportLogsCommand {
 }
 
 impl WorkerCommand for ExportLogsCommand {
-    fn execute(&self, state: &mut WorkerState) -> Result<bool, JsValue> {
+    fn execute(
+        &self,
+        state: &mut WorkerState,
+        _state_rc: &Rc<RefCell<WorkerState>>,
+    ) -> Result<bool, JsValue> {
         let repo = &state.proc.repository;
         let size = repo.storage.backend.get_file_size()?;
         let handle = repo

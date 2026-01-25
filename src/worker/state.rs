@@ -12,6 +12,8 @@ pub(crate) struct WorkerState {
     pub(crate) filename: Option<String>,
     pub(crate) root: web_sys::FileSystemDirectoryHandle,
     pub(crate) scope: web_sys::DedicatedWorkerGlobalScope,
+    pub(crate) last_reported_count: usize,
+    pub(crate) current_search_id: u32,
 }
 
 impl WorkerState {
@@ -31,7 +33,31 @@ impl WorkerState {
             filename,
             root,
             scope,
+            last_reported_count: 0,
+            current_search_id: 0,
         })
+    }
+
+    /// Starts a periodic update loop to send TotalLines to the main thread
+    pub(crate) fn start_periodic_updates(state_rc: Rc<RefCell<Self>>) {
+        spawn_local(async move {
+            loop {
+                gloo_timers::future::TimeoutFuture::new(crate::config::WORKER_UPDATE_INTERVAL_MS)
+                    .await; // ~60fps
+                let (count, scope) = {
+                    let state = state_rc.borrow();
+                    (state.proc.get_line_count() as usize, state.scope.clone())
+                };
+
+                let mut state = state_rc.borrow_mut();
+                if count != state.last_reported_count {
+                    state.last_reported_count = count;
+                    if let Ok(msg) = serde_json::to_string(&WorkerMsg::TotalLines(count)) {
+                        let _ = scope.post_message(&msg.into());
+                    }
+                }
+            }
+        });
     }
 
     /// Handles creating a new session asynchronously

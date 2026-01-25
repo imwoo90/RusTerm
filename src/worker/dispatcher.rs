@@ -11,7 +11,7 @@ pub fn handle_message(state_rc: Rc<RefCell<WorkerState>>, data: JsValue) {
     if let Some(msg_str) = data.as_string() {
         if let Ok(msg) = serde_json::from_str::<WorkerMsg>(&msg_str) {
             let command = create_command_from_msg(msg);
-            match command.execute(&mut state) {
+            match command.execute(&mut state, &state_rc) {
                 Ok(false) => {
                     // NewSession needs async handling
                     drop(state);
@@ -25,13 +25,17 @@ pub fn handle_message(state_rc: Rc<RefCell<WorkerState>>, data: JsValue) {
         }
     } else if data.is_object() {
         // Optimized path for binary chunks
-        if let Err(e) = handle_object_message(&mut state, &data) {
+        if let Err(e) = handle_object_message(&state_rc, &data) {
             state.send_error(e);
         }
     }
 }
 
-fn handle_object_message(state: &mut WorkerState, data: &JsValue) -> Result<(), JsValue> {
+fn handle_object_message(
+    state_rc: &Rc<RefCell<WorkerState>>,
+    data: &JsValue,
+) -> Result<(), JsValue> {
+    let mut state = state_rc.borrow_mut();
     let cmd = js_sys::Reflect::get(data, &"cmd".into())
         .ok()
         .and_then(|v| v.as_string());
@@ -45,7 +49,7 @@ fn handle_object_message(state: &mut WorkerState, data: &JsValue) -> Result<(), 
                 .unwrap_or(false);
 
             let command = AppendChunkCommand { chunk, is_hex };
-            command.execute(state)?;
+            command.execute(&mut state, state_rc)?;
         }
     }
     Ok(())
