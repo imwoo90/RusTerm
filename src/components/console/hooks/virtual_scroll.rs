@@ -13,6 +13,7 @@ pub struct VirtualScroll {
     pub console_height: Signal<f64>,
     pub total_height: f64,
     pub offset_top: f64,
+    pub scale_factor: f64,
     pub console_handle: Signal<Option<Rc<MountedData>>>,
     pub sentinel_handle: Signal<Option<Rc<MountedData>>>,
 }
@@ -63,13 +64,15 @@ pub fn use_virtual_scroll() -> VirtualScroll {
     use_data_request(start_index, window_size, total_lines);
     use_auto_scroller(state.ui.autoscroll, total_lines, sentinel_handle);
 
-    let (total_height, offset_top) = calculate_virtual_metrics(total_lines(), start_index());
+    let (total_height, offset_top, scale_factor) =
+        calculate_virtual_metrics(total_lines(), start_index(), console_height());
 
     VirtualScroll {
         start_index,
         console_height,
         total_height,
         offset_top,
+        scale_factor,
         console_handle,
         sentinel_handle,
     }

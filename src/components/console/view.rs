@@ -59,6 +59,8 @@ pub fn Console() -> Element {
                                         offset.y,
                                         *vs.console_height.read(),
                                         total_lines,
+                                        vs.scale_factor,
+                                        vs.total_height,
                                     );
                                     if (vs.start_index)() != new_index {
                                         vs.start_index.set(new_index);

@@ -87,24 +87,29 @@ pub fn calculate_scroll_state(
     offset_y: f64,
     viewport_height: f64,
     total_lines: usize,
+    scale_factor: f64,
+    physical_total_height: f64,
 ) -> (usize, bool) {
-    use crate::config::{CONSOLE_BOTTOM_PADDING, CONSOLE_TOP_PADDING, LINE_HEIGHT, TOP_BUFFER};
+    use crate::config::{LINE_HEIGHT, TOP_BUFFER};
     use crate::utils::calculate_start_index;
 
-    // 1. Calculate Virtual Scroll Index
-    // No scaling needed
-    let new_index = calculate_start_index(offset_y, LINE_HEIGHT, TOP_BUFFER);
-
-    // 2. Autoscroll Detection (Math-based)
-    let total_content_height =
-        (total_lines as f64) * LINE_HEIGHT + CONSOLE_TOP_PADDING + CONSOLE_BOTTOM_PADDING;
-
-    // Allow small buffer (e.g. 10px) for precision
-    let is_at_bottom = if total_content_height <= viewport_height {
+    // 1. Physical Bottom Detection
+    let is_at_bottom = if physical_total_height <= viewport_height {
         true
     } else {
-        // Check if we are at the bottom of the container
-        offset_y + viewport_height >= total_content_height - 10.0
+        // Use a generous threshold (15px) to absorb browser or overscroll jitter
+        offset_y + viewport_height >= physical_total_height - 15.0
+    };
+
+    // 2. Calculate Start Index with Clamping
+    let new_index = if is_at_bottom {
+        // If at bottom, force to the maximum possible start index
+        let visible_lines = (viewport_height / LINE_HEIGHT).ceil() as usize;
+        total_lines.saturating_sub(visible_lines)
+    } else {
+        // Normal calculation: Convert physical to logical
+        let logical_offset_y = offset_y * scale_factor;
+        calculate_start_index(logical_offset_y, LINE_HEIGHT, TOP_BUFFER)
     };
 
     (new_index, is_at_bottom)
@@ -112,17 +117,42 @@ pub fn calculate_scroll_state(
 
 // Removed ConsoleHeader and ResumeScrollButton to separate files
 
-/// Calculates virtual scroll metrics (total_height, scale_factor, offset_top)
-pub fn calculate_virtual_metrics(total_lines: usize, start_index: usize) -> (f64, f64) {
-    use crate::config::{CONSOLE_BOTTOM_PADDING, CONSOLE_TOP_PADDING, LINE_HEIGHT};
+/// Calculates virtual scroll metrics (total_height, offset_top, scale_factor)
+pub fn calculate_virtual_metrics(
+    total_lines: usize,
+    start_index: usize,
+    viewport_height: f64,
+) -> (f64, f64, f64) {
+    use crate::config::{
+        CONSOLE_BOTTOM_PADDING, CONSOLE_TOP_PADDING, LINE_HEIGHT, VIRTUAL_SCROLL_THRESHOLD,
+    };
 
     let real_total_height =
         (total_lines as f64) * LINE_HEIGHT + CONSOLE_TOP_PADDING + CONSOLE_BOTTOM_PADDING;
 
-    // Scaling removed as requested
-    let total_height = real_total_height;
+    // Use Dynamic x2 Scaling:
+    // We pick a scale factor that is a power of 2 (1, 2, 4, 8...),
+    // ensuring the physical scroll range stays under the threshold.
+    let (total_height, scale_factor) = if real_total_height > VIRTUAL_SCROLL_THRESHOLD {
+        let max_physical_scroll_range = VIRTUAL_SCROLL_THRESHOLD - viewport_height;
+        let logical_scroll_range = real_total_height - viewport_height;
 
-    let offset_top = (start_index as f64) * LINE_HEIGHT;
+        // Find the smallest power of 2 such that logical_range / sf <= max_physical_range
+        let ratio = logical_scroll_range / max_physical_scroll_range;
+        let sf = 2.0_f64.powf(ratio.log2().ceil());
 
-    (total_height, offset_top)
+        let physical_total_height = (logical_scroll_range / sf) + viewport_height;
+        (physical_total_height, sf)
+    } else {
+        (real_total_height, 1.0)
+    };
+
+    // Calculate logical offset top
+    let logical_offset_top = (start_index as f64) * LINE_HEIGHT;
+
+    // Map logical offset to physical offset (Stable because scale_factor only changes at power-of-2 boundaries)
+    // FLOOR the value to avoid sub-pixel rendering jitters
+    let offset_top = (logical_offset_top / scale_factor).floor();
+
+    (total_height, offset_top, scale_factor)
 }
