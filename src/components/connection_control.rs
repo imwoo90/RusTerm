@@ -39,7 +39,6 @@ pub fn ConnectionControl() -> Element {
             }
 
             // Test Mode Button
-            // Test Mode Button
             if cfg!(debug_assertions) {
                 button {
                     class: if (state.conn.is_simulating)() { "flex items-center justify-center w-9 h-9 bg-yellow-500/80 hover:bg-yellow-500 border border-yellow-500/50 rounded-lg transition-all active:scale-95 shadow-lg shadow-yellow-500/20 text-white gap-2" } else { "flex items-center justify-center w-9 h-9 bg-[#16181a] border border-[#2a2e33] rounded-lg hover:border-yellow-500/50 hover:text-yellow-500 transition-colors text-gray-400 gap-2" },
@@ -66,15 +65,17 @@ pub fn ConnectionControl() -> Element {
                     }
                 },
                 div { class: "relative flex h-2 w-2",
-                    span {
-                        class: "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-white",
-                    }
+                    span { class: "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-white" }
                     span { class: "relative inline-flex rounded-full h-2 w-2 bg-white" }
                 }
                 span {
                     class: "text-xs font-bold transition-colors uppercase tracking-wide",
                     class: if state.conn.is_connected() { "text-white" } else { "text-black group-hover:text-black/80" },
-                    if state.conn.is_connected() { "Disconnect" } else { "Connect" }
+                    if state.conn.is_connected() {
+                        "Disconnect"
+                    } else {
+                        "Connect"
+                    }
                 }
             }
 

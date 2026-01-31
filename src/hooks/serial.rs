@@ -39,28 +39,15 @@ pub fn use_serial_controller() -> SerialController {
     // Simulation resource
     use_resource(move || {
         let simulating = (state.conn.is_simulating)();
-        let hex_sig = state.ui.is_hex_view;
         async move {
             if !simulating {
                 return;
             }
-            loop {
-                let rnd = js_sys::Math::random();
-                let content = if rnd < 0.1 {
-                    format!("Error: System overheat at {:.1}°C\n", 80.0 + rnd * 20.0)
-                } else if rnd < 0.3 {
-                    format!("Warning: Voltage fluctuation detected: {:.2}V\n", 3.0 + rnd)
-                } else {
-                    format!(
-                        "Info: Sensor reading: A={:.2}, B={:.2}, C={:.2}\n",
-                        rnd * 100.0,
-                        rnd * 50.0,
-                        rnd * 10.0
-                    )
-                };
-                bridge.append_chunk(content.as_bytes(), hex_sig());
-                TimeoutFuture::new(1).await;
-            }
+            let stream = crate::utils::simulation::create_simulation_stream();
+            let reader = stream
+                .get_reader()
+                .unchecked_into::<ReadableStreamDefaultReader>();
+            state.conn.set_connected(None, Some(reader));
         }
     });
 
@@ -146,5 +133,6 @@ impl SerialController {
     pub fn stop_simulation(&self) {
         self.state.conn.set_simulating(false);
         self.state.warning("Simulation Stopped");
+        self.disconnect();
     }
 }
