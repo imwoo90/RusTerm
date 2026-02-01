@@ -37,31 +37,6 @@ pub fn use_virtual_scroll() -> VirtualScroll {
         TOP_BUFFER + BOTTOM_BUFFER_EXTRA,
     );
 
-    // Reset/Sync start index
-    use_effect(move || {
-        let total = total_lines();
-        let start = start_index();
-
-        if total == 0 {
-            if start != 0 {
-                start_index.set(0);
-            }
-            return;
-        }
-
-        if start >= total {
-            if (state.ui.autoscroll)() {
-                let page_size = (console_height() / LINE_HEIGHT).ceil() as usize;
-                let new_start = total.saturating_sub(page_size);
-                if start != new_start {
-                    start_index.set(new_start);
-                }
-            } else if start != 0 {
-                start_index.set(0);
-            }
-        }
-    });
-
     use_window_resize(console_height, state.ui.autoscroll, sentinel_handle);
     use_data_request(start_index, window_size, total_lines);
     use_auto_scroller(state.ui.autoscroll, total_lines, sentinel_handle);
