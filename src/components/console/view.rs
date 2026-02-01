@@ -48,7 +48,14 @@ pub fn Console() -> Element {
                 }
 
                 if !(state.ui.autoscroll)() {
-                    ResumeScrollButton { onclick: move |_| state.ui.set_autoscroll(true) }
+                    ResumeScrollButton {
+                        onclick: move |_| {
+                            web_sys::window()
+                                .and_then(|win| win.document())
+                                .and_then(|doc| doc.get_element_by_id("console-output"))
+                                .map(|el| el.set_scroll_top(el.scroll_height()));
+                        },
+                    }
                 }
             }
         }
