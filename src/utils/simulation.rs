@@ -7,20 +7,34 @@ pub fn create_simulation_stream() -> web_sys::ReadableStream {
         TimeoutFuture::new(10).await; // Using 10ms to prevent overwhelming the UI, can be adjusted.
 
         let rnd = js_sys::Math::random();
-        let content = if rnd < 0.1 {
-            format!("Error: System overheat at {:.1}°C\n", 80.0 + rnd * 20.0)
-        } else if rnd < 0.3 {
-            format!("Warning: Voltage fluctuation detected: {:.2}V\n", 3.0 + rnd)
-        } else {
-            format!(
-                "Info: Sensor reading: A={:.2}, B={:.2}, C={:.2}\n",
-                rnd * 100.0,
-                rnd * 50.0,
-                rnd * 10.0
-            )
-        };
+        // Generate random bytes directly to support simulation of corrupted data
+        let mut bytes = Vec::new();
 
-        let chunk = js_sys::Uint8Array::from(content.as_bytes());
+        if rnd < 0.05 {
+            // Simulate garbage / corrupted data (invalid UTF-8)
+            // 0xFF, 0xC0 (invalid start byte), 0x80 (continuation byte without start)
+            bytes.extend_from_slice(&[0xFF, 0xC0, 0xFE, 0x80, 0x12, 0x34]);
+        } else if rnd < 0.15 {
+            bytes.extend_from_slice(
+                format!("Error: System overheat at {:.1}°C\n", 80.0 + rnd * 20.0).as_bytes(),
+            );
+        } else if rnd < 0.35 {
+            bytes.extend_from_slice(
+                format!("Warning: Voltage fluctuation detected: {:.2}V\n", 3.0 + rnd).as_bytes(),
+            );
+        } else {
+            bytes.extend_from_slice(
+                format!(
+                    "Info: Sensor reading: A={:.2}, B={:.2}, C={:.2}\n",
+                    rnd * 100.0,
+                    rnd * 50.0,
+                    rnd * 10.0
+                )
+                .as_bytes(),
+            );
+        }
+
+        let chunk = js_sys::Uint8Array::from(bytes.as_slice());
         // Stream expects Result<JsValue, JsValue>
         Some((Ok(JsValue::from(chunk)), ()))
     });
