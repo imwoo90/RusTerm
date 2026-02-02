@@ -100,7 +100,7 @@ impl SerialController {
 }
 
 /// Helper to cleanup serial connection (Reader + Port) safely
-async fn cleanup_serial_connection(mut state: AppState) {
+async fn cleanup_serial_connection(state: AppState) {
     // Avoid double cleanup or cleanup while connecting
     if (state.conn.is_busy)() {
         return;
@@ -176,6 +176,10 @@ fn start_read_task(state: AppState, bridge: WorkerController, port: web_sys::Ser
         // 4. Handle Result
         match status {
             ReadStatus::Retry => {
+                // Prevent hot-looping on continuous errors (e.g. wrong baud rate)
+                // Give UI enough time to process events (like Disconnect click)
+                TimeoutFuture::new(100).await;
+
                 // Recursive restart (spawn new task)
                 start_read_task(state, bridge, port);
             }
