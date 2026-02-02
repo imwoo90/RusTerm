@@ -114,7 +114,10 @@ impl StreamingLineProcessor {
         }
 
         while start < line.len() {
-            let end = (start + max_len).min(line.len());
+            let mut end = (start + max_len).min(line.len());
+            while !line.is_char_boundary(end) {
+                end -= 1;
+            }
             let sub_line = &line[start..end];
 
             let start_pos = batch.len();

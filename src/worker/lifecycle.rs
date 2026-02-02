@@ -7,9 +7,9 @@ use wasm_bindgen_futures::spawn_local;
 
 /// Starts the worker and sets up the message handling loop
 #[wasm_bindgen]
-pub fn start_worker() {
+pub fn start_worker() -> bool {
     if !js_sys::Reflect::has(&js_sys::global(), &"WorkerGlobalScope".into()).unwrap_or(false) {
-        return;
+        return false;
     }
 
     spawn_local(async move {
@@ -35,6 +35,8 @@ pub fn start_worker() {
         scope.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
         onmessage.forget();
     });
+
+    true
 }
 
 /// Gets the path to the application script
