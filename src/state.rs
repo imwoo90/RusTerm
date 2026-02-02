@@ -31,6 +31,8 @@ pub struct ConnectionState {
     pub reader: Signal<Option<ReadableStreamDefaultReader>>,
     pub is_simulating: Signal<bool>,
     pub log_worker: Signal<Option<web_sys::Worker>>,
+    pub is_busy: Signal<bool>,
+    pub is_reading: Signal<bool>,
 }
 
 #[derive(Clone, Copy)]
@@ -109,6 +111,12 @@ impl ConnectionState {
     pub fn set_simulating(&self, simulating: bool) {
         { self.is_simulating }.set(simulating);
     }
+    pub fn set_busy(&self, busy: bool) {
+        { self.is_busy }.set(busy);
+    }
+    pub fn set_reading(&self, reading: bool) {
+        { self.is_reading }.set(reading);
+    }
 }
 
 impl LogState {
@@ -173,6 +181,8 @@ pub fn use_provide_app_state() -> AppState {
             reader: use_signal(|| None),
             is_simulating: use_signal(|| false),
             log_worker: use_signal(|| None::<web_sys::Worker>),
+            is_busy: use_signal(|| false),
+            is_reading: use_signal(|| false),
         },
         log: LogState {
             total_lines: use_signal(|| 0usize),

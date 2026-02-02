@@ -52,7 +52,18 @@ pub fn ConnectionControl() -> Element {
 
             // Connect Button
             button {
-                class: if state.conn.is_connected() { "group relative flex items-center gap-2 bg-red-500/80 hover:bg-red-500 border border-red-500/50 pl-3 pr-4 py-1.5 rounded-lg transition-all duration-300 active:scale-95 shadow-lg shadow-red-500/20 ml-2" } else { "group relative flex items-center gap-2 bg-primary hover:brightness-110 border border-primary/50 pl-3 pr-4 py-1.5 rounded-lg transition-all duration-300 active:scale-95 shadow-lg shadow-primary/20 ml-2" },
+                disabled: (state.conn.is_busy)(),
+                class: {
+                    let is_busy = (state.conn.is_busy)();
+                    let is_connected = state.conn.is_connected();
+                    if is_busy {
+                        "group relative flex items-center gap-2 bg-gray-500/50 cursor-not-allowed border border-gray-500/30 pl-3 pr-4 py-1.5 rounded-lg ml-2 opacity-50"
+                    } else if is_connected {
+                        "group relative flex items-center gap-2 bg-red-500/80 hover:bg-red-500 border border-red-500/50 pl-3 pr-4 py-1.5 rounded-lg transition-all duration-300 active:scale-95 shadow-lg shadow-red-500/20 ml-2"
+                    } else {
+                        "group relative flex items-center gap-2 bg-primary hover:brightness-110 border border-primary/50 pl-3 pr-4 py-1.5 rounded-lg transition-all duration-300 active:scale-95 shadow-lg shadow-primary/20 ml-2"
+                    }
+                },
                 onclick: move |_| {
                     if state.conn.is_connected() {
                         controller.disconnect();
@@ -61,13 +72,17 @@ pub fn ConnectionControl() -> Element {
                     }
                 },
                 div { class: "relative flex h-2 w-2",
-                    span { class: "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-white" }
+                    if !(state.conn.is_busy)() {
+                         span { class: "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-white" }
+                    }
                     span { class: "relative inline-flex rounded-full h-2 w-2 bg-white" }
                 }
                 span {
                     class: "text-xs font-bold transition-colors uppercase tracking-wide",
                     class: if state.conn.is_connected() { "text-white" } else { "text-black group-hover:text-black/80" },
-                    if state.conn.is_connected() {
+                    if (state.conn.is_busy)() {
+                        "WAIT..."
+                    } else if state.conn.is_connected() {
                         "Disconnect"
                     } else {
                         "Connect"

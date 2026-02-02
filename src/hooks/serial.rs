@@ -9,52 +9,6 @@ pub fn use_serial_controller() -> SerialController {
     let state = use_context::<AppState>();
     let bridge = use_worker_controller();
 
-    // Read loop resource
-    use_resource(move || {
-        let reader = (state.conn.reader)();
-        let bridge = bridge;
-        async move {
-            let Some(reader_wrapper) = reader else { return };
-
-            use crate::utils::serial_api::ReadStatus;
-
-            let status = crate::utils::serial_api::read_loop(reader_wrapper, move |data| {
-                let is_hex = (state.ui.is_hex_view)();
-                bridge.append_chunk(&data, is_hex);
-            })
-            .await;
-
-            match status {
-                ReadStatus::Retry => {
-                    // Auto-recover: Create new reader and update state
-                    // This will trigger use_resource to re-run with the new reader
-                    if let Some(port) = (state.conn.port)() {
-                        let readable = port.readable();
-                        let new_reader = readable
-                            .get_reader()
-                            .unchecked_into::<ReadableStreamDefaultReader>();
-                        state.conn.set_connected(Some(port), Some(new_reader));
-                    }
-                }
-                ReadStatus::Done => {
-                    // Stream closed normally (e.g. user disconnect)
-                    if state.conn.is_connected() {
-                        state.info("Connection Closed");
-                        spawn(async move {
-                            cleanup_serial_connection(state).await;
-                        });
-                    }
-                }
-                ReadStatus::Fatal(msg) => {
-                    state.error(&format!("Connection Lost: {}", msg));
-                    spawn(async move {
-                        cleanup_serial_connection(state).await;
-                    });
-                }
-            }
-        }
-    });
-
     // Simulation resource
     use_resource(move || {
         let simulating = (state.conn.is_simulating)();
@@ -66,6 +20,9 @@ pub fn use_serial_controller() -> SerialController {
             let reader = stream
                 .get_reader()
                 .unchecked_into::<ReadableStreamDefaultReader>();
+
+            // Simulation doesn't use the robust read_loop/task structure yet,
+            // but we update state so disconnect works.
             state.conn.set_connected(None, Some(reader));
         }
     });
@@ -82,6 +39,10 @@ pub struct SerialController {
 impl SerialController {
     pub fn connect(&self) {
         let state = self.state;
+        // Prevent action if busy
+        if (state.conn.is_busy)() {
+            return;
+        }
         let bridge = self.bridge;
         spawn(async move {
             let Ok(port) = crate::utils::serial_api::request_port().await else {
@@ -104,18 +65,21 @@ impl SerialController {
             };
 
             bridge.new_session();
-            let readable = port.readable();
-            let reader = readable.get_reader();
-            let reader: ReadableStreamDefaultReader = reader.unchecked_into();
-            state
-                .conn
-                .set_connected(Some(port.clone()), Some(reader.clone()));
+
+            // Start the read task explicitly
+            start_read_task(state, bridge, port);
+
             state.success("Connected");
         });
     }
 
     pub fn disconnect(&self) {
         let state = self.state;
+        // Prevent action if busy
+        if (state.conn.is_busy)() {
+            return;
+        }
+
         spawn(async move {
             cleanup_serial_connection(state).await;
             state.info("Disconnected");
@@ -137,20 +101,34 @@ impl SerialController {
 
 /// Helper to cleanup serial connection (Reader + Port) safely
 async fn cleanup_serial_connection(mut state: AppState) {
+    // Avoid double cleanup or cleanup while connecting
+    if (state.conn.is_busy)() {
+        return;
+    }
+    state.conn.set_busy(true);
+    // Yield to let UI update and previous events settle
+    TimeoutFuture::new(50).await;
+
     let maybe_reader = (state.conn.reader)();
     let maybe_port = (state.conn.port)();
-
-    // 1. Reset Reader state immediately to stop potential re-entry and cancel the resource loop
-    state.conn.reader.set(None);
 
     // 2. Cancel Reader if exists
     if let Some(reader_wrapper) = maybe_reader {
         let _ = crate::utils::serial_api::cancel_reader(&reader_wrapper).await;
     }
 
-    // 3. Close Port if exists
-    // Small delay to ensure reader lock is released properly by browser
-    TimeoutFuture::new(100).await;
+    // 3. Wait for Read Loop to finish (Release Lock)
+    let mut retries = 0;
+    while (state.conn.is_reading)() && retries < 50 {
+        TimeoutFuture::new(50).await;
+        retries += 1;
+    }
+
+    if (state.conn.is_reading)() {
+        web_sys::console::warn_1(&"Timeout waiting for reader lock release".into());
+    }
+
+    // 4. Close Port if exists
 
     if let Some(conn_port) = maybe_port {
         if crate::utils::serial_api::close_port(&conn_port)
@@ -164,4 +142,53 @@ async fn cleanup_serial_connection(mut state: AppState) {
 
     // 4. Final State Reset
     state.conn.set_connected(None, None);
+    state.conn.set_busy(false);
+}
+
+/// Starts an explicit read task that handles the serial read loop and retries
+fn start_read_task(state: AppState, bridge: WorkerController, port: web_sys::SerialPort) {
+    use crate::utils::serial_api::ReadStatus;
+
+    spawn(async move {
+        // 1. Get Reader
+        let readable = port.readable();
+        let reader = readable
+            .get_reader()
+            .unchecked_into::<ReadableStreamDefaultReader>();
+
+        // 2. Update State (Primary location for reader)
+        // We clone the port because we need to keep it for retries
+        state
+            .conn
+            .set_connected(Some(port.clone()), Some(reader.clone()));
+        state.conn.set_reading(true);
+
+        // 3. Run Loop
+        let status = crate::utils::serial_api::read_loop(reader, move |data| {
+            let is_hex = (state.ui.is_hex_view)();
+            bridge.append_chunk(&data, is_hex);
+        })
+        .await;
+
+        // Loop finished (Lock released inside read_loop before return)
+        state.conn.set_reading(false);
+
+        // 4. Handle Result
+        match status {
+            ReadStatus::Retry => {
+                // Recursive restart (spawn new task)
+                start_read_task(state, bridge, port);
+            }
+            ReadStatus::Done => {
+                if state.conn.is_connected() {
+                    state.info("Connection Closed");
+                    cleanup_serial_connection(state).await;
+                }
+            }
+            ReadStatus::Fatal(msg) => {
+                state.error(&format!("Connection Lost: {}", msg));
+                cleanup_serial_connection(state).await;
+            }
+        }
+    });
 }
