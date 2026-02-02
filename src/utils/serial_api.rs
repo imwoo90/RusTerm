@@ -52,11 +52,17 @@ pub async fn open_port(
     JsFuture::from(promise).await.map(|_| ())
 }
 
+#[derive(PartialEq, Clone, Debug)]
+pub enum ReadStatus {
+    Done,
+    Retry,
+    Fatal(String),
+}
+
 pub async fn read_loop(
     reader: ReadableStreamDefaultReader,
     mut on_data: impl FnMut(Vec<u8>) + 'static,
-    mut on_error: impl FnMut(String) + 'static,
-) {
+) -> ReadStatus {
     loop {
         let promise = reader.read();
         match JsFuture::from(promise).await {
@@ -68,15 +74,14 @@ pub async fn read_loop(
                 let value = match js_sys::Reflect::get(&result, &"value".into()) {
                     Ok(v) => v,
                     Err(_) => {
-                        on_error("Failed to get read value".to_string());
                         reader.release_lock();
-                        break;
+                        return ReadStatus::Fatal("Failed to get read value".to_string());
                     }
                 };
 
                 if done {
                     reader.release_lock();
-                    break;
+                    return ReadStatus::Done;
                 }
 
                 if !value.is_undefined() && !value.is_null() {
@@ -88,16 +93,18 @@ pub async fn read_loop(
             Err(e) => {
                 let err_str = format!("{:?}", e);
                 // Check for fatal errors that require closing the connection
-                // "NetworkError" is the standard DOMException for lost device
-                // "The device has been lost" is the common message text
                 if err_str.contains("NetworkError") || err_str.contains("device has been lost") {
-                    on_error(format!("Fatal Error: {:?}", e));
                     reader.release_lock();
-                    break;
+                    return ReadStatus::Fatal(format!("Fatal Error: {:?}", e));
                 } else {
                     // Non-fatal errors (Framing, Parity, Break, BufferOverrun)
-                    // Just log warning and continue reading
-                    web_sys::console::warn_1(&format!("Non-fatal read error: {:?}", e).into());
+                    // The stream is technically broken (Reader errored), so we must release and re-acquire.
+                    // We return Retry status so logic layer can handle it.
+                    web_sys::console::warn_1(
+                        &format!("Non-fatal read error (recovering): {:?}", e).into(),
+                    );
+                    reader.release_lock();
+                    return ReadStatus::Retry;
                 }
             }
         }

@@ -16,24 +16,41 @@ pub fn use_serial_controller() -> SerialController {
         async move {
             let Some(reader_wrapper) = reader else { return };
 
-            crate::utils::serial_api::read_loop(
-                reader_wrapper,
-                move |data| {
-                    let is_hex = (state.ui.is_hex_view)();
-                    bridge.append_chunk(&data, is_hex);
-                },
-                move |err_msg| {
-                    state.error(&format!("Connection Lost: {}", err_msg));
+            use crate::utils::serial_api::ReadStatus;
+
+            let status = crate::utils::serial_api::read_loop(reader_wrapper, move |data| {
+                let is_hex = (state.ui.is_hex_view)();
+                bridge.append_chunk(&data, is_hex);
+            })
+            .await;
+
+            match status {
+                ReadStatus::Retry => {
+                    // Auto-recover: Create new reader and update state
+                    // This will trigger use_resource to re-run with the new reader
+                    if let Some(port) = (state.conn.port)() {
+                        let readable = port.readable();
+                        let new_reader = readable
+                            .get_reader()
+                            .unchecked_into::<ReadableStreamDefaultReader>();
+                        state.conn.set_connected(Some(port), Some(new_reader));
+                    }
+                }
+                ReadStatus::Done => {
+                    // Stream closed normally (e.g. user disconnect)
+                    if state.conn.is_connected() {
+                        state.info("Connection Closed");
+                        spawn(async move {
+                            cleanup_serial_connection(state).await;
+                        });
+                    }
+                }
+                ReadStatus::Fatal(msg) => {
+                    state.error(&format!("Connection Lost: {}", msg));
                     spawn(async move {
                         cleanup_serial_connection(state).await;
                     });
-                },
-            )
-            .await;
-
-            if state.conn.is_connected() && (state.conn.reader)().is_some() {
-                state.info("Connection Closed");
-                cleanup_serial_connection(state).await;
+                }
             }
         }
     });
@@ -123,7 +140,7 @@ async fn cleanup_serial_connection(mut state: AppState) {
     let maybe_reader = (state.conn.reader)();
     let maybe_port = (state.conn.port)();
 
-    // 1. Reset Reader state immediately to stop potential re-entry
+    // 1. Reset Reader state immediately to stop potential re-entry and cancel the resource loop
     state.conn.reader.set(None);
 
     // 2. Cancel Reader if exists
