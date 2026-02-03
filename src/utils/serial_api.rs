@@ -61,7 +61,7 @@ pub enum ReadStatus {
 
 pub async fn read_loop(
     reader: ReadableStreamDefaultReader,
-    mut on_data: impl FnMut(Vec<u8>) + 'static,
+    mut on_data: impl FnMut(js_sys::Uint8Array) + 'static,
 ) -> ReadStatus {
     loop {
         let promise = reader.read();
@@ -86,8 +86,7 @@ pub async fn read_loop(
 
                 if !value.is_undefined() && !value.is_null() {
                     let array = js_sys::Uint8Array::new(&value);
-                    let bytes = array.to_vec();
-                    on_data(bytes);
+                    on_data(array);
                 }
             }
             Err(e) => {

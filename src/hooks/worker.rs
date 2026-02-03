@@ -52,7 +52,7 @@ impl WorkerController {
         self.send(WorkerMsg::AppendLog(text));
     }
 
-    pub fn append_chunk(&self, chunk: &[u8], is_hex: bool) {
+    pub fn append_chunk(&self, chunk: js_sys::Uint8Array, is_hex: bool) {
         if let Some(w) = self.worker_sig.read().as_ref() {
             send_chunk_to_worker(w, chunk, is_hex);
         }

@@ -172,7 +172,7 @@ fn start_read_task(state: AppState, bridge: WorkerController, port: web_sys::Ser
         // 3. Run Loop
         let status = crate::utils::serial_api::read_loop(reader, move |data| {
             let is_hex = (state.ui.is_hex_view)();
-            bridge.append_chunk(&data, is_hex);
+            bridge.append_chunk(data, is_hex);
         })
         .await;
 

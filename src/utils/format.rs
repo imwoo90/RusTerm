@@ -36,9 +36,8 @@ pub fn format_hex_input(input: &str) -> String {
 }
 
 /// Helper to send raw byte chunk to worker
-pub fn send_chunk_to_worker(worker: &web_sys::Worker, data: &[u8], is_hex: bool) {
-    // 1. Rust Memory -> JS Heap (Copy is inevitable here)
-    let arr = js_sys::Uint8Array::from(data);
+pub fn send_chunk_to_worker(worker: &web_sys::Worker, arr: js_sys::Uint8Array, is_hex: bool) {
+    // 1. Get buffer (JS Heap)
     let buffer = arr.buffer(); // Get buffer before moving arr
 
     // 2. Prepare Message Object
