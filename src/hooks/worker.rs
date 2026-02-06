@@ -129,6 +129,9 @@ fn setup_worker_message_handler(worker: &web_sys::Worker, state: AppState) {
                     WorkerMsg::Error(msg) => {
                         state.error(&format!("Worker Error: {}", msg));
                     }
+                    WorkerMsg::ActiveLine(line) => {
+                        { state.log.active_line }.set(line);
+                    }
                     _ => {}
                 }
             }

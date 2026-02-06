@@ -29,7 +29,7 @@ impl StreamingLineProcessor {
         timestamp: &str,
         is_filtering: bool,
         filter_matcher: impl Fn(&str) -> bool,
-    ) -> (String, Vec<ByteOffset>, Vec<LineRange>) {
+    ) -> (String, Vec<ByteOffset>, Vec<LineRange>, Option<String>) {
         self.parser.process(chunk);
 
         let mut batch = String::new();
@@ -92,7 +92,21 @@ impl StreamingLineProcessor {
             self.parser.screen_mut().set_scrollback(0);
         }
 
-        (batch, offsets, filtered)
+        // Get Current Active Line (Row 0)
+        let active_line = self
+            .parser
+            .screen()
+            .rows_formatted(0, 2048)
+            .next()
+            .map(|bytes| String::from_utf8_lossy(&bytes).to_string())
+            .filter(|s| !s.trim().is_empty()); // Optional: Don't send empty lines? Maybe send even empty to clear prev?
+                                               // Better to send what is there. If empty, send some empty string?
+                                               // Actually, if it's empty, user sees nothing.
+
+        // Trim trailing newlines or empty spaces if needed?
+        // rows_formatted returns formatted ANSI.
+
+        (batch, offsets, filtered, active_line)
     }
 
     /// Processes a text chunk (Legacy/Hex mode)

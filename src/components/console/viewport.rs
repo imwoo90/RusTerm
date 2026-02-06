@@ -30,21 +30,32 @@ pub fn LogViewport(
                     let highlights = (state.log.highlights)().clone();
                     let show_timestamps = (state.ui.show_timestamps)();
                     let show_highlights = (state.ui.show_highlights)();
+                    let active_line = (state.log.active_line)();
+                    let logs = visible_logs.read();
+                    let is_at_bottom = logs.last().map(|(idx, _)| *idx + 1 == total_lines()).unwrap_or(total_lines() == 0);
 
-                    visible_logs
-                        .read()
-                        .iter()
-                        .map(move |(line_idx, text)| {
-                            rsx! {
-                                LogLine {
-                                    key: "{line_idx}",
+                    rsx! {
+                        for (line_idx, text) in logs.iter() {
+                            LogLine {
+                                key: "{line_idx}",
+                                text: text.clone(),
+                                highlights: highlights.clone(),
+                                show_timestamps,
+                                show_highlights,
+                            }
+                        }
+                        if is_at_bottom {
+                             if let Some(text) = active_line {
+                                 LogLine {
+                                    key: "{0}",
                                     text: text.clone(),
                                     highlights: highlights.clone(),
                                     show_timestamps,
-                                    show_highlights,
-                                }
-                            }
-                        })
+                                    show_highlights: false, // Maybe don't highlight active line to avoid flicker?
+                                 }
+                             }
+                        }
+                    }
                 }
             }
 

@@ -45,6 +45,7 @@ pub struct LogState {
     pub invert_filter: Signal<bool>,
     pub highlights: Signal<Vec<Highlight>>,
     pub toasts: Signal<Vec<ToastMessage>>,
+    pub active_line: Signal<Option<String>>,
 }
 
 #[derive(Clone, Copy)]
@@ -193,6 +194,7 @@ pub fn use_provide_app_state() -> AppState {
             invert_filter: use_signal(|| false),
             highlights: use_signal(Vec::new),
             toasts: use_signal(Vec::new),
+            active_line: use_signal(|| None),
         },
     };
 

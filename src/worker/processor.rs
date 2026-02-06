@@ -59,27 +59,32 @@ impl LogProcessor {
         self.repository.initialize_storage(handle)
     }
 
-    pub fn append_chunk(&mut self, chunk: &[u8], is_hex: bool) -> Result<u32, JsValue> {
+    pub fn append_chunk(&mut self, chunk: &[u8], is_hex: bool) -> Result<Option<String>, JsValue> {
         self.append_chunk_internal(chunk, is_hex)
             .map_err(JsValue::from)
     }
 
-    fn append_chunk_internal(&mut self, chunk: &[u8], is_hex: bool) -> Result<u32, LogError> {
+    fn append_chunk_internal(
+        &mut self,
+        chunk: &[u8],
+        is_hex: bool,
+    ) -> Result<Option<String>, LogError> {
         let formatter = self.formatter.create_strategy(is_hex, MAX_LINE_BYTES);
         let timestamp = self.formatter.get_timestamp();
         let repo = &self.repository;
         let is_filtering = repo.is_filtering();
         let filter_matcher = |text: &str| repo.matches_active_filter(text);
 
-        let (batch, offsets, filtered) = if is_hex {
+        let (batch, offsets, filtered, active_line) = if is_hex {
             let text = formatter.format_chunk(chunk);
-            self.chunk_handler.process_text_lines(
+            let (b, o, f) = self.chunk_handler.process_text_lines(
                 &text,
                 &*formatter,
                 &timestamp,
                 is_filtering,
                 filter_matcher,
-            )
+            );
+            (b, o, f, None)
         } else {
             self.chunk_handler.process_vt100(
                 chunk,
@@ -93,7 +98,7 @@ impl LogProcessor {
         if !batch.is_empty() {
             self.repository.append_lines(&batch, offsets, filtered)?;
         }
-        Ok(self.get_line_count())
+        Ok(active_line)
     }
 
     pub fn append_log(&mut self, text: String) -> Result<u32, JsValue> {

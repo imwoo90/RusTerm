@@ -80,5 +80,6 @@ pub enum WorkerMsg {
     ExportLogs {
         include_timestamp: bool,
     },
+    ActiveLine(Option<String>),
     Error(String),
 }
