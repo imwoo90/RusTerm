@@ -8,7 +8,7 @@ use crate::hooks::use_worker_controller;
 use crate::state::ViewMode;
 
 #[component]
-pub fn SerialMonitor() -> Element {
+pub fn RusTerm() -> Element {
     let app_state = crate::state::use_provide_app_state();
     let bridge = use_worker_controller();
     let view_mode = app_state.ui.view_mode;

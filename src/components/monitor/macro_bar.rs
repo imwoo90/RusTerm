@@ -85,7 +85,7 @@ pub fn MacroBar() -> Element {
             div { class: "shrink-0 flex items-center gap-4 ml-auto px-2",
                 a {
                     class: "text-gray-500 hover:text-primary transition-colors flex items-center gap-1.5 group text-[11px]",
-                    href: "https://github.com/imwoo90/web_serial_monitor",
+                    href: "https://github.com/imwoo90/rusterm",
                     target: "_blank",
                     span { class: "material-symbols-outlined text-[14px]", "code" }
                     span { "GitHub" }

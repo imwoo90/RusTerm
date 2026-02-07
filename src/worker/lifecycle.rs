@@ -49,7 +49,9 @@ pub fn get_app_script_path() -> String {
                 let script: web_sys::HtmlScriptElement = node.unchecked_into();
                 let src = script.src();
                 let s = src.to_lowercase();
-                if (s.contains("serial_monitor") || s.contains("web_serial_monitor"))
+                if (s.contains("rusterm")
+                    || s.contains("serial_monitor")
+                    || s.contains("web_serial_monitor"))
                     && !s.contains("snippets")
                     && s.ends_with(".js")
                 {
@@ -58,5 +60,5 @@ pub fn get_app_script_path() -> String {
             }
         }
     }
-    "./serial_monitor.js".into()
+    "./rusterm.js".into()
 }

@@ -7,7 +7,7 @@ mod state;
 pub mod types;
 mod utils;
 mod worker;
-use components::serial_monitor::SerialMonitor;
+use components::rust_term::RusTerm;
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
@@ -48,6 +48,6 @@ fn App() -> Element {
         document::Link { rel: "stylesheet", href: "{XTERM_CSS}" }
         document::Script { src: "{XTERM_JS}" }
         document::Script { src: "{XTERM_FIT_ADDON_JS}" }
-        SerialMonitor {}
+        RusTerm {}
     }
 }

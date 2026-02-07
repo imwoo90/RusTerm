@@ -4,5 +4,5 @@ pub mod header;
 pub mod monitor;
 pub mod terminal;
 
-pub mod serial_monitor;
+pub mod rust_term;
 pub mod ui;
