@@ -40,42 +40,34 @@ pub fn start_worker() -> bool {
     true
 }
 
-/// Gets the path to the application script
+/// Gets the path to the application script by searching the DOM
 pub fn get_app_script_path() -> String {
-    let window = web_sys::window().expect("no global window instance found");
-    let document = window.document().expect("should have a document on window");
+    let document = web_sys::window()
+        .and_then(|w| w.document())
+        .expect("No document");
 
-    // 1. Try to find the script tag by searching all scripts and preloads
-    if let Ok(scripts) = document.query_selector_all("script, link[rel='preload'][as='script']") {
-        for i in 0..scripts.length() {
-            if let Some(node) = scripts.item(i) {
-                let src = if let Ok(script) = node.clone().dyn_into::<web_sys::HtmlScriptElement>()
-                {
-                    script.src()
-                } else if let Ok(link) = node.clone().dyn_into::<web_sys::HtmlLinkElement>() {
-                    link.href()
-                } else {
-                    continue;
-                };
+    // Select only relevant tags that contain 'rusterm' in their source/href
+    let selector = "script[src*='rusterm'], link[href*='rusterm'][rel='preload']";
 
-                if src.is_empty() {
-                    continue;
-                }
+    document
+        .query_selector_all(selector)
+        .ok()
+        .and_then(|nodes| {
+            (0..nodes.length()).find_map(|i| {
+                let node = nodes.item(i)?;
 
-                let s = src.to_lowercase();
-                let base_path = s.split('?').next().unwrap_or(&s);
-                let is_js = base_path.ends_with(".js");
+                // Efficiently get the source URL without unnecessary clones
+                let src = node
+                    .dyn_ref::<web_sys::HtmlScriptElement>()
+                    .map(|s| s.src())
+                    .or_else(|| node.dyn_ref::<web_sys::HtmlLinkElement>().map(|l| l.href()))?;
 
-                let is_app_script = s.contains("rusterm")
-                    || s.contains("serial_monitor")
-                    || s.contains("web_serial_monitor");
+                // Confirm it's the main JS bundle (ends with .js, ignoring query params)
+                let is_main_bundle =
+                    src.split('?').next()?.ends_with(".js") && !src.contains("snippets");
 
-                if is_app_script && !s.contains("snippets") && is_js {
-                    return src;
-                }
-            }
-        }
-    }
-
-    "./rusterm.js".into()
+                is_main_bundle.then_some(src)
+            })
+        })
+        .unwrap_or_else(|| "./rusterm.js".to_string())
 }
