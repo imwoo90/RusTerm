@@ -23,7 +23,7 @@ Unlike typical web serial tools, RusTerm leverages **OPFS (Origin Private File S
 *   **Non-Blocking Filter**: Background worker handles search/filtering efficiently using a **Progressive Scan & Yield** algorithm.
 
 ### 💻 Terminal & Interaction
-*   **Terminal Mode (xterm.js)**: A full-featured interactive terminal with ANSI/VT100 support.
+*   **Terminal Mode (xterm.js v6.0.0)**: Full-featured interactive terminal with ANSI/VT100 support.
 *   **Bidirectional Communication**: Send commands and receive responses in real-time.
 *   **Smart Auto-Scroll**: Tracks the bottom reliably even during high-speed data ingestion.
 *   **Configurable Layout**: Interactive font resizing and window fitting for the terminal instance.
@@ -57,14 +57,15 @@ RusTerm uses a multi-threaded architecture to ensure a smooth UI even under heav
     *   **OPFS**: Persistent storage for massive logs.
     *   **VT100 Parser**: Robust processing of ANSI escape sequences.
     *   **Search Engine**: Efficient log filtering and scanning.
-*   **Terminal (xterm.js)**: High-performance terminal rendering and keyboard input handling.
+*   **Terminal (xterm.js v6.0.0)**: High-performance terminal rendering and input.
+keyboard input handling.
 
 ```mermaid
 graph TD
     User["User / Serial Device"] <-->|Data Stream| Main["Main Thread (RusTerm)"]
     
     %% Terminal Mode
-    subgraph Terminal_Mode ["Terminal Mode"]
+    subgraph Terminal_Mode ["Terminal Mode (xterm.js v6.0.0)"]
         Xterm["Terminal (xterm.js)"]
     end
     Main <-->|Direct Interaction| Xterm
