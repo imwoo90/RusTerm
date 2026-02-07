@@ -1,5 +1,5 @@
-use crate::components::console::hooks::data_request::use_data_request;
-use crate::components::console::utils::layout_utils::{
+use crate::components::monitor::hooks::data_request::use_data_request;
+use crate::components::monitor::utils::layout_utils::{
     calculate_scroll_state, calculate_virtual_metrics, use_auto_scroller, use_window_resize,
 };
 use crate::config::{BOTTOM_BUFFER_EXTRA, LINE_HEIGHT, TOP_BUFFER};

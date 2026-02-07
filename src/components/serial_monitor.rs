@@ -1,7 +1,8 @@
 use crate::components::ui::ToastContainer;
 use dioxus::prelude::*;
 
-use super::console::{Console, FilterBar, InputBar, MacroBar, Xterm};
+use super::monitor::{FilterBar, InputBar, MacroBar, Monitor};
+use super::terminal::Xterm;
 use crate::components::header::Header;
 use crate::hooks::use_worker_controller;
 use crate::state::ViewMode;
@@ -35,7 +36,7 @@ pub fn SerialMonitor() -> Element {
                 if view_mode() == ViewMode::Monitoring {
                     InputBar {}
                     FilterBar {}
-                    Console {}
+                    Monitor {}
                 } else {
                     Xterm {}
                 }

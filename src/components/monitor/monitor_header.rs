@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 #[component]
-pub fn ConsoleHeader(
+pub fn MonitorHeader(
     autoscroll: bool,
     count: usize,
     onexport: EventHandler<MouseEvent>,

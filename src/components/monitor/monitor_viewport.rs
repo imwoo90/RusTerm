@@ -1,4 +1,4 @@
-use crate::components::console::log_line::LogLine;
+use crate::components::monitor::monitor_log_line::MonitorLogLine;
 use crate::config::{CONSOLE_BOTTOM_PADDING, CONSOLE_TOP_PADDING};
 use crate::state::{AppState, LineEnding};
 use crate::utils::serial;
@@ -6,7 +6,7 @@ use dioxus::prelude::*;
 use js_sys::Uint8Array;
 
 #[component]
-pub fn LogViewport(
+pub fn MonitorViewport(
     total_height: f64,
     offset_top: f64,
     onmounted_console: EventHandler<MountedEvent>,
@@ -26,10 +26,12 @@ pub fn LogViewport(
             tabindex: "0",
             onkeydown: move |evt| {
                 let modifiers = evt.modifiers();
-                if modifiers.contains(Modifiers::CONTROL) || modifiers.contains(Modifiers::ALT) || modifiers.contains(Modifiers::META) {
+                if modifiers.contains(Modifiers::CONTROL) || modifiers.contains(Modifiers::ALT)
+
+                    || modifiers.contains(Modifiers::META)
+                {
                     return;
                 }
-
                 let key = evt.key();
                 let data = match key {
                     Key::Character(c) => c.into_bytes(),
@@ -40,17 +42,15 @@ pub fn LogViewport(
                             LineEnding::NLCR => vec![b'\r', b'\n'],
                             LineEnding::None => vec![b'\r'],
                         }
-                    },
+                    }
                     Key::Backspace => vec![0x08],
                     Key::Tab => vec![0x09],
                     Key::Escape => vec![0x1B],
                     _ => return,
                 };
-
                 let port = state.conn.port.peek().as_ref().cloned();
                 let local_echo = *state.serial.tx_local_echo.peek();
                 let bridge = bridge.clone();
-
                 spawn(async move {
                     if let Some(p) = port {
                         if serial::send_data(&p, &data).await.is_ok() {
@@ -81,7 +81,7 @@ pub fn LogViewport(
                         .unwrap_or(total_lines() == 0);
                     rsx! {
                         for (line_idx , text) in logs.iter() {
-                            LogLine {
+                            MonitorLogLine {
                                 key: "{line_idx}",
                                 text: text.clone(),
                                 highlights: highlights.clone(),
@@ -91,12 +91,12 @@ pub fn LogViewport(
                         }
                         if is_at_bottom {
                             if let Some(text) = active_line {
-                                LogLine {
+                                MonitorLogLine {
                                     key: "{0}",
                                     text: text.clone(),
                                     highlights: highlights.clone(),
                                     show_timestamps,
-                                    show_highlights: false, // Maybe don't highlight active line to avoid flicker?
+                                    show_highlights: false, // Maybe don't highlight active line to avoid flicker? // Maybe don't highlight active line to avoid flicker?
                                 }
                             }
                         }

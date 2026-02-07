@@ -4,7 +4,7 @@ use crate::utils::decode_ansi_text;
 use dioxus::prelude::*;
 
 #[component]
-pub fn LogLine(
+pub fn MonitorLogLine(
     text: String,
     highlights: Vec<Highlight>,
     show_timestamps: bool,

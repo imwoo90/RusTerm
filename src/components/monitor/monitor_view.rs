@@ -1,14 +1,14 @@
-use crate::components::console::hooks::effects::{use_search_sync, use_settings_sync};
-use crate::components::console::viewport::LogViewport;
+use crate::components::monitor::hooks::effects::{use_search_sync, use_settings_sync};
+use crate::components::monitor::monitor_viewport::MonitorViewport;
 use crate::hooks::use_worker_controller;
 use crate::state::AppState;
 use dioxus::prelude::*;
 
-use crate::components::console::console_header::ConsoleHeader;
-use crate::components::console::hooks::virtual_scroll::use_virtual_scroll;
+use crate::components::monitor::hooks::virtual_scroll::use_virtual_scroll;
+use crate::components::monitor::monitor_header::MonitorHeader;
 
 #[component]
-pub fn Console() -> Element {
+pub fn Monitor() -> Element {
     let state = use_context::<AppState>();
     let bridge = use_worker_controller();
     let mut vs = use_virtual_scroll();
@@ -18,11 +18,11 @@ pub fn Console() -> Element {
     use_search_sync(bridge);
 
     rsx! {
-        main { class: "flex-1 min-h-0 mx-4 mb-0 mt-0 relative group/console",
+        main { class: "flex-1 min-h-0 mx-4 mb-0 mt-0 relative group/monitor",
             div { class: "absolute inset-0 bg-console-bg rounded-t-2xl border-t border-x border-[#222629] shadow-[inset_0_0_20px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col",
                 div { class: "absolute inset-0 scanlines opacity-20 pointer-events-none z-10" }
 
-                ConsoleHeader {
+                MonitorHeader {
                     autoscroll: (state.ui.autoscroll)(),
                     count: (state.log.total_lines)(),
                     onexport: move |_| bridge.export((state.ui.show_timestamps)()),
@@ -35,7 +35,7 @@ pub fn Console() -> Element {
                     ontoggle_autoscroll: move |_| state.ui.toggle_autoscroll(),
                 }
 
-                LogViewport {
+                MonitorViewport {
                     total_height: vs.total_height,
                     offset_top: vs.offset_top,
                     onmounted_console: move |evt: MountedEvent| {
