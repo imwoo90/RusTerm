@@ -77,7 +77,7 @@ impl LogProcessor {
 
         let (batch, offsets, filtered, active_line) = if is_hex {
             let text = formatter.format_chunk(chunk);
-            let (b, o, f) = self.chunk_handler.process_text_lines(
+            let (b, o, f) = self.chunk_handler.process_hex_lines(
                 &text,
                 &*formatter,
                 &timestamp,

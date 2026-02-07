@@ -90,8 +90,8 @@ impl StreamingLineProcessor {
         (batch, offsets, filtered, active_line)
     }
 
-    /// Processes a text chunk (Legacy/Hex mode)
-    pub fn process_text_lines(
+    /// Processes a hex chunk (Hex mode)
+    pub fn process_hex_lines(
         &mut self,
         chunk: &str,
         formatter: &dyn LogFormatterStrategy,
