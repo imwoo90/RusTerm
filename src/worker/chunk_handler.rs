@@ -85,7 +85,8 @@ impl StreamingLineProcessor {
             .rows_formatted(0, MAX_LINE_BYTES as u16)
             .next()
             .map(|bytes| String::from_utf8_lossy(&bytes).to_string())
-            .filter(|s| !s.trim().is_empty());
+            .filter(|s| !s.trim().is_empty())
+            .filter(|s| !is_filtering || filter_matcher(s));
 
         (batch, offsets, filtered, active_line)
     }
