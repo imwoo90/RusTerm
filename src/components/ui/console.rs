@@ -16,12 +16,8 @@ pub fn ConsoleFrame(children: Element) -> Element {
 pub fn ConsoleToolbar(left: Element, right: Element) -> Element {
     rsx! {
         div { class: "shrink-0 h-6 bg-[#16181a] border-b border-[#222629] flex items-center justify-between px-3 z-20 relative",
-            div { class: "flex items-center gap-4",
-                {left}
-            }
-            div { class: "flex items-center gap-2",
-                {right}
-            }
+            div { class: "flex items-center gap-4", {left} }
+            div { class: "flex items-center gap-2", {right} }
         }
     }
 }
@@ -83,7 +79,11 @@ pub fn ConsoleTrackingIndicator(
     rsx! {
         div {
             class: "h-full flex items-center px-3 border-l border-[#222629] group/tracking select-none {cursor_class}",
-            onclick: move |evt| if interactive { ontoggle.call(evt) },
+            onclick: move |evt| {
+                if interactive {
+                    ontoggle.call(evt)
+                }
+            },
             if is_tracking {
                 div { class: "text-[9px] font-mono text-primary/60 uppercase tracking-widest flex items-center gap-1 group-hover/tracking:text-primary transition-colors",
                     span { class: "w-1 h-1 rounded-full bg-primary animate-pulse" }
@@ -144,29 +144,20 @@ pub fn UnifiedConsoleToolbar(
                 {left}
             },
             right: rsx! {
-                ConsoleFontSizeControl {
-                    font_size: font_size,
-                    min_size: min_font_size,
-                    max_size: max_font_size,
-                }
-
-                ConsoleSeparator {}
-
                 ConsoleTrackingIndicator {
                     is_tracking: is_autoscroll,
                     interactive: is_tracking_interactive,
                     ontoggle: move |evt| on_toggle_autoscroll.call(evt),
                 }
-
                 ConsoleSeparator {}
-
+                ConsoleFontSizeControl { font_size, min_size: min_font_size, max_size: max_font_size }
+                ConsoleSeparator {}
                 ConsoleActionButton {
                     icon: "delete",
                     title: "Clear Logs",
                     onclick: move |evt| on_clear.call(evt),
                     hover_color_class: "hover:text-red-500",
                 }
-
                 if let Some(export_handler) = on_export {
                     ConsoleActionButton {
                         icon: "download",
@@ -175,7 +166,7 @@ pub fn UnifiedConsoleToolbar(
                         hover_color_class: "hover:text-primary",
                     }
                 }
-            }
+            },
         }
     }
 }

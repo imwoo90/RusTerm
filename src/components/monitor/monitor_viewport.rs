@@ -93,7 +93,7 @@ pub fn MonitorViewport(
                                     key: "{0}",
                                     text: text.clone(),
                                     highlights: highlights.clone(),
-                                    show_highlights: false, // Maybe don't highlight active line to avoid flicker? // Maybe don't highlight active line to avoid flicker?
+                                    show_highlights: false, // Maybe don't highlight active line to avoid flicker? // Maybe don't highlight active line to avoid flicker? // Maybe don't highlight active line to avoid flicker?  Maybe don't highlight active line to avoid flicker?
                                 }
                             }
                         }
