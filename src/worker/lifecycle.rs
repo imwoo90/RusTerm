@@ -45,12 +45,13 @@ pub fn get_app_script_path() -> String {
     let document = web_sys::window()
         .and_then(|w| w.document())
         .expect("No document");
+    let pkg_name = env!("CARGO_PKG_NAME");
 
-    // Select only relevant tags that contain 'rusterm' in their source/href
-    let selector = "script[src*='rusterm'], link[href*='rusterm'][rel='preload']";
+    // Select only relevant tags that contain the package name in their source/href
+    let selector = format!("script[src*='{pkg_name}'], link[href*='{pkg_name}'][rel='preload']");
 
     document
-        .query_selector_all(selector)
+        .query_selector_all(&selector)
         .ok()
         .and_then(|nodes| {
             (0..nodes.length()).find_map(|i| {
@@ -69,5 +70,5 @@ pub fn get_app_script_path() -> String {
                 is_main_bundle.then_some(src)
             })
         })
-        .unwrap_or_else(|| "./rusterm.js".to_string())
+        .unwrap_or_else(|| format!("./{pkg_name}.js"))
 }
