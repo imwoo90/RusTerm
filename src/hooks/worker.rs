@@ -51,6 +51,10 @@ impl WorkerController {
     pub fn new_session(&self) {
         self.send(WorkerMsg::NewSession);
     }
+
+    pub fn set_mode(&self, mode: crate::state::ViewMode) {
+        self.send(WorkerMsg::SetMode(mode));
+    }
 }
 
 pub fn use_worker_controller() -> WorkerController {

@@ -88,6 +88,5 @@ pub enum WorkerMsg {
     },
     ActiveLine(Option<String>),
     SetMode(ViewMode),
-    RawData(Vec<u8>),
     Error(String),
 }

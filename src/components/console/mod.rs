@@ -9,6 +9,7 @@ pub mod transmit_bar;
 pub mod utils;
 pub mod view;
 pub mod viewport;
+pub mod xterm;
 
 pub use filter_bar::FilterBar;
 pub use input_bar::InputBar;
@@ -16,3 +17,4 @@ pub use macro_bar::MacroBar;
 pub use search_bar::SearchBar;
 pub use transmit_bar::TransmitBar;
 pub use view::Console;
+pub use xterm::Xterm;

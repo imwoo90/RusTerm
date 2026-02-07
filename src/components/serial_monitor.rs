@@ -1,7 +1,7 @@
 use crate::components::ui::ToastContainer;
 use dioxus::prelude::*;
 
-use super::console::{Console, FilterBar, InputBar, MacroBar};
+use super::console::{Console, FilterBar, InputBar, MacroBar, Xterm};
 use crate::components::header::Header;
 use crate::hooks::use_worker_controller;
 use crate::state::ViewMode;
@@ -9,13 +9,24 @@ use crate::state::ViewMode;
 #[component]
 pub fn SerialMonitor() -> Element {
     let app_state = crate::state::use_provide_app_state();
+    let bridge = use_worker_controller();
+    let view_mode = app_state.ui.view_mode;
 
-    // Lifecycle/Worker Hook
-    use_worker_controller();
+    use_effect(move || {
+        let mode = view_mode();
+        bridge.set_mode(mode);
+        match mode {
+            ViewMode::Monitoring => {
+                bridge.clear();
+                app_state.log.clear();
+            }
+            ViewMode::Terminal => {
+                app_state.terminal.clear();
+            }
+        }
+    });
 
     let toasts = app_state.log.toasts;
-
-    let view_mode = app_state.ui.view_mode;
 
     rsx! {
         div { class: "bg-background-dark h-screen w-full font-display text-white selection:bg-primary/30 selection:text-primary overflow-x-auto overflow-y-hidden",
@@ -26,10 +37,7 @@ pub fn SerialMonitor() -> Element {
                     FilterBar {}
                     Console {}
                 } else {
-                    // Placeholder for Terminal View
-                    div { class: "flex-1 w-full bg-black text-white p-4 font-mono flex items-center justify-center",
-                        "Terminal View (Coming Soon)"
-                    }
+                    Xterm {}
                 }
                 MacroBar {}
                 ToastContainer { toasts }

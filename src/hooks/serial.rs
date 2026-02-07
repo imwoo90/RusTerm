@@ -16,14 +16,7 @@ pub fn use_serial_controller() -> SerialController {
             if !simulating {
                 return;
             }
-            let stream = crate::utils::simulation::create_simulation_stream();
-            let reader = stream
-                .get_reader()
-                .unchecked_into::<ReadableStreamDefaultReader>();
-
-            // Simulation doesn't use the robust read_loop/task structure yet,
-            // but we update state so disconnect works.
-            state.conn.set_connected(None, Some(reader));
+            start_simulation_task(state, bridge);
         }
     });
 
@@ -171,8 +164,12 @@ fn start_read_task(state: AppState, bridge: WorkerController, port: web_sys::Ser
 
         // 3. Run Loop
         let status = crate::utils::serial_api::read_loop(reader, move |data| {
-            let is_hex = (state.ui.is_hex_view)();
-            bridge.append_chunk(data, is_hex);
+            if (state.ui.view_mode)() == crate::state::ViewMode::Terminal {
+                state.terminal.push_data(data.to_vec());
+            } else {
+                let is_hex = (state.ui.is_hex_view)();
+                bridge.append_chunk(data, is_hex);
+            }
         })
         .await;
 
@@ -213,5 +210,31 @@ fn start_read_task(state: AppState, bridge: WorkerController, port: web_sys::Ser
                 }
             }
         }
+    });
+}
+
+/// Starts a simulation read task
+fn start_simulation_task(state: AppState, bridge: WorkerController) {
+    spawn(async move {
+        let stream = crate::utils::simulation::create_simulation_stream();
+        let reader = stream
+            .get_reader()
+            .unchecked_into::<ReadableStreamDefaultReader>();
+
+        state.conn.set_connected(None, Some(reader.clone()));
+        state.conn.set_reading(true);
+
+        // Run Loop
+        let _ = crate::utils::serial_api::read_loop(reader, move |data| {
+            if (state.ui.view_mode)() == crate::state::ViewMode::Terminal {
+                state.terminal.push_data(data.to_vec());
+            } else {
+                let is_hex = (state.ui.is_hex_view)();
+                bridge.append_chunk(data, is_hex);
+            }
+        })
+        .await;
+
+        state.conn.set_reading(false);
     });
 }

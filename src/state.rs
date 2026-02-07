@@ -50,11 +50,17 @@ pub struct LogState {
 }
 
 #[derive(Clone, Copy)]
+pub struct TerminalState {
+    pub received_data: Signal<Vec<u8>>,
+}
+
+#[derive(Clone, Copy)]
 pub struct AppState {
     pub ui: UIState,
     pub serial: SerialSettings,
     pub conn: ConnectionState,
     pub log: LogState,
+    pub terminal: TerminalState,
 }
 
 impl UIState {
@@ -162,6 +168,28 @@ impl LogState {
     }
 }
 
+impl TerminalState {
+    pub fn push_data(&self, data: Vec<u8>) {
+        let mut signal = self.received_data;
+        let mut buffer = signal.write();
+        buffer.extend(data);
+    }
+
+    pub fn take_data(&self) -> Vec<u8> {
+        let mut signal = self.received_data;
+        if signal.peek().is_empty() {
+            return Vec::new();
+        }
+
+        let mut buffer = signal.write();
+        std::mem::take(&mut *buffer)
+    }
+
+    pub fn clear(&self) {
+        { self.received_data }.set(Vec::new());
+    }
+}
+
 pub fn use_provide_app_state() -> AppState {
     let app_state = AppState {
         ui: UIState {
@@ -200,6 +228,9 @@ pub fn use_provide_app_state() -> AppState {
             highlights: use_signal(Vec::new),
             toasts: use_signal(Vec::new),
             active_line: use_signal(|| None),
+        },
+        terminal: TerminalState {
+            received_data: use_signal(Vec::new),
         },
     };
 
