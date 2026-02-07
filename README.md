@@ -10,7 +10,7 @@ A high-performance, browser-based Serial Monitor & Terminal that requires **no i
 
 Unlike typical web serial tools, RusTerm leverages **OPFS (Origin Private File System)** and **Web Workers** to handle **Gigabyte-scale logs** without freezing the UI, featuring real-time filtering, virtual scrolling, and a full-featured terminal.
 
-[**🔴 RusTerm Live**](https://imwoo90.github.io/web_serial_monitor/)
+[**🔴 RusTerm Live**](https://imwoo90.github.io/RusTerm/)
 
 ---
 
@@ -105,8 +105,8 @@ graph TD
 ### Running Locally
 ```bash
 # 1. Clone the repository
-git clone https://github.com/imwoo90/web_serial_monitor.git
-cd web_serial_monitor
+git clone https://github.com/imwoo90/RusTerm.git
+cd RusTerm
 
 # 2. Run with Dioxus CLI
 dx serve --port 8080
@@ -145,5 +145,5 @@ This project is licensed under the **Apache License 2.0**.
 - **[xterm.js](https://github.com/xtermjs/xterm.js)**: Licensed under the **MIT License**.
 - **[xterm-addon-fit](https://github.com/xtermjs/xterm.js/tree/master/addons/xterm-addon-fit)**: Licensed under the **MIT License**.
 
-See the [LICENSE](file:///Users/inmyungwoo/works/rust/web_serial_monitor/LICENSE) file for more details.
+See the [LICENSE](LICENSE) file for more details.
 

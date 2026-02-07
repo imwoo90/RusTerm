@@ -54,7 +54,7 @@ jobs:
         with:
           # Dioxus 0.7 output path is target/dx/[app_name]/release/web/public
           # This replaces the need to manually copy files to 'docs' or 'dist'
-          path: ./target/dx/serial_monitor/release/web/public
+          path: ./target/dx/RusTerm/release/web/public
 
       - name: Deploy to GitHub Pages
         id: deployment
