@@ -11,6 +11,8 @@ pub struct UIState {
     pub show_timestamps: Signal<bool>,
     pub autoscroll: Signal<bool>,
     pub is_hex_view: Signal<bool>,
+    pub view_mode: Signal<ViewMode>,
+    pub font_size: Signal<u32>,
 }
 
 #[derive(Clone, Copy)]
@@ -49,11 +51,20 @@ pub struct LogState {
 }
 
 #[derive(Clone, Copy)]
+pub struct TerminalState {
+    pub received_data: Signal<Vec<u8>>,
+    pub scrollback: Signal<u32>,
+    pub lines: Signal<usize>,
+    pub autoscroll: Signal<bool>,
+}
+
+#[derive(Clone, Copy)]
 pub struct AppState {
     pub ui: UIState,
     pub serial: SerialSettings,
     pub conn: ConnectionState,
     pub log: LogState,
+    pub terminal: TerminalState,
 }
 
 impl UIState {
@@ -74,6 +85,9 @@ impl UIState {
     }
     pub fn toggle_hex_view(&self) {
         { self.is_hex_view }.toggle();
+    }
+    pub fn set_view_mode(&self, mode: ViewMode) {
+        { self.view_mode }.set(mode);
     }
 }
 
@@ -158,6 +172,28 @@ impl LogState {
     }
 }
 
+impl TerminalState {
+    pub fn push_data(&self, data: Vec<u8>) {
+        let mut signal = self.received_data;
+        let mut buffer = signal.write();
+        buffer.extend(data);
+    }
+
+    pub fn take_data(&self) -> Vec<u8> {
+        let mut signal = self.received_data;
+        if signal.peek().is_empty() {
+            return Vec::new();
+        }
+
+        let mut buffer = signal.write();
+        std::mem::take(&mut *buffer)
+    }
+
+    pub fn clear(&self) {
+        { self.received_data }.set(Vec::new());
+    }
+}
+
 pub fn use_provide_app_state() -> AppState {
     let app_state = AppState {
         ui: UIState {
@@ -166,6 +202,8 @@ pub fn use_provide_app_state() -> AppState {
             show_timestamps: use_signal(|| false),
             autoscroll: use_signal(|| true),
             is_hex_view: use_signal(|| false),
+            view_mode: use_signal(|| ViewMode::Monitoring),
+            font_size: use_signal(|| 14),
         },
         serial: SerialSettings {
             baud_rate: use_signal(|| 115200u32),
@@ -196,6 +234,12 @@ pub fn use_provide_app_state() -> AppState {
             toasts: use_signal(Vec::new),
             active_line: use_signal(|| None),
         },
+        terminal: TerminalState {
+            received_data: use_signal(Vec::new),
+            scrollback: use_signal(|| 1000),
+            lines: use_signal(|| 0),
+            autoscroll: use_signal(|| true),
+        },
     };
 
     use_context_provider(|| app_state);
@@ -205,10 +249,6 @@ pub fn use_provide_app_state() -> AppState {
 impl AppState {
     pub fn add_toast(&self, message: &str, type_: ToastType) {
         self.log.add_toast(message, type_);
-    }
-
-    pub fn clear_logs(&self) {
-        self.log.clear();
     }
 
     pub fn success(&self, msg: &str) {

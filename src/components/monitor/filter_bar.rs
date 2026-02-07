@@ -128,7 +128,7 @@ fn HighlightPanel(visible: bool, onclose: EventHandler<()>) -> Element {
     }
 }
 
-use crate::components::console::utils::style::get_highlight_classes;
+use crate::components::monitor::utils::style::get_highlight_classes;
 
 #[component]
 fn HighlightTag(color: &'static str, label: String, onremove: EventHandler<MouseEvent>) -> Element {

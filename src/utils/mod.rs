@@ -6,6 +6,7 @@ pub mod macros;
 pub mod scroll;
 pub mod serial_api;
 pub mod simulation;
+pub mod terminal_bindings;
 
 pub use ansi_decoder::decode_ansi_text;
 pub use format::{format_hex_input, parse_hex_string, send_chunk_to_worker, send_worker_msg};

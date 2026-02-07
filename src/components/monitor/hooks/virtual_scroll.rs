@@ -1,23 +1,19 @@
-use crate::components::console::hooks::data_request::use_data_request;
-use crate::components::console::utils::layout_utils::{
+use crate::components::monitor::hooks::data_request::use_data_request;
+use crate::components::monitor::utils::layout_utils::{
     calculate_scroll_state, calculate_virtual_metrics, use_auto_scroller, use_window_resize,
 };
-use crate::config::{BOTTOM_BUFFER_EXTRA, LINE_HEIGHT, TOP_BUFFER};
+use crate::config::{line_height_from_font, BOTTOM_BUFFER_EXTRA, TOP_BUFFER};
 use crate::state::AppState;
 use crate::utils::calculate_window_size;
 use dioxus::prelude::*;
 use std::rc::Rc;
 
 pub struct VirtualScroll {
-    pub start_index: Signal<usize>,
-    pub _console_height: Signal<f64>,
     pub total_height: f64,
     pub offset_top: f64,
-    pub _scale_factor: f64,
     pub console_handle: Signal<Option<Rc<MountedData>>>,
     pub sentinel_handle: Signal<Option<Rc<MountedData>>>,
     pub scroll_task: Resource<()>,
-    pub _height_task: Resource<()>,
 }
 
 pub fn use_virtual_scroll() -> VirtualScroll {
@@ -30,10 +26,12 @@ pub fn use_virtual_scroll() -> VirtualScroll {
     let sentinel_handle = use_signal(|| None::<Rc<MountedData>>);
 
     let total_lines = state.log.total_lines;
+    let font_size = *state.ui.font_size.read();
+    let line_height = line_height_from_font(font_size);
 
     let window_size = calculate_window_size(
         console_height(),
-        LINE_HEIGHT,
+        line_height,
         TOP_BUFFER + BOTTOM_BUFFER_EXTRA,
     );
 
@@ -42,10 +40,10 @@ pub fn use_virtual_scroll() -> VirtualScroll {
     use_auto_scroller(state.ui.autoscroll, total_lines, sentinel_handle);
 
     let (total_height, offset_top, scale_factor) =
-        calculate_virtual_metrics(total_lines(), start_index(), console_height());
+        calculate_virtual_metrics(total_lines(), start_index(), console_height(), line_height);
 
     // Height update task
-    let height_task = use_resource(move || {
+    let _height_task = use_resource(move || {
         let handle = (console_handle)();
         async move {
             if let Some(handle) = handle {
@@ -63,6 +61,7 @@ pub fn use_virtual_scroll() -> VirtualScroll {
         let current_height = *console_height.read();
         let current_total_height = total_height;
         let current_scale = scale_factor;
+        let lh = line_height;
         async move {
             if let Some(handle) = handle {
                 if let Ok(offset) = handle.get_scroll_offset().await {
@@ -72,6 +71,7 @@ pub fn use_virtual_scroll() -> VirtualScroll {
                         total_lines,
                         current_scale,
                         current_total_height,
+                        lh,
                     );
                     if (start_index)() != new_index {
                         start_index.set(new_index);
@@ -85,14 +85,10 @@ pub fn use_virtual_scroll() -> VirtualScroll {
     });
 
     VirtualScroll {
-        start_index,
-        _console_height: console_height,
         total_height,
         offset_top,
-        _scale_factor: scale_factor,
         console_handle,
         sentinel_handle,
         scroll_task,
-        _height_task: height_task,
     }
 }

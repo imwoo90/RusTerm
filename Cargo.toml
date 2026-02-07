@@ -11,6 +11,7 @@ license = "Apache-2.0"
 chrono = { version = "0.4.43", features = ["wasmbind"] }
 dioxus = { version = "0.7.1", features = ["document", "asset", "web", "html", "macro", "hooks", "signals"] }
 futures-util = "0.3.31"
+gloo-events = "0.2.0"
 gloo-timers = { version = "0.3.0", features = ["futures"] }
 gloo-worker = "0.5.0"
 js-sys = "0.3.85"
@@ -59,6 +60,7 @@ web-sys = { version = "0.3.85", features = [
     "HtmlCollection",
     "HtmlInputElement",
     "HtmlElement",
+    "Clipboard",
     "Element",
     "NodeList",
 ] }

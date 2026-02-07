@@ -11,6 +11,9 @@ use components::serial_monitor::SerialMonitor;
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
+const XTERM_CSS: Asset = asset!("/assets/css/xterm.css");
+const XTERM_JS: Asset = asset!("/assets/js/xterm.js");
+const XTERM_FIT_ADDON_JS: Asset = asset!("/assets/js/xterm-addon-fit.js");
 
 fn main() {
     #[cfg(target_arch = "wasm32")]
@@ -42,6 +45,9 @@ fn App() -> Element {
             href: "https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap",
         }
         document::Link { rel: "stylesheet", href: "{TAILWIND_CSS}" }
+        document::Link { rel: "stylesheet", href: "{XTERM_CSS}" }
+        document::Script { src: "{XTERM_JS}" }
+        document::Script { src: "{XTERM_FIT_ADDON_JS}" }
         SerialMonitor {}
     }
 }

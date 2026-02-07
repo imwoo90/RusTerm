@@ -14,6 +14,8 @@ pub(crate) struct WorkerState {
     pub(crate) scope: web_sys::DedicatedWorkerGlobalScope,
     pub(crate) last_reported_count: usize,
     pub(crate) current_search_id: u32,
+    pub(crate) last_reported_active_line: Option<String>,
+    pub(crate) current_active_line: Option<String>,
 }
 
 impl WorkerState {
@@ -35,6 +37,8 @@ impl WorkerState {
             scope,
             last_reported_count: 0,
             current_search_id: 0,
+            last_reported_active_line: None,
+            current_active_line: None,
         })
     }
 
@@ -44,15 +48,26 @@ impl WorkerState {
             loop {
                 gloo_timers::future::TimeoutFuture::new(crate::config::WORKER_UPDATE_INTERVAL_MS)
                     .await; // ~60fps
-                let (count, scope) = {
+                let (count, active_line, scope) = {
                     let state = state_rc.borrow();
-                    (state.proc.get_line_count() as usize, state.scope.clone())
+                    (
+                        state.proc.get_line_count() as usize,
+                        state.current_active_line.clone(),
+                        state.scope.clone(),
+                    )
                 };
 
                 let mut state = state_rc.borrow_mut();
                 if count != state.last_reported_count {
                     state.last_reported_count = count;
                     if let Ok(msg) = serde_json::to_string(&WorkerMsg::TotalLines(count)) {
+                        let _ = scope.post_message(&msg.into());
+                    }
+                }
+
+                if active_line != state.last_reported_active_line {
+                    state.last_reported_active_line = active_line.clone();
+                    if let Ok(msg) = serde_json::to_string(&WorkerMsg::ActiveLine(active_line)) {
                         let _ = scope.post_message(&msg.into());
                     }
                 }

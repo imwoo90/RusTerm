@@ -9,10 +9,10 @@ title = "serial_monitor"
 [web.resource]
 
 # Additional CSS style files
-style = []
+style = ["css/xterm.css"]
 
 # Additional JavaScript files
-script = []
+script = ["js/xterm.js", "js/xterm-addon-fit.js"]
 
 [web.resource.dev]
 

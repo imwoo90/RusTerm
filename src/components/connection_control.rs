@@ -73,7 +73,7 @@ pub fn ConnectionControl() -> Element {
                 },
                 div { class: "relative flex h-2 w-2",
                     if !(state.conn.is_busy)() {
-                         span { class: "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-white" }
+                        span { class: "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-white" }
                     }
                     span { class: "relative inline-flex rounded-full h-2 w-2 bg-white" }
                 }

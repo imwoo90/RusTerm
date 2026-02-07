@@ -1,4 +1,4 @@
-use crate::components::console::{SearchBar, TransmitBar};
+use crate::components::monitor::{SearchBar, TransmitBar};
 use dioxus::prelude::*;
 
 #[component]

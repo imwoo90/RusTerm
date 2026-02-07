@@ -21,7 +21,7 @@ pub fn LineEndSelector(
                         class: if selected == ending { "{active_class} border shadow-sm" } else { "text-gray-500 hover:text-white" },
                         onclick: move |_| onselect.call(ending),
                         match ending {
-                            LineEnding::None => if is_rx { "RAW" } else { "NONE" },
+                            LineEnding::None => if is_rx { "RAW" } else { "NONE" }
                             LineEnding::NL => "LF",
                             LineEnding::CR => "CR",
                             LineEnding::NLCR => "CRLF",
@@ -100,8 +100,7 @@ pub fn CustomInputSelect(
 
     rsx! {
         div { class: "relative {class} group/select",
-            div {
-                class: if disabled { "w-full flex items-center justify-between bg-[#0d0f10] border border-[#2a2e33] rounded-lg py-0 px-0 opacity-50 cursor-not-allowed" } else { "w-full flex items-center justify-between bg-[#0d0f10] border border-[#2a2e33] rounded-lg py-0 px-0 hover:bg-[#16181a] hover:border-primary/50 transition-all duration-200 focus-within:border-primary/50" },
+            div { class: if disabled { "w-full flex items-center justify-between bg-[#0d0f10] border border-[#2a2e33] rounded-lg py-0 px-0 opacity-50 cursor-not-allowed" } else { "w-full flex items-center justify-between bg-[#0d0f10] border border-[#2a2e33] rounded-lg py-0 px-0 hover:bg-[#16181a] hover:border-primary/50 transition-all duration-200 focus-within:border-primary/50" },
 
                 // Input field for custom value
                 input {

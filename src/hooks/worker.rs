@@ -44,12 +44,20 @@ impl WorkerController {
         }
     }
 
+    pub fn set_timestamp_state(&self, enabled: bool) {
+        self.send(WorkerMsg::SetTimestampState(enabled));
+    }
+
     pub fn request_window(&self, start_line: usize, count: usize) {
         self.send(WorkerMsg::RequestWindow { start_line, count });
     }
 
     pub fn new_session(&self) {
         self.send(WorkerMsg::NewSession);
+    }
+
+    pub fn set_mode(&self, mode: crate::state::ViewMode) {
+        self.send(WorkerMsg::SetMode(mode));
     }
 }
 
