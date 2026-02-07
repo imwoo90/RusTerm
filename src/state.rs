@@ -52,6 +52,8 @@ pub struct LogState {
 #[derive(Clone, Copy)]
 pub struct TerminalState {
     pub received_data: Signal<Vec<u8>>,
+    pub font_size: Signal<u32>,
+    pub scrollback: Signal<u32>,
 }
 
 #[derive(Clone, Copy)]
@@ -231,6 +233,8 @@ pub fn use_provide_app_state() -> AppState {
         },
         terminal: TerminalState {
             received_data: use_signal(Vec::new),
+            font_size: use_signal(|| 14),
+            scrollback: use_signal(|| 1000),
         },
     };
 

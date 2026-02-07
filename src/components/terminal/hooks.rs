@@ -1,0 +1,120 @@
+use crate::state::AppState;
+use crate::utils::terminal_bindings::*;
+use dioxus::prelude::*;
+use js_sys::Uint8Array;
+use std::cell::RefCell;
+use std::rc::Rc;
+use wasm_bindgen::JsCast;
+use web_sys::window;
+
+/// Initialize the xterm.js terminal instance
+pub fn setup_terminal(
+    div: &web_sys::HtmlElement,
+    state: AppState,
+    send_buffer: Rc<RefCell<Vec<u8>>>,
+    aggregation_buffer: Rc<RefCell<Vec<u8>>>,
+    mut term_instance: Signal<Option<super::AutoDisposeTerminal>>,
+    mut resize_listener: Signal<Option<gloo_events::EventListener>>,
+) {
+    let win = window().unwrap();
+    let term_constructor = js_sys::Reflect::get(&win, &"Terminal".into()).unwrap();
+    if term_constructor.is_undefined() {
+        web_sys::console::error_1(&"xterm.js not loaded".into());
+        return;
+    }
+
+    // Terminal options
+    let options = js_sys::Object::new();
+    js_sys::Reflect::set(&options, &"convertEol".into(), &true.into()).unwrap();
+    js_sys::Reflect::set(
+        &options,
+        &"theme".into(),
+        &serde_wasm_bindgen::to_value(&serde_json::json!({
+            "background": "#000000",
+            "foreground": "#ffffff"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    js_sys::Reflect::set(
+        &options,
+        &"fontSize".into(),
+        &(*state.terminal.font_size.read()).into(),
+    )
+    .unwrap();
+    js_sys::Reflect::set(
+        &options,
+        &"scrollback".into(),
+        &(*state.terminal.scrollback.read()).into(),
+    )
+    .unwrap();
+
+    let term = Terminal::new(&options);
+    let fit_addon = XtermFitAddon::new_fit();
+    term.load_addon(&fit_addon.clone().into());
+    term.open(div);
+
+    // Data sending closure (append to send_buffer for throttled sending)
+    let send_buffer_for_input = send_buffer.clone();
+    let on_data_closure = wasm_bindgen::prelude::Closure::wrap(Box::new(move |data: String| {
+        let data_bytes = data.into_bytes();
+        send_buffer_for_input.borrow_mut().extend(data_bytes);
+    }) as Box<dyn FnMut(String)>);
+    term.on_data(on_data_closure.as_ref().unchecked_ref());
+    on_data_closure.forget();
+
+    // Throttled Send Loop (60Hz)
+    let send_buffer_for_loop = send_buffer;
+    let state_for_send = state;
+    wasm_bindgen_futures::spawn_local(async move {
+        loop {
+            gloo_timers::future::TimeoutFuture::new(16).await;
+            let data = {
+                let mut buf = send_buffer_for_loop.borrow_mut();
+                if buf.is_empty() {
+                    continue;
+                }
+                std::mem::take(&mut *buf)
+            };
+            if let Some(port) = state_for_send.conn.port.peek().clone() {
+                if let Err(e) = crate::utils::serial_api::send_data(&port, &data).await {
+                    web_sys::console::error_1(&e);
+                }
+            }
+        }
+    });
+
+    // Store terminal instance
+    let term_for_instance: Terminal = term.clone().unchecked_into();
+    term_instance.set(Some(super::AutoDisposeTerminal(term_for_instance)));
+
+    // Initial fit
+    let fit_initial: XtermFitAddon = fit_addon.clone().unchecked_into();
+    spawn(async move {
+        gloo_timers::future::TimeoutFuture::new(100).await;
+        fit_initial.fit();
+    });
+
+    // Throttled Write Interval (60Hz)
+    let term_for_write: Terminal = term.clone().unchecked_into();
+    wasm_bindgen_futures::spawn_local(async move {
+        loop {
+            gloo_timers::future::TimeoutFuture::new(60).await;
+            let mut data_vec = aggregation_buffer.borrow_mut();
+            if !data_vec.is_empty() {
+                let chunk = std::mem::take(&mut *data_vec);
+                drop(data_vec);
+                let array = Uint8Array::from(chunk.as_slice());
+                term_for_write.write_chunk(&array);
+            }
+        }
+    });
+
+    // Resize Handler
+    let fit_for_resize = fit_addon;
+    let listener = gloo_events::EventListener::new(&win, "resize", move |_| {
+        let fit: XtermFitAddon = fit_for_resize.clone().unchecked_into();
+        fit.fit();
+    });
+    resize_listener.set(Some(listener));
+}

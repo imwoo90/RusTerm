@@ -117,7 +117,6 @@ pub async fn cancel_reader(reader: &ReadableStreamDefaultReader) -> Result<(), J
 
 pub async fn send_data(port: &SerialPort, data: &[u8]) -> Result<(), JsValue> {
     let writable = port.writable();
-    // get_writer can throw
     let writer = writable.get_writer()?;
     let writer: WritableStreamDefaultWriter = writer.unchecked_into();
 
