@@ -77,6 +77,7 @@ pub fn TransmitBar() -> Element {
                     placeholder: "Send command...",
                     "type": "text",
                     value: "{input_value}",
+                    id: "transmit-input",
                     oninput: move |evt| {
                         if is_hex_input() {
                             input_value.set(format_hex_input(&evt.value()));
