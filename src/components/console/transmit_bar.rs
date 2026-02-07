@@ -2,6 +2,7 @@ use crate::state::{AppState, LineEnding};
 use crate::utils::serial;
 use crate::utils::{format_hex_input, parse_hex_string, CommandHistory};
 use dioxus::prelude::*;
+use futures_util::StreamExt;
 
 #[component]
 pub fn TransmitBar() -> Element {
@@ -12,26 +13,31 @@ pub fn TransmitBar() -> Element {
     let mut is_hex_input = use_signal(|| false);
     let bridge = crate::hooks::use_worker_controller();
 
-    let mut send_task = use_resource(move || {
-        let text = input_value();
-        let is_hex = is_hex_input();
-        let ending = *(state.serial.tx_line_ending).peek();
-        let local_echo = *(state.serial.tx_local_echo).peek();
-        let port = (state.conn.port).peek().as_ref().cloned();
+    let send_task = use_coroutine(move |mut rx| async move {
+        while rx.next().await.is_some() {
+            let text = input_value();
+            let ending = *state.serial.tx_line_ending.peek();
 
-        async move {
-            if text.is_empty() {
-                return;
+            if text.is_empty() && matches!(ending, LineEnding::None) {
+                continue;
             }
 
+            let is_hex = is_hex_input();
+            let local_echo = *state.serial.tx_local_echo.peek();
+            let port = state.conn.port.peek().as_ref().cloned();
+
             let mut data = if is_hex {
-                match parse_hex_string(&text) {
-                    Ok(d) => d,
-                    Err(e) => {
-                        if let Some(w) = web_sys::window() {
-                            let _ = w.alert_with_message(&format!("Hex Error: {}", e));
+                if text.is_empty() {
+                    Vec::new()
+                } else {
+                    match parse_hex_string(&text) {
+                        Ok(d) => d,
+                        Err(e) => {
+                            if let Some(w) = web_sys::window() {
+                                let _ = w.alert_with_message(&format!("Hex Error: {}", e));
+                            }
+                            continue;
                         }
-                        return;
                     }
                 }
             } else {
@@ -54,7 +60,9 @@ pub fn TransmitBar() -> Element {
                         bridge.append_log(text.clone());
                     }
                     input_value.set(String::new());
-                    history.write().add(text);
+                    if !text.is_empty() {
+                        history.write().add(text);
+                    }
                     history_index.set(None);
                 }
             }
@@ -78,7 +86,7 @@ pub fn TransmitBar() -> Element {
                     },
                     onkeydown: move |evt| {
                         match evt.key() {
-                            Key::Enter => send_task.restart(),
+                            Key::Enter => send_task.send(()),
                             Key::ArrowUp => {
                                 let h = history.read();
                                 if h.len() > 0 {
@@ -131,7 +139,7 @@ pub fn TransmitBar() -> Element {
 
             button {
                 class: "h-full aspect-square bg-primary text-surface rounded-lg flex items-center justify-center hover:bg-white transition-all hover:shadow-[0_0_15px_rgba(255,255,255,0.4)] active:scale-95 group",
-                onclick: move |_| send_task.restart(),
+                onclick: move |_| send_task.send(()),
                 span { class: "material-symbols-outlined text-[20px] group-hover:rotate-45 transition-transform duration-300",
                     "send"
                 }
