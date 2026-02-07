@@ -1,3 +1,4 @@
+use crate::config::MAX_LINE_BYTES;
 use crate::worker::formatter::LogFormatterStrategy;
 use crate::worker::repository::index::{ByteOffset, LineRange};
 use std::borrow::Cow;
@@ -7,21 +8,19 @@ use vt100::Parser;
 pub struct StreamingLineProcessor {
     pub leftover_buffer: String,
     parser: Parser,
-    last_scrollback_index: usize,
 }
 
 impl StreamingLineProcessor {
     pub fn new() -> Self {
         Self {
             leftover_buffer: String::new(),
-            // Height 1 ensures lines are pushed to scrollback immediately upon newline.
-            // Width 2048 prevents arbitrary wrapping of long lines.
-            parser: Parser::new(1, 2048, 100000),
-            last_scrollback_index: 0,
+            // Height 1 ensures we focus on a single line.
+            // Width MAX_LINE_BYTES prevents arbitrary wrapping of long lines.
+            // Scrollback 0 disables history as we extract confirmed lines immediately.
+            parser: Parser::new(1, MAX_LINE_BYTES as u16, 0),
         }
     }
 
-    /// Processes bytes using VT100 parser and extracts clean lines with ANSI codes
     pub fn process_vt100(
         &mut self,
         chunk: &[u8],
@@ -30,81 +29,63 @@ impl StreamingLineProcessor {
         is_filtering: bool,
         filter_matcher: impl Fn(&str) -> bool,
     ) -> (String, Vec<ByteOffset>, Vec<LineRange>, Option<String>) {
-        self.parser.process(chunk);
-
         let mut batch = String::new();
         let mut offsets = Vec::new();
         let mut filtered = Vec::new();
         let mut relative_offset = ByteOffset(0);
 
-        // Get total history lines (hack using set_scrollback(MAX))
-        self.parser.screen_mut().set_scrollback(usize::MAX);
-        let len = self.parser.screen().scrollback();
+        let mut start = 0;
+        // Search for newlines to process confirmed lines immediately
+        while let Some(pos) = chunk[start..].iter().position(|&b| b == b'\n') {
+            let end = start + pos;
+            let line_bytes = &chunk[start..end];
 
-        // Handle scrollback clearing external/internal reset
-        if len < self.last_scrollback_index {
-            self.last_scrollback_index = 0;
+            // Process the line content (excluding the newline)
+            self.parser.process(line_bytes);
+
+            // Extract the formatted line immediately
+            if let Some(bytes) = self
+                .parser
+                .screen()
+                .rows_formatted(0, MAX_LINE_BYTES as u16)
+                .next()
+            {
+                let line_str = String::from_utf8_lossy(&bytes);
+
+                self.process_single_line(
+                    &line_str,
+                    formatter,
+                    timestamp,
+                    &mut batch,
+                    &mut offsets,
+                    &mut filtered,
+                    &mut relative_offset,
+                    is_filtering,
+                    &filter_matcher,
+                );
+            }
+
+            // Clear the line in the parser to prepare for the next line
+            // Carriage Return + Clear Line
+            self.parser.process(b"\r\x1b[2K");
+
+            start = end + 1;
         }
 
-        if len > self.last_scrollback_index {
-            // Iterate through new lines in history
-            for i in self.last_scrollback_index..len {
-                // Offset calculation: len - i gives the 'lines back from end' + 1 roughly
-                // Logic:
-                // i=0 (oldest), offset = len (view from start)
-                // i=len-1 (newest), offset = 1 (view from end)
-                self.parser.screen_mut().set_scrollback(len - i);
-
-                // Get the first row of the view
-                if let Some(bytes) = self.parser.screen().rows_formatted(0, 2048).next() {
-                    let line_str = String::from_utf8_lossy(&bytes);
-
-                    // Use common logic to format/filter
-                    self.process_single_line(
-                        &line_str,
-                        formatter,
-                        timestamp,
-                        &mut batch,
-                        &mut offsets,
-                        &mut filtered,
-                        &mut relative_offset,
-                        is_filtering,
-                        &filter_matcher,
-                    );
-                }
-            }
-            self.last_scrollback_index = len;
-        }
-
-        // Reset view to normal (live)
-        self.parser.screen_mut().set_scrollback(0);
-
-        // Memory Management Hack: Clear scrollback if too large
-        if self.last_scrollback_index > 50000 {
-            // Attempt to clear scrollback
-            self.parser.process(b"\x1b[3J");
-
-            // Re-check length
-            self.parser.screen_mut().set_scrollback(usize::MAX);
-            if self.parser.screen().scrollback() == 0 {
-                self.last_scrollback_index = 0;
-            }
-            self.parser.screen_mut().set_scrollback(0);
+        // Process any remaining bytes (incomplete line)
+        if start < chunk.len() {
+            self.parser.process(&chunk[start..]);
         }
 
         // Get Current Active Line (Row 0)
+        // If the chunk ended with a newline, this will be empty (which is correct)
         let active_line = self
             .parser
             .screen()
-            .rows_formatted(0, 2048)
+            .rows_formatted(0, MAX_LINE_BYTES as u16)
             .next()
             .map(|bytes| String::from_utf8_lossy(&bytes).to_string())
-            .filter(|s| !s.trim().is_empty()); // Optional: Don't send empty lines? Maybe send even empty to clear prev?
-                                               // Better to send what is there. If empty, send some empty string?
-                                               // Actually, if it's empty, user sees nothing.
-
-        // Trim trailing newlines or empty spaces if needed?
-        // rows_formatted returns formatted ANSI.
+            .filter(|s| !s.trim().is_empty());
 
         (batch, offsets, filtered, active_line)
     }
@@ -236,9 +217,8 @@ impl StreamingLineProcessor {
 
     pub fn clear(&mut self) {
         self.leftover_buffer.clear();
-        // Reset parser? Recreating is safer.
-        self.parser = Parser::new(1, 2048, 100000);
-        self.last_scrollback_index = 0;
+        // Reset parser state
+        self.parser = Parser::new(1, MAX_LINE_BYTES as u16, 0);
     }
 }
 
