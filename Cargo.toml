@@ -57,6 +57,7 @@ web-sys = { version = "0.3.85", features = [
     "Document",
     "DedicatedWorkerGlobalScope",
     "HtmlScriptElement",
+    "HtmlLinkElement",
     "HtmlCollection",
     "HtmlInputElement",
     "HtmlElement",
@@ -70,3 +71,11 @@ default = ["web"]
 web = ["dioxus/web"]
 desktop = ["dioxus/desktop"]
 mobile = ["dioxus/mobile"]
+
+[profile.release]
+opt-level = 'z'     # Optimize for size
+lto = true          # Link-time optimization
+codegen-units = 1   # Better optimization
+panic = 'abort'     # Smaller binary
+debug = 0           # Fully disable debug symbols
+strip = true        # Strip symbols and debuginfo to fix wasm-opt error

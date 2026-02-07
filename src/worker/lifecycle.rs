@@ -21,7 +21,6 @@ pub fn start_worker() -> bool {
             }
         };
 
-        // Start periodic updates for total line count
         WorkerState::start_periodic_updates(state.clone());
 
         let onmessage = {
@@ -34,6 +33,8 @@ pub fn start_worker() -> bool {
         let scope = state.borrow().scope.clone();
         scope.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
         onmessage.forget();
+
+        web_sys::console::log_1(&"Worker: Started and listening".into());
     });
 
     true
@@ -43,17 +44,38 @@ pub fn start_worker() -> bool {
 pub fn get_app_script_path() -> String {
     let window = web_sys::window().expect("no global window instance found");
     let document = window.document().expect("should have a document on window");
-    if let Ok(scripts) = document.query_selector_all("script[type='module']") {
+
+    // 1. Try to find the script tag by searching all scripts and preloads
+    if let Ok(scripts) = document.query_selector_all("script, link[rel='preload'][as='script']") {
         for i in 0..scripts.length() {
             if let Some(node) = scripts.item(i) {
-                let script: web_sys::HtmlScriptElement = node.unchecked_into();
-                let src = script.src();
+                let src = if let Ok(script) = node.clone().dyn_into::<web_sys::HtmlScriptElement>()
+                {
+                    script.src()
+                } else if let Ok(link) = node.clone().dyn_into::<web_sys::HtmlLinkElement>() {
+                    link.href()
+                } else {
+                    continue;
+                };
+
+                if src.is_empty() {
+                    continue;
+                }
+
                 let s = src.to_lowercase();
-                if s.contains("rusterm") && !s.contains("snippets") && s.ends_with(".js") {
+                let base_path = s.split('?').next().unwrap_or(&s);
+                let is_js = base_path.ends_with(".js");
+
+                let is_app_script = s.contains("rusterm")
+                    || s.contains("serial_monitor")
+                    || s.contains("web_serial_monitor");
+
+                if is_app_script && !s.contains("snippets") && is_js {
                     return src;
                 }
             }
         }
     }
+
     "./rusterm.js".into()
 }

@@ -8,12 +8,6 @@ title = "RusTerm"
 # include `assets` in web platform
 [web.resource]
 
-# Additional CSS style files
-style = ["css/xterm.css"]
-
-# Additional JavaScript files
-script = ["js/xterm.js", "js/xterm-addon-fit.js"]
-
 [web.resource.dev]
 
 # Javascript code file
