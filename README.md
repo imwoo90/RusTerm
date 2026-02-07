@@ -63,22 +63,34 @@ RusTerm uses a multi-threaded architecture to ensure a smooth UI even under heav
 graph TD
     User["User / Serial Device"] <-->|Data Stream| Main["Main Thread (RusTerm)"]
     
-    %% Terminal Path
-    Main <-->|Direct Interaction| Xterm["Terminal (xterm.js)"]
+    %% Terminal Mode
+    subgraph Terminal_Mode ["Terminal Mode"]
+        Xterm["Terminal (xterm.js)"]
+    end
+    Main <-->|Direct Interaction| Xterm
 
-    %% Monitor Engine Path
-    subgraph Monitor_Engine ["Monitor Engine (Background)"]
-        Worker["Log Worker (Rust)"]
-        OPFS["OPFS Storage"]
+    %% Monitor Mode
+    subgraph Monitor_Mode ["Monitor Mode"]
+        direction TB
+        Monitor_View["Monitor View"]
+        
+        subgraph Monitor_Engine ["Log Engine (Background)"]
+            Worker["Log Worker (Rust)"]
+            OPFS["OPFS Storage"]
+        end
+        
+        Monitor_View <-->|Virtual Scrolling| Monitor_Engine
     end
 
     Main -->|Raw Stream| Worker
-    Worker <-->|Fast I/O| OPFS
     Worker -->|Filtered & Indexing| Main
-    Main <-->|Virtual Scrolling| Monitor["Monitor View"]
+    Main <-->|State Sync| Monitor_View
 
-    style Monitor_Engine fill:#1a1a1a,stroke:#333,stroke-width:2px
+    style Monitor_Mode fill:#1a1a1a,stroke:#333,stroke-width:2px
+    style Monitor_Engine fill:#262626,stroke:#444,stroke-width:2px
+    style Terminal_Mode fill:#1a1a1a,stroke:#333,stroke-width:2px
 ```
+
 
 ---
 
