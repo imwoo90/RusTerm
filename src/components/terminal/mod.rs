@@ -1,6 +1,7 @@
 mod hooks;
 mod toolbar;
 
+use crate::components::ui::console::ConsoleFrame;
 use crate::state::AppState;
 use crate::utils::terminal_bindings::{Terminal, XtermFitAddon};
 use dioxus::prelude::*;
@@ -92,30 +93,26 @@ pub fn Xterm(props: XtermProps) -> Element {
     });
 
     rsx! {
-        main { class: "flex-1 min-h-0 mx-4 mb-0 mt-0 relative group/terminal",
-            div { class: "absolute inset-0 bg-console-bg rounded-t-2xl border-t border-x border-[#222629] shadow-[inset_0_0_20px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col",
-                div { class: "absolute inset-0 scanlines opacity-20 pointer-events-none z-10" }
+        ConsoleFrame {
+            // Toolbar
+            TerminalToolbar { term_instance }
 
-                // Toolbar
-                TerminalToolbar { term_instance }
-
-                // Terminal Container
-                div {
-                    class: "flex-1 w-full bg-transparent overflow-hidden pl-2",
-                    id: "xterm-container",
-                    onmounted: move |_| {
-                        if let Some(element) = window()
-                            .unwrap()
-                            .document()
-                            .unwrap()
-                            .get_element_by_id("xterm-container")
-                        {
-                            if let Ok(html_elem) = element.dyn_into::<web_sys::HtmlElement>() {
-                                terminal_div.set(Some(html_elem));
-                            }
+            // Terminal Container
+            div {
+                class: "flex-1 w-full bg-transparent overflow-hidden pl-2",
+                id: "xterm-container",
+                onmounted: move |_| {
+                    if let Some(element) = window()
+                        .unwrap()
+                        .document()
+                        .unwrap()
+                        .get_element_by_id("xterm-container")
+                    {
+                        if let Ok(html_elem) = element.dyn_into::<web_sys::HtmlElement>() {
+                            terminal_div.set(Some(html_elem));
                         }
-                    },
-                }
+                    }
+                },
             }
         }
     }
