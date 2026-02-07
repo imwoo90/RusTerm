@@ -15,6 +15,7 @@ pub fn setup_terminal(
     aggregation_buffer: Rc<RefCell<Vec<u8>>>,
     mut term_instance: Signal<Option<super::AutoDisposeTerminal>>,
     mut resize_listener: Signal<Option<gloo_events::EventListener>>,
+    mut fit_addon_signal: Signal<Option<XtermFitAddon>>,
 ) {
     let win = window().unwrap();
     let term_constructor = js_sys::Reflect::get(&win, &"Terminal".into()).unwrap();
@@ -53,6 +54,9 @@ pub fn setup_terminal(
     let fit_addon = XtermFitAddon::new_fit();
     term.load_addon(&fit_addon.clone().into());
     term.open(div);
+
+    // Store fit_addon for external access
+    fit_addon_signal.set(Some(fit_addon.clone().unchecked_into()));
 
     // Data sending closure (append to send_buffer for throttled sending)
     let send_buffer_for_input = send_buffer.clone();

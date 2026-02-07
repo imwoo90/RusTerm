@@ -2,7 +2,7 @@ mod hooks;
 mod toolbar;
 
 use crate::state::AppState;
-use crate::utils::terminal_bindings::Terminal;
+use crate::utils::terminal_bindings::{Terminal, XtermFitAddon};
 use dioxus::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -31,6 +31,7 @@ impl std::ops::Deref for AutoDisposeTerminal {
 pub fn Xterm() -> Element {
     let mut terminal_div = use_signal(|| None::<web_sys::HtmlElement>);
     let term_instance = use_signal(|| None::<AutoDisposeTerminal>);
+    let fit_addon = use_signal(|| None::<XtermFitAddon>);
     let state = use_context::<AppState>();
 
     // Buffers for throttled operations
@@ -54,16 +55,25 @@ pub fn Xterm() -> Element {
                 aggregation_buffer.clone(),
                 term_instance,
                 resize_listener,
+                fit_addon,
             );
         }
     });
 
-    // Option updates effect
+    // Option updates effect - also call fit() when font size changes
     use_effect(move || {
+        let font_size = *state.ui.font_size.read();
+        let scrollback = *state.terminal.scrollback.read();
+
         if let Some(term) = term_instance.read().as_ref() {
             let options = term.options();
-            options.set_font_size(*state.ui.font_size.read());
-            options.set_scrollback(*state.terminal.scrollback.read());
+            options.set_font_size(font_size);
+            options.set_scrollback(scrollback);
+
+            // Call fit() after font size change to recalculate rows/cols
+            if let Some(fit) = fit_addon.read().as_ref() {
+                fit.fit();
+            }
         }
     });
 
