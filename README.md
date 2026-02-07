@@ -136,6 +136,14 @@ Open `http://localhost:8080` in a supported browser.
 
 ---
 
-## 📜 License
+## 📄 License
+
 This project is licensed under the **Apache License 2.0**.
+
+### Third-Party Licenses
+
+- **[xterm.js](https://github.com/xtermjs/xterm.js)**: Licensed under the **MIT License**.
+- **[xterm-addon-fit](https://github.com/xtermjs/xterm.js/tree/master/addons/xterm-addon-fit)**: Licensed under the **MIT License**.
+
+See the [LICENSE](file:///Users/inmyungwoo/works/rust/web_serial_monitor/LICENSE) file for more details.
 
