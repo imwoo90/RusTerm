@@ -35,7 +35,11 @@ pub fn TerminalToolbar(term_instance: Signal<Option<super::AutoDisposeTerminal>>
                     term.clear();
                 }
             },
-            on_export: None,
+            on_export: move |_| {
+                if let Some(term) = term_instance.read().as_ref() {
+                    crate::utils::file_save::save_terminal_history(&(term.0).clone().into());
+                }
+            },
             min_font_size: 8,
             max_font_size: 36,
         }
