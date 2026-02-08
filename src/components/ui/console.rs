@@ -15,7 +15,7 @@ pub fn ConsoleFrame(children: Element) -> Element {
 #[component]
 pub fn ConsoleToolbar(left: Element, right: Element) -> Element {
     rsx! {
-        div { class: "shrink-0 h-6 bg-[#16181a] border-b border-[#222629] flex items-center justify-between px-3 z-20 relative",
+        div { class: "shrink-0 h-6 bg-[#16181a] border-b border-[#222629] flex items-center justify-between px-3 z-0 relative",
             div { class: "flex items-center gap-4", {left} }
             div { class: "flex items-center gap-2", {right} }
         }

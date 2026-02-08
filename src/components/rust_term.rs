@@ -1,7 +1,7 @@
 use crate::components::ui::ToastContainer;
 use dioxus::prelude::*;
 
-use super::monitor::{InputBar, MacroBar, Monitor};
+use super::monitor::{MacroBar, Monitor, MonitorToolbar};
 use super::terminal::{AutoDisposeTerminal, TerminalView};
 use crate::components::header::Header;
 use crate::hooks::use_worker_controller;
@@ -37,8 +37,7 @@ pub fn RusTerm() -> Element {
             div { class: "flex flex-col h-full min-w-[600px]",
                 Header {}
                 if view_mode() == ViewMode::Monitoring {
-                    InputBar {}
-
+                    MonitorToolbar {}
                 }
 
                 if view_mode() == ViewMode::Monitoring {

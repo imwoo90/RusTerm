@@ -45,7 +45,9 @@ pub fn CustomSelect(
     let mut is_open = use_signal(|| false);
 
     rsx! {
-        div { class: "relative {class} group/select",
+        div {
+            class: "relative {class} group/select",
+            class: if is_open() { "z-[600]" },
             button {
                 class: if disabled { "w-full flex items-center justify-between bg-[#0d0f10] border border-[#2a2e33] rounded-lg text-xs font-bold text-gray-500 py-2 px-3 opacity-50 cursor-not-allowed" } else { "w-full flex items-center justify-between bg-[#0d0f10] border border-[#2a2e33] rounded-lg text-xs font-bold text-gray-300 py-2 px-3 hover:bg-[#16181a] hover:border-primary/50 transition-all duration-200 outline-none focus:border-primary/50" },
                 disabled: "{disabled}",
@@ -65,11 +67,11 @@ pub fn CustomSelect(
 
             if is_open() {
                 div {
-                    class: "fixed inset-0 z-40 cursor-default",
+                    class: "fixed inset-0 z-[400] cursor-default",
                     onclick: move |_| is_open.set(false),
                 }
 
-                div { class: "absolute top-full left-0 right-0 mt-1 z-50 bg-[#16181a] border border-white/10 rounded-xl shadow-2xl py-1 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200",
+                div { class: "absolute top-full left-0 right-0 mt-1 z-[500] bg-[#16181a] border border-white/10 rounded-xl shadow-2xl py-1 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200",
                     for opt in options {
                         button {
                             class: "w-full text-left px-3 py-2 text-[11px] font-bold transition-all duration-150",
@@ -99,7 +101,9 @@ pub fn CustomInputSelect(
     let mut is_open = use_signal(|| false);
 
     rsx! {
-        div { class: "relative {class} group/select",
+        div {
+            class: "relative {class} group/select",
+            class: if is_open() { "z-[600]" },
             div { class: if disabled { "w-full flex items-center justify-between bg-[#0d0f10] border border-[#2a2e33] rounded-lg py-0 px-0 opacity-50 cursor-not-allowed" } else { "w-full flex items-center justify-between bg-[#0d0f10] border border-[#2a2e33] rounded-lg py-0 px-0 hover:bg-[#16181a] hover:border-primary/50 transition-all duration-200 focus-within:border-primary/50" },
 
                 // Input field for custom value
@@ -133,11 +137,11 @@ pub fn CustomInputSelect(
 
             if is_open() {
                 div {
-                    class: "fixed inset-0 z-40 cursor-default",
+                    class: "fixed inset-0 z-[400] cursor-default",
                     onclick: move |_| is_open.set(false),
                 }
 
-                div { class: "absolute top-full left-0 right-0 mt-1 z-50 bg-[#16181a] border border-white/10 rounded-xl shadow-2xl py-1 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 max-h-60 overflow-y-auto custom-scrollbar",
+                div { class: "absolute top-full left-0 right-0 mt-1 z-[500] bg-[#16181a] border border-white/10 rounded-xl shadow-2xl py-1 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 max-h-60 overflow-y-auto custom-scrollbar",
                     for opt in options {
                         button {
                             class: "w-full text-left px-3 py-2 text-[11px] font-bold transition-all duration-150",

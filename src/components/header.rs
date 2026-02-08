@@ -13,7 +13,7 @@ pub fn Header() -> Element {
     let close_menu = move |_| show_menu.set(false);
 
     rsx! {
-        header { class: "shrink-0 h-14 p-2 flex items-center z-30 relative border-b border-[#2a2e33] bg-[#0d0f10]",
+        header { class: "shrink-0 h-14 p-2 flex items-center z-50 relative border-b border-[#2a2e33] bg-[#0d0f10]",
             div { class: "flex gap-3 items-center w-full min-w-[600px]",
                 // --- Left: Brand & Mode Switcher ---
                 div { class: "flex-[1.3] relative min-w-0",
@@ -146,7 +146,7 @@ pub fn Header() -> Element {
                 }
 
 
-                // --- Divider (Matches InputBar Divider) ---
+                // --- Divider (Matches MonitorToolbar Divider) ---
                 div { class: "w-px h-8 bg-[#2a2e33]" }
 
                 // --- Right: Controls (Aligns with Send Input: flex-1) ---
