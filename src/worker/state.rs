@@ -21,7 +21,7 @@ pub(crate) struct WorkerState {
 impl WorkerState {
     /// Creates a new WorkerState instance
     pub(crate) async fn new() -> Result<Self, JsValue> {
-        let mut proc = LogProcessor::new()?;
+        let mut proc = LogProcessor::new().map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
         let mut filename: Option<String> = None;
         if let Ok(lock) = init_opfs_session(&mut filename).await {
             let _ = proc.set_sync_handle(lock);

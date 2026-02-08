@@ -6,7 +6,6 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 
 /// Starts the worker and sets up the message handling loop
-#[wasm_bindgen]
 pub fn start_worker() -> bool {
     if !js_sys::Reflect::has(&js_sys::global(), &"WorkerGlobalScope".into()).unwrap_or(false) {
         return false;

@@ -5,12 +5,10 @@ use crate::worker::formatter::LogFormatter;
 
 use crate::worker::repository::LogRepository;
 
-use wasm_bindgen::prelude::*;
 use web_sys::FileSystemSyncAccessHandle;
 
 use crate::config::MAX_LINE_BYTES;
 
-#[wasm_bindgen]
 pub struct LogProcessor {
     pub(crate) repository: LogRepository,
     pub(crate) formatter: LogFormatter,
@@ -18,14 +16,8 @@ pub struct LogProcessor {
     chunk_handler: StreamingLineProcessor,
 }
 
-#[wasm_bindgen]
 impl LogProcessor {
-    #[wasm_bindgen(constructor)]
-    pub fn new() -> Result<LogProcessor, JsValue> {
-        LogProcessor::new_internal().map_err(JsValue::from)
-    }
-
-    fn new_internal() -> Result<Self, LogError> {
+    pub fn new() -> Result<Self, LogError> {
         Ok(LogProcessor {
             repository: LogRepository::new()?,
             formatter: LogFormatter::new(),
@@ -39,27 +31,11 @@ impl LogProcessor {
         self.repository.get_line_count() as u32
     }
 
-    pub fn set_sync_handle(&mut self, handle: FileSystemSyncAccessHandle) -> Result<(), JsValue> {
-        self.set_sync_handle_internal(handle).map_err(JsValue::from)
-    }
-
-    fn set_sync_handle_internal(
-        &mut self,
-        handle: FileSystemSyncAccessHandle,
-    ) -> Result<(), LogError> {
+    pub fn set_sync_handle(&mut self, handle: FileSystemSyncAccessHandle) -> Result<(), LogError> {
         self.repository.initialize_storage(handle)
     }
 
-    pub fn append_chunk(&mut self, chunk: &[u8], is_hex: bool) -> Result<Option<String>, JsValue> {
-        self.append_chunk_internal(chunk, is_hex)
-            .map_err(JsValue::from)
-    }
-
-    fn append_chunk_internal(
-        &mut self,
-        chunk: &[u8],
-        is_hex: bool,
-    ) -> Result<Option<String>, LogError> {
+    pub fn append_chunk(&mut self, chunk: &[u8], is_hex: bool) -> Result<Option<String>, LogError> {
         let formatter = self.formatter.create_strategy(is_hex, MAX_LINE_BYTES);
         let timestamp = if self.show_timestamps {
             self.formatter.get_timestamp()
@@ -101,11 +77,7 @@ impl LogProcessor {
         self.show_timestamps = enabled;
     }
 
-    pub fn clear(&mut self) -> Result<(), JsValue> {
-        self.clear_internal().map_err(JsValue::from)
-    }
-
-    fn clear_internal(&mut self) -> Result<(), LogError> {
+    pub fn clear(&mut self) -> Result<(), LogError> {
         self.repository.clear()?;
         self.chunk_handler.clear();
         Ok(())

@@ -35,7 +35,10 @@ impl WorkerCommand for AppendChunkCommand {
         state: &mut WorkerState,
         _state_rc: &Rc<RefCell<WorkerState>>,
     ) -> Result<bool, JsValue> {
-        let active_line = state.proc.append_chunk(&self.chunk, self.is_hex)?;
+        let active_line = state
+            .proc
+            .append_chunk(&self.chunk, self.is_hex)
+            .map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
         if let Some(line) = active_line {
             state.send_msg(WorkerMsg::ActiveLine(Some(line)));
         } else {
@@ -86,7 +89,7 @@ impl WorkerCommand for RequestWindowCommand {
                     .storage
                     .decoder
                     .decode_with_u8_array(&buf)
-                    .map_err(LogError::from)?
+                    .map_err(|e| JsValue::from_str(&format!("{:?}", e)))?
                     .trim_end_matches('\n')
                     .to_string();
                 lines.push((i, text));
@@ -109,7 +112,10 @@ impl WorkerCommand for ClearCommand {
         state: &mut WorkerState,
         _state_rc: &Rc<RefCell<WorkerState>>,
     ) -> Result<bool, JsValue> {
-        state.proc.clear()?;
+        state
+            .proc
+            .clear()
+            .map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
         state.send_msg(WorkerMsg::TotalLines(0));
         Ok(true)
     }
