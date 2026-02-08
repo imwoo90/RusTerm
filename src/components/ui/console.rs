@@ -115,6 +115,29 @@ pub fn ConsoleActionButton(
     }
 }
 #[component]
+pub fn ConsoleToggleButton(
+    icon: &'static str,
+    title: &'static str,
+    active: bool,
+    onclick: EventHandler<MouseEvent>,
+) -> Element {
+    let active_class = if active {
+        "text-primary bg-primary/10 hover:bg-primary/20"
+    } else {
+        "text-gray-500 hover:text-gray-300 hover:bg-white/10"
+    };
+
+    rsx! {
+        button {
+            class: "flex items-center justify-center w-5 h-5 rounded transition-colors {active_class}",
+            onclick: move |evt| onclick.call(evt),
+            title: "{title}",
+            span { class: "material-symbols-outlined text-[14px]", "{icon}" }
+        }
+    }
+}
+
+#[component]
 pub fn UnifiedConsoleToolbar(
     /// Content for the left side of the toolbar (e.g., line count, custom controls)
     left: Element,

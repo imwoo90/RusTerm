@@ -7,7 +7,7 @@ pub fn SearchBar() -> Element {
     let mut state = use_context::<AppState>();
 
     rsx! {
-        div { class: "flex-[1.3] relative group flex items-center min-w-0",
+        div { class: "flex-[0.7] relative group flex items-center min-w-0",
             span { class: "material-symbols-outlined absolute left-3 text-gray-600 text-[18px] group-focus-within:text-primary transition-colors",
                 "search"
             }

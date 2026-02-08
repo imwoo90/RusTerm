@@ -1,4 +1,6 @@
-use crate::components::ui::console::UnifiedConsoleToolbar;
+use crate::components::ui::console::{
+    ConsoleSeparator, ConsoleToggleButton, UnifiedConsoleToolbar,
+};
 use crate::state::AppState;
 use dioxus::prelude::*;
 
@@ -15,7 +17,22 @@ pub fn MonitorHeader(
     rsx! {
         UnifiedConsoleToolbar {
             left: rsx! {
-                span { class: "text-[10px] text-gray-500 font-mono", "[ LINES: {count} / OPFS ENABLED ]" }
+                span { class: "text-[10px] text-gray-500 font-mono hidden sm:block", "[ LINES: {count} / OPFS ENABLED ]" }
+                ConsoleSeparator {}
+                div { class: "flex items-center gap-1",
+                    ConsoleToggleButton {
+                        icon: "schedule",
+                        title: "Toggle Timestamps",
+                        active: (state.ui.show_timestamps)(),
+                        onclick: move |_| state.ui.toggle_timestamps(),
+                    }
+                    ConsoleToggleButton {
+                        icon: "hexagon",
+                        title: "Toggle Hex View",
+                        active: (state.ui.is_hex_view)(),
+                        onclick: move |_| state.ui.toggle_hex_view(),
+                    }
+                }
             },
             font_size: state.ui.font_size,
             is_autoscroll: autoscroll,
