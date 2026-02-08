@@ -1,7 +1,7 @@
-use crate::components::ui::forms::LineEndSelector;
+use crate::components::ui::forms::CommandInputGroup;
 use crate::state::{AppState, LineEnding};
 use crate::utils::serial;
-use crate::utils::{format_hex_input, parse_hex_string, MacroStorage};
+use crate::utils::{parse_hex_string, MacroStorage};
 use dioxus::prelude::*;
 
 #[component]
@@ -121,41 +121,15 @@ pub fn MacroBar() -> Element {
                                 label { class: "block text-[10px] uppercase text-gray-500 font-bold mb-1",
                                     "Command"
                                 }
-                                input {
-                                    class: "w-full bg-[#0d0f10] text-white p-2 rounded border border-[#2a2e33] text-xs font-mono focus:border-primary/50 outline-none",
+                                CommandInputGroup {
+                                    value: new_cmd,
+                                    is_hex: new_hex,
+                                    line_ending: new_ending,
+                                    echo: None,
                                     placeholder: "e.g. AT+RST",
-                                    value: "{new_cmd}",
-                                    oninput: move |e| {
-                                        if new_hex() {
-                                            let formatted = format_hex_input(&e.value());
-                                            new_cmd.set(formatted);
-                                        } else {
-                                            new_cmd.set(e.value());
-                                        }
-                                    },
+                                    on_submit: None,
+                                    id: None,
                                 }
-                            }
-                        }
-                        div { class: "flex items-center gap-4 mt-2 ml-1",
-                            label { class: "flex items-center gap-2 cursor-pointer",
-                                input {
-                                    class: "w-4 h-4 rounded bg-[#0d0f10] border-[#2a2e33] checked:bg-primary checked:border-primary focus:ring-0 cursor-pointer accent-primary",
-                                    "type": "checkbox",
-                                    checked: "{new_hex}",
-                                    onchange: move |e| new_hex.set(e.value() == "true"),
-                                }
-                                span { class: "text-xs text-gray-400 font-bold select-none",
-                                    "Hex Mode"
-                                }
-                            }
-
-                            // Line Ending Selector
-                            LineEndSelector {
-                                label: "End",
-                                selected: new_ending(),
-                                onselect: move |e| new_ending.set(e),
-                                active_class: "bg-primary text-surface",
-                                is_rx: false,
                             }
                         }
 
