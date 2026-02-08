@@ -10,6 +10,8 @@ pub struct MacroItem {
     pub command: String,
     #[serde(default)]
     pub is_hex: bool,
+    #[serde(default)]
+    pub line_ending: crate::state::LineEnding,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
@@ -46,13 +48,20 @@ impl MacroStorage {
         self.items.clone()
     }
 
-    pub fn add(&mut self, label: String, command: String, is_hex: bool) {
+    pub fn add(
+        &mut self,
+        label: String,
+        command: String,
+        is_hex: bool,
+        line_ending: crate::state::LineEnding,
+    ) {
         let id = js_sys::Date::now() as u64;
         self.items.push(MacroItem {
             id,
             label,
             command,
             is_hex,
+            line_ending,
         });
         self.save();
     }

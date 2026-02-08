@@ -1,3 +1,4 @@
+use crate::components::ui::forms::LineEndSelector;
 use crate::state::{AppState, LineEnding};
 use crate::utils::serial;
 use crate::utils::{format_hex_input, parse_hex_string, MacroStorage};
@@ -8,20 +9,21 @@ pub fn MacroBar() -> Element {
     let state = use_context::<AppState>();
     let mut storage = use_signal(MacroStorage::load);
     let mut show_form = use_signal(|| false);
+    let bridge = crate::hooks::use_worker_controller();
 
     let mut new_label = use_signal(String::new);
     let mut new_cmd = use_signal(String::new);
     let mut new_hex = use_signal(|| false);
+    let mut new_ending = use_signal(|| LineEnding::None);
 
-    let mut current_macro = use_signal(|| None::<(String, bool)>);
+    let mut current_macro = use_signal(|| None::<(String, bool, LineEnding)>);
 
     let mut macro_task = use_resource(move || {
         let macro_data = current_macro();
         let port = (state.conn.port).peek().as_ref().cloned();
-        let ending = (state.serial.tx_line_ending)();
 
         async move {
-            if let Some((cmd, is_hex)) = macro_data {
+            if let Some((cmd, is_hex, ending)) = macro_data {
                 let mut data = if is_hex {
                     match parse_hex_string(&cmd) {
                         Ok(d) => d,
@@ -46,7 +48,12 @@ pub fn MacroBar() -> Element {
                     _ => {}
                 }
                 if let Some(conn_port) = port {
-                    let _ = serial::send_data(&conn_port, &data).await;
+                    if serial::send_data(&conn_port, &data).await.is_ok() {
+                        if (state.serial.tx_local_echo)() {
+                            let array = js_sys::Uint8Array::from(data.as_slice());
+                            bridge.append_chunk(array, false);
+                        }
+                    }
                 }
             }
         }
@@ -60,7 +67,7 @@ pub fn MacroBar() -> Element {
                         key: "{item.id}",
                         class: "shrink-0 px-3 py-1 bg-[#2a2e33] hover:bg-primary hover:text-white rounded text-xs font-mono transition-colors border border-gray-700 select-none whitespace-nowrap",
                         onclick: move |_| {
-                            current_macro.set(Some((item.command.clone(), item.is_hex)));
+                            current_macro.set(Some((item.command.clone(), item.is_hex, item.line_ending)));
                             macro_task.restart();
                         },
                         oncontextmenu: move |evt| {
@@ -129,15 +136,26 @@ pub fn MacroBar() -> Element {
                                 }
                             }
                         }
-                        label { class: "flex items-center gap-2 mt-2 ml-1 cursor-pointer",
-                            input {
-                                class: "w-4 h-4 rounded bg-[#0d0f10] border-[#2a2e33] checked:bg-primary checked:border-primary focus:ring-0 cursor-pointer accent-primary",
-                                "type": "checkbox",
-                                checked: "{new_hex}",
-                                onchange: move |e| new_hex.set(e.value() == "true"),
+                        div { class: "flex items-center gap-4 mt-2 ml-1",
+                            label { class: "flex items-center gap-2 cursor-pointer",
+                                input {
+                                    class: "w-4 h-4 rounded bg-[#0d0f10] border-[#2a2e33] checked:bg-primary checked:border-primary focus:ring-0 cursor-pointer accent-primary",
+                                    "type": "checkbox",
+                                    checked: "{new_hex}",
+                                    onchange: move |e| new_hex.set(e.value() == "true"),
+                                }
+                                span { class: "text-xs text-gray-400 font-bold select-none",
+                                    "Hex Mode"
+                                }
                             }
-                            span { class: "text-xs text-gray-400 font-bold select-none",
-                                "Hex Mode"
+
+                            // Line Ending Selector
+                            LineEndSelector {
+                                label: "End",
+                                selected: new_ending(),
+                                onselect: move |e| new_ending.set(e),
+                                active_class: "bg-primary text-surface",
+                                is_rx: false,
                             }
                         }
 
@@ -158,10 +176,11 @@ pub fn MacroBar() -> Element {
                                             }
                                         }
 
-                                        storage.write().add(new_label(), new_cmd(), new_hex());
+                                        storage.write().add(new_label(), new_cmd(), new_hex(), new_ending());
                                         new_label.set(String::new());
                                         new_cmd.set(String::new());
                                         new_hex.set(false);
+                                        new_ending.set(LineEnding::None);
                                         show_form.set(false);
                                         state.success("Macro Added");
                                     } else {
