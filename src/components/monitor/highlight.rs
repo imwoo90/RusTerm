@@ -5,31 +5,30 @@ use crate::state::AppState;
 use dioxus::prelude::*;
 
 #[component]
-pub fn HighlightButton() -> Element {
+pub fn HighlightButton(is_open: Signal<bool>) -> Element {
     let state = use_context::<AppState>();
-    let mut index_open = use_signal(|| false);
     let show_highlights = (state.ui.show_highlights)();
 
     rsx! {
-        if index_open() {
+        if is_open() {
             div {
                 class: "fixed inset-0 z-40 cursor-default",
-                onclick: move |_| index_open.set(false),
+                onclick: move |_| is_open.set(false),
             }
         }
         div {
             class: "relative h-full aspect-square",
-            class: if index_open() { "z-50" },
+            class: if is_open() { "z-50" },
             button {
                 class: "h-full w-full rounded-lg flex items-center justify-center transition-all bg-[#0d0f10] border border-[#2a2e33] hover:border-gray-500 group/highlight",
-                class: if index_open() || (show_highlights && !(state.log.highlights)().is_empty()) { "border-primary text-primary" } else { "text-gray-400 hover:text-white" },
-                onclick: move |_| index_open.set(!index_open()),
+                class: if is_open() || (show_highlights && !(state.log.highlights)().is_empty()) { "border-primary text-primary" } else { "text-gray-400 hover:text-white" },
+                onclick: move |_| is_open.set(!is_open()),
                 title: "Highlight Rules",
                 span { class: "material-symbols-outlined text-[20px]", "ink_highlighter" }
             }
 
-            if index_open() {
-                HighlightPanel { visible: true, onclose: move |_| index_open.set(false) }
+            if is_open() {
+                HighlightPanel { visible: true, onclose: move |_| is_open.set(false) }
             }
         }
     }
