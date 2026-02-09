@@ -54,7 +54,8 @@ pub fn CommandInputGroup(
                 onclick: move |_| show_line_ending_menu.set(false),
             }
         }
-        div { class: "relative group flex-1",
+        div {
+            class: "relative group flex-1",
             class: if show_line_ending_menu() { "z-50" },
             input {
                 class: "w-full h-full min-h-[40px] bg-[#0d0f10] text-sm text-white placeholder-gray-600 px-4 rounded-lg border border-[#2a2e33] focus:border-primary/50 focus:shadow-glow outline-none transition-all font-mono",
@@ -188,7 +189,7 @@ pub fn CustomSelect(
     rsx! {
         div {
             class: "relative {class} group/select",
-            class: if is_open() { "z-[600]" },
+            class: if is_open() { "z-50" },
             button {
                 class: if disabled { "w-full flex items-center justify-between bg-[#0d0f10] border border-[#2a2e33] rounded-lg text-xs font-bold text-gray-500 py-2 px-3 opacity-50 cursor-not-allowed" } else { "w-full flex items-center justify-between bg-[#0d0f10] border border-[#2a2e33] rounded-lg text-xs font-bold text-gray-300 py-2 px-3 hover:bg-[#16181a] hover:border-primary/50 transition-all duration-200 outline-none focus:border-primary/50" },
                 disabled: "{disabled}",
@@ -208,11 +209,12 @@ pub fn CustomSelect(
 
             if is_open() {
                 div {
-                    class: "fixed inset-0 z-[400] cursor-default",
+                    class: "fixed inset-0 cursor-default",
                     onclick: move |_| is_open.set(false),
                 }
-
-                div { class: "absolute top-full left-0 right-0 mt-1 z-[500] bg-[#16181a] border border-white/10 rounded-xl shadow-2xl py-1 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200",
+                div {
+                    class: "absolute top-full left-0 right-0 mt-1 z-50 bg-[#16181a] border border-white/10 rounded-xl shadow-2xl py-1 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200",
+                    onclick: move |e| e.stop_propagation(),
                     for opt in options {
                         button {
                             class: "w-full text-left px-3 py-2 text-[11px] font-bold transition-all duration-150",
@@ -244,7 +246,7 @@ pub fn CustomInputSelect(
     rsx! {
         div {
             class: "relative {class} group/select",
-            class: if is_open() { "z-[600]" },
+            class: if is_open() { "z-50" },
             div { class: if disabled { "w-full flex items-center justify-between bg-[#0d0f10] border border-[#2a2e33] rounded-lg py-0 px-0 opacity-50 cursor-not-allowed" } else { "w-full flex items-center justify-between bg-[#0d0f10] border border-[#2a2e33] rounded-lg py-0 px-0 hover:bg-[#16181a] hover:border-primary/50 transition-all duration-200 focus-within:border-primary/50" },
 
                 // Input field for custom value
@@ -278,11 +280,12 @@ pub fn CustomInputSelect(
 
             if is_open() {
                 div {
-                    class: "fixed inset-0 z-[400] cursor-default",
+                    class: "fixed inset-0 cursor-default",
                     onclick: move |_| is_open.set(false),
                 }
-
-                div { class: "absolute top-full left-0 right-0 mt-1 z-[500] bg-[#16181a] border border-white/10 rounded-xl shadow-2xl py-1 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 max-h-60 overflow-y-auto custom-scrollbar",
+                div {
+                    class: "absolute top-full left-0 right-0 mt-1 z-50 bg-[#16181a] border border-white/10 rounded-xl shadow-2xl py-1 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 max-h-60 overflow-y-auto custom-scrollbar",
+                    onclick: move |e| e.stop_propagation(),
                     for opt in options {
                         button {
                             class: "w-full text-left px-3 py-2 text-[11px] font-bold transition-all duration-150",

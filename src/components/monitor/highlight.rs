@@ -13,7 +13,7 @@ pub fn HighlightButton() -> Element {
     rsx! {
         if index_open() {
             div {
-                class: "fixed inset-0 z-30 cursor-default",
+                class: "fixed inset-0 z-40 cursor-default",
                 onclick: move |_| index_open.set(false),
             }
         }

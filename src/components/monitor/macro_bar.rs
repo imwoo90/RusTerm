@@ -101,7 +101,7 @@ pub fn MacroBar() -> Element {
 
             // Form Modal
             if show_form() {
-                div { class: "fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm",
+                div { class: "fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm",
                     div { class: "bg-[#16181a] p-4 rounded-xl border border-[#2a2e33] w-80 shadow-2xl",
                         h3 { class: "text-sm font-bold text-gray-300 mb-3", "Add Quick Command" }
                         div { class: "space-y-3",

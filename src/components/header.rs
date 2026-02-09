@@ -63,12 +63,12 @@ pub fn Header() -> Element {
 
                     // Dropdown Menu
                     if show_menu() {
+                        div {
+                            class: "fixed inset-0 z-40 cursor-default",
+                            onclick: close_menu,
+                        }
+
                         div { class: "absolute top-full left-0 mt-2 w-48 bg-[#1e2024] border border-[#2a2e33] rounded-xl shadow-2xl overflow-hidden z-50 flex flex-col py-1 animation-files-enter",
-                            // Backdrop to close
-                            div {
-                                class: "fixed inset-0 z-[-1]",
-                                onclick: close_menu,
-                            }
 
                             // Monitor Option
                             button {
