@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 
 #[component]
 pub fn MonitorToolbar() -> Element {
-    let mut highlight_open = use_signal(|| false);
+    let highlight_open = use_signal(|| false);
 
     rsx! {
         div {

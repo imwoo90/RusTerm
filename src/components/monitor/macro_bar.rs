@@ -15,6 +15,8 @@ pub fn MacroBar() -> Element {
     let mut new_cmd = use_signal(String::new);
     let mut new_hex = use_signal(|| false);
     let mut new_ending = use_signal(|| LineEnding::None);
+    let mut editing_id = use_signal(|| None::<u64>);
+    let mut context_menu = use_signal(|| None::<(u64, i32, i32)>); // (id, x, y)
 
     let mut current_macro = use_signal(|| None::<(String, bool, LineEnding)>);
 
@@ -63,28 +65,85 @@ pub fn MacroBar() -> Element {
         div { class: "flex gap-2 p-2 bg-background-dark border-t border-[#2a2e33] min-h-[40px] items-center overflow-x-auto",
             div { class: "flex gap-2 flex-1 items-center",
                 for item in storage.read().get_items() {
-                    button {
-                        key: "{item.id}",
-                        class: "shrink-0 px-3 py-1 bg-[#2a2e33] hover:bg-primary hover:text-white rounded text-xs font-mono transition-colors border border-gray-700 select-none whitespace-nowrap",
-                        onclick: move |_| {
-                            current_macro.set(Some((item.command.clone(), item.is_hex, item.line_ending)));
-                            macro_task.restart();
-                        },
-                        oncontextmenu: move |evt| {
-                            evt.prevent_default();
-                            storage.write().remove(item.id);
-                        },
-                        title: "Right-click to remove",
-                        "{item.label}"
+                    {
+                        let cmd = item.command.clone();
+                        let is_hex = item.is_hex;
+                        let line_ending = item.line_ending;
+                        let id = item.id;
+                        let label = item.label.clone();
+                        let cmd_title = item.command.clone();
+                        rsx! {
+                            button {
+                                key: "{id}",
+                                class: "shrink-0 px-3 py-1 bg-[#2a2e33] hover:bg-primary hover:text-white rounded text-xs font-mono transition-colors border border-gray-700 select-none whitespace-nowrap",
+                                onclick: move |_| {
+                                    current_macro.set(Some((cmd.clone(), is_hex, line_ending)));
+                                    macro_task.restart();
+                                },
+                                oncontextmenu: move |evt: MouseEvent| {
+                                    evt.prevent_default();
+                                    let coords = evt.client_coordinates();
+                                    context_menu.set(Some((id, coords.x as i32, coords.y as i32)));
+                                },
+                                title: "{cmd_title}",
+                                "{label}"
+                            }
+                        }
                     }
                 }
 
                 // Add Button
                 button {
                     class: "shrink-0 w-6 h-6 flex items-center justify-center bg-[#1a1c1e] text-gray-400 hover:text-white rounded text-xs border border-dashed border-gray-700 hover:border-gray-500 transition-colors",
-                    onclick: move |_| show_form.set(!show_form()),
+                    onclick: move |_| {
+                        editing_id.set(None);
+                        new_label.set(String::new());
+                        new_cmd.set(String::new());
+                        new_hex.set(false);
+                        new_ending.set(LineEnding::None);
+                        show_form.set(true);
+                    },
                     title: "Add Macro",
                     "+"
+                }
+            }
+
+            // Context Menu
+            if let Some((id, x, y)) = context_menu() {
+                div {
+                    class: "fixed inset-0 z-50",
+                    onclick: move |_| context_menu.set(None),
+                    div {
+                        class: "absolute bg-[#16181a] border border-[#2a2e33] rounded-lg shadow-xl py-1 z-50 min-w-[120px]",
+                        style: "top: {y}px; left: {x}px; transform: translateY(-100%);",
+                        onclick: |evt| evt.stop_propagation(),
+
+                        button {
+                            class: "w-full text-left px-3 py-1.5 text-xs text-gray-300 hover:bg-white/5 hover:text-white transition-colors flex items-center gap-2",
+                            onclick: move |_| {
+                                context_menu.set(None);
+                                if let Some(item) = storage.read().get(id) {
+                                    editing_id.set(Some(id));
+                                    new_label.set(item.label);
+                                    new_cmd.set(item.command);
+                                    new_hex.set(item.is_hex);
+                                    new_ending.set(item.line_ending);
+                                    show_form.set(true);
+                                }
+                            },
+                            span { class: "material-symbols-outlined text-[14px]", "edit" }
+                            "Edit"
+                        }
+                        button {
+                            class: "w-full text-left px-3 py-1.5 text-xs text-red-400 hover:bg-red-900/20 hover:text-red-300 transition-colors flex items-center gap-2",
+                            onclick: move |_| {
+                                storage.write().remove(id);
+                                context_menu.set(None);
+                            },
+                            span { class: "material-symbols-outlined text-[14px]", "delete" }
+                            "Delete"
+                        }
+                    }
                 }
             }
 
@@ -103,7 +162,9 @@ pub fn MacroBar() -> Element {
             if show_form() {
                 div { class: "fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm",
                     div { class: "bg-[#16181a] p-4 rounded-xl border border-[#2a2e33] w-80 shadow-2xl",
-                        h3 { class: "text-sm font-bold text-gray-300 mb-3", "Add Quick Command" }
+                        h3 { class: "text-sm font-bold text-gray-300 mb-3",
+                            if editing_id().is_some() { "Edit Macro" } else { "Add Quick Command" }
+                        }
                         div { class: "space-y-3",
                             div {
                                 label { class: "block text-[10px] uppercase text-gray-500 font-bold mb-1",
@@ -139,6 +200,17 @@ pub fn MacroBar() -> Element {
                                 onclick: move |_| show_form.set(false),
                                 "Cancel"
                             }
+                            if let Some(id) = editing_id() {
+                                button {
+                                    class: "mr-auto px-3 py-1.5 text-xs text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded transition-colors",
+                                    onclick: move |_| {
+                                        storage.write().remove(id);
+                                        show_form.set(false);
+                                        state.success("Macro Deleted");
+                                    },
+                                    "Delete"
+                                }
+                            }
                             button {
                                 class: "px-3 py-1.5 text-xs bg-primary text-white rounded hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all active:scale-95",
                                 onclick: move |_| {
@@ -150,18 +222,24 @@ pub fn MacroBar() -> Element {
                                             }
                                         }
 
-                                        storage.write().add(new_label(), new_cmd(), new_hex(), new_ending());
+                                        if let Some(id) = editing_id() {
+                                            storage.write().update(id, new_label(), new_cmd(), new_hex(), new_ending());
+                                            state.success("Macro Updated");
+                                        } else {
+                                            storage.write().add(new_label(), new_cmd(), new_hex(), new_ending());
+                                            state.success("Macro Added");
+                                        }
+
                                         new_label.set(String::new());
                                         new_cmd.set(String::new());
                                         new_hex.set(false);
                                         new_ending.set(LineEnding::None);
                                         show_form.set(false);
-                                        state.success("Macro Added");
                                     } else {
                                         state.error("Please fill in all fields");
                                     }
                                 },
-                                "Add"
+                                if editing_id().is_some() { "Save" } else { "Add" }
                             }
                         }
                     }

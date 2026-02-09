@@ -66,6 +66,27 @@ impl MacroStorage {
         self.save();
     }
 
+    pub fn get(&self, id: u64) -> Option<MacroItem> {
+        self.items.iter().find(|i| i.id == id).cloned()
+    }
+
+    pub fn update(
+        &mut self,
+        id: u64,
+        label: String,
+        command: String,
+        is_hex: bool,
+        line_ending: crate::state::LineEnding,
+    ) {
+        if let Some(item) = self.items.iter_mut().find(|i| i.id == id) {
+            item.label = label;
+            item.command = command;
+            item.is_hex = is_hex;
+            item.line_ending = line_ending;
+            self.save();
+        }
+    }
+
     pub fn remove(&mut self, id: u64) {
         self.items.retain(|item| item.id != id);
         self.save();
