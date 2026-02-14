@@ -306,30 +306,6 @@ impl StreamingLineProcessor {
         // Otherwise, buffer is not full yet and no newline found.
         None
     }
-
-    /// Legacy helper for Hex mode (or simple scans) that only looks for newlines
-    fn find_next_line_ending(chunk: &[u8], start: usize) -> Option<(usize, usize)> {
-        let len = chunk.len();
-        let mut i = start;
-        while i < len {
-            let b = chunk[i];
-            if b == b'\n' {
-                return Some((i, i + 1));
-            } else if b == b'\r' {
-                if i + 1 < len {
-                    if chunk[i + 1] == b'\n' {
-                        return Some((i, i + 2)); // CRLF
-                    } else {
-                        return Some((i, i + 1)); // CR followed by something else
-                    }
-                } else {
-                    return None;
-                }
-            }
-            i += 1;
-        }
-        None
-    }
 }
 
 impl Default for StreamingLineProcessor {
