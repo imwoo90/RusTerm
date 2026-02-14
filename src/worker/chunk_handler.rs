@@ -38,8 +38,15 @@ impl StreamingLineProcessor {
         let len = chunk.len();
 
         while start < len {
-            if let Some((end, next_start)) = Self::find_next_line_ending(chunk, start) {
-                // Process content up to the newline char(s)
+            // Get current cursor position to determine remaining space on the line.
+            // Since height is 1, row is always 0.
+            let (_, col) = self.parser.screen().cursor_position();
+            let remaining = MAX_LINE_BYTES - col as usize;
+
+            if let Some((end, next_start)) =
+                Self::find_next_line_ending_or_full(chunk, start, remaining)
+            {
+                // Process content up to the newline char(s) OR up to the full buffer limit
                 let line_bytes = &chunk[start..end];
                 self.parser.process(line_bytes);
 
@@ -71,7 +78,7 @@ impl StreamingLineProcessor {
 
                 start = next_start;
             } else {
-                // No more newlines, the rest is active line content
+                // No more newlines AND buffer not full yet
                 break;
             }
         }
@@ -127,6 +134,7 @@ impl StreamingLineProcessor {
         let mut start = 0;
 
         while start < len {
+            // Hex mode uses basic newline splitting, max_len handled by process_single_line splitting
             if let Some((end, next_start)) = Self::find_next_line_ending(text_bytes, start) {
                 let line_str = &full_text[start..end];
 
@@ -220,14 +228,21 @@ impl StreamingLineProcessor {
         self.parser = Parser::new(1, MAX_LINE_BYTES as u16, 0);
     }
 
-    /// Helper to find the next line ending from a byte slice.
+    /// Helper to find the next line ending OR buffer full point.
     /// Returns Some((content_end_index, next_start_index)) if found.
-    /// content_end_index: Index exclusive of the newline char(s).
-    /// next_start_index: Index to resume searching for the next line (skipping \n, \r, or \r\n).
-    fn find_next_line_ending(chunk: &[u8], start: usize) -> Option<(usize, usize)> {
+    /// - content_end_index: Index exclusive of the newline char(s).
+    /// - next_start_index: Index to resume searching for the next line.
+    fn find_next_line_ending_or_full(
+        chunk: &[u8],
+        start: usize,
+        remaining_space: usize,
+    ) -> Option<(usize, usize)> {
         let len = chunk.len();
+        // Check only up to 'remaining_space' or end of chunk, whichever is smaller
+        let search_limit = std::cmp::min(start + remaining_space, len);
+
         let mut i = start;
-        while i < len {
+        while i < search_limit {
             let b = chunk[i];
             if b == b'\n' {
                 return Some((i, i + 1));
@@ -246,6 +261,61 @@ impl StreamingLineProcessor {
             }
             i += 1;
         }
+
+        // We reached search_limit without finding a newline.
+        // If search_limit was determined by remaining_space (i.e., buffer full),
+        // we must return a split point here.
+        if search_limit == start + remaining_space {
+            // Buffer is full. Logic break at search_limit.
+            // Ensure we don't split in the middle of a UTF-8 multi-byte character.
+            let mut cut_point = search_limit;
+
+            // Check if the cut point lands inside a UTF-8 sequence.
+            // We check only the last few bytes (max 3 bytes for 4-byte UTF-8 char) to see if they form a valid sequence end.
+            match std::str::from_utf8(&chunk[start..cut_point]) {
+                Ok(_) => {} // Valid UTF-8 boundary, safe to cut here.
+                Err(e) => {
+                    // Valid up to a point, but the last bytes form an incomplete sequence.
+                    // We backtrack to exclude the incomplete character from this batch.
+                    let valid_len = e.valid_up_to();
+
+                    // Only adjust if the incomplete sequence is at the very end (within 3 bytes).
+                    // If it's garbage in the middle, valid_up_to might be far back, which we ignore here.
+                    if start + valid_len >= cut_point.saturating_sub(3) {
+                        cut_point = start + valid_len;
+                    }
+                }
+            }
+
+            // content_end = cut_point, next_start = cut_point (no delimiter to skip)
+            return Some((cut_point, cut_point));
+        }
+
+        // Otherwise, buffer is not full yet and no newline found.
+        None
+    }
+
+    /// Legacy helper for Hex mode (or simple scans) that only looks for newlines
+    fn find_next_line_ending(chunk: &[u8], start: usize) -> Option<(usize, usize)> {
+        let len = chunk.len();
+        let mut i = start;
+        while i < len {
+            let b = chunk[i];
+            if b == b'\n' {
+                return Some((i, i + 1));
+            } else if b == b'\r' {
+                if i + 1 < len {
+                    if chunk[i + 1] == b'\n' {
+                        return Some((i, i + 2)); // CRLF
+                    } else {
+                        return Some((i, i + 1)); // CR followed by something else
+                    }
+                } else {
+                    return None;
+                }
+            }
+            i += 1;
+        }
         None
     }
 }
@@ -253,5 +323,231 @@ impl StreamingLineProcessor {
 impl Default for StreamingLineProcessor {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::worker::formatter::LogFormatterStrategy;
+
+    struct MockFormatter;
+    impl LogFormatterStrategy for MockFormatter {
+        fn format(&self, text: &str, _timestamp: &str) -> String {
+            format!("{}\n", text)
+        }
+        fn format_chunk(&self, _chunk: &[u8]) -> String {
+            String::new()
+        }
+        fn max_line_length(&self) -> usize {
+            1000
+        }
+    }
+
+    #[test]
+    fn test_process_vt100_long_line_wrapping() {
+        let mut processor = StreamingLineProcessor::new();
+        let formatter = MockFormatter;
+
+        // Use dynamic MAX_LINE_BYTES
+        let max_len = MAX_LINE_BYTES;
+        let overflow = 44;
+        let total_len = max_len + overflow;
+
+        // Feed data larger than buffer
+        let data = "a".repeat(total_len);
+        let (batch, _, _, active_line) =
+            processor.process_vt100(data.as_bytes(), &formatter, "", false, |_| true);
+
+        // Expected behavior:
+        // 1. First 'max_len' bytes fill the buffer -> extracted as one line.
+        let lines: Vec<&str> = batch.lines().collect();
+        assert_eq!(lines.len(), 1, "Should extract exactly one full line");
+        assert_eq!(
+            lines[0].len(),
+            max_len,
+            "Extracted line should be MAX_LINE_BYTES long"
+        );
+
+        // 2. Remaining bytes are in active_line (since no newline at end)
+        assert!(active_line.is_some());
+        assert_eq!(
+            active_line.unwrap().len(),
+            overflow,
+            "Remaining bytes should be in active line"
+        );
+    }
+
+    #[test]
+    fn test_process_vt100_long_line_with_newline() {
+        let mut processor = StreamingLineProcessor::new();
+        let formatter = MockFormatter;
+
+        let max_len = MAX_LINE_BYTES;
+        let overflow = 4;
+
+        // Data: [max_len + overflow] 'a' ... '\n' ... [39] 'b'
+        // Total 'a' length = max_len + overflow.
+        let mut data = "a".repeat(max_len + overflow);
+        data.push('\n');
+        data.push_str(&"b".repeat(39));
+
+        let (batch, _, _, _) =
+            processor.process_vt100(data.as_bytes(), &formatter, "", false, |_| true);
+
+        let lines: Vec<&str> = batch.lines().collect();
+        // We expect:
+        // 1. Full line of 'a' (max_len)
+        // 2. Overflow line of 'a' (overflow len)
+        // 3. Line of 'b' - part has no newline, so it remains in active line
+        // MockFormatter adds \n for every format() call in extract_and_clear_line.
+        // - First split at max_len -> extract -> adds \n
+        // - Second split at newline -> extract -> adds \n
+
+        assert_eq!(lines.len(), 2);
+        assert_eq!(lines[0].len(), max_len);
+        assert_eq!(lines[1].len(), overflow);
+    }
+
+    #[test]
+    fn test_process_vt100_prefilled_buffer() {
+        let mut processor = StreamingLineProcessor::new();
+        let formatter = MockFormatter;
+        let max_len = MAX_LINE_BYTES;
+
+        // 1. Prefill buffer with (max_len - 10) bytes
+        let initial_fill = max_len - 10;
+        let data1 = "A".repeat(initial_fill);
+
+        // First processing: should NOT extract anything yet, just fills buffer
+        let (batch1, _, _, active1) =
+            processor.process_vt100(data1.as_bytes(), &formatter, "", false, |_| true);
+
+        assert!(batch1.is_empty(), "Should not extract line yet");
+        assert_eq!(
+            active1.unwrap().len(),
+            initial_fill,
+            "Active line should contain prefilled data"
+        );
+
+        // 2. Feed 20 bytes.
+        // Expected:
+        // - First 10 bytes fill the remaining space -> Extract 1 full line (max_len)
+        // - Remaining 10 bytes start a new line
+        let data2 = "B".repeat(20);
+        let (batch2, _, _, active2) =
+            processor.process_vt100(data2.as_bytes(), &formatter, "", false, |_| true);
+
+        let lines: Vec<&str> = batch2.lines().collect();
+        assert_eq!(
+            lines.len(),
+            1,
+            "Should extract exactly one full line after filling remaining space"
+        );
+
+        // The extracted line should be: [initial_fill 'A'] + [10 'B']
+        let expected_line = format!("{}{}", "A".repeat(initial_fill), "B".repeat(10));
+        assert_eq!(lines[0], expected_line);
+
+        // The active line should contain the remaining 10 'B's
+        assert!(active2.is_some());
+        assert_eq!(active2.unwrap(), "B".repeat(10));
+    }
+
+    #[test]
+    fn test_process_vt100_empty_chunk() {
+        let mut processor = StreamingLineProcessor::new();
+        let formatter = MockFormatter;
+
+        let (batch, _, _, _) = processor.process_vt100(b"", &formatter, "", false, |_| true);
+        assert!(batch.is_empty());
+    }
+
+    #[test]
+    fn test_process_vt100_utf8_boundary_handling() {
+        let mut processor = StreamingLineProcessor::new();
+        let formatter = MockFormatter;
+        let max_len = MAX_LINE_BYTES;
+
+        // 1. Fill buffer slightly less than max
+        let prefix_len = max_len - 1;
+        let prefix = "A".repeat(prefix_len);
+        processor.process_vt100(prefix.as_bytes(), &formatter, "", false, |_| true);
+
+        // 2. Next chunk: a 3-byte Hangul char "가" (0xE3, 0x80, 0x80)
+        let hangul = "가"; // 3 bytes
+        let (batch, _, _, active_line) =
+            processor.process_vt100(hangul.as_bytes(), &formatter, "", false, |_| true);
+
+        let lines: Vec<&str> = batch.lines().collect();
+
+        // The split point logic should backtrack from boundary (0+1) to 0.
+        // So first line is the prefix "A"s flushed due to buffer full avoidance for "가".
+        // Wait, if we return Some((0, 0)), process_vt100 extracts buffer (prefix) and clears.
+        // Then loops for remaining chunk ("가").
+
+        assert_eq!(lines.len(), 1, "Should flush the buffer");
+        assert_eq!(lines[0].len(), prefix_len);
+        assert_eq!(lines[0], prefix);
+
+        // The active line should contain "가" now.
+        assert!(active_line.is_some());
+        assert_eq!(active_line.unwrap(), "가");
+    }
+    #[test]
+    fn test_process_vt100_stress_mixed_content() {
+        let mut processor = StreamingLineProcessor::new();
+        let formatter = MockFormatter;
+
+        // 1. Massive Chunk Test (No Newline)
+        // Simulate a huge burst of data without newlines (e.g. binary data or glitch)
+        // 100KB of 'A's. MAX_LINE_BYTES is 256.
+        // It should split into many 256-byte lines without panic.
+        let huge_size = 100 * 1024;
+        let huge_data = "A".repeat(huge_size);
+
+        let (batch, _, _, _) =
+            processor.process_vt100(huge_data.as_bytes(), &formatter, "", false, |_| true);
+
+        // We expect (100*1024 / 256) lines = 400 lines exactly?
+        // Let's check line count and length.
+        let lines: Vec<&str> = batch.lines().collect();
+        assert!(
+            lines.len() >= 400,
+            "Should split huge line into many fragments"
+        );
+        for line in &lines {
+            // MockFormatter adds \n, but lines() removes it.
+            // So content length should be 256 (except maybe last one if math is weird, but here it divides evenly).
+            assert_eq!(
+                line.len(),
+                256,
+                "Split line should be exactly MAX_LINE_BYTES"
+            );
+        }
+
+        // 2. Complex Mixed Content Test
+        // - Colors (ANSI)
+        // - Multi-byte UTF-8 (Korean, Emoji)
+        // - Newlines (\n, \r\n)
+        let multi_byte = "안녕하세요 🚀";
+        let colored = "\x1b[31mjunk\x1b[0m";
+        let mixed_data = format!("Start\n{}{}\nEnd", multi_byte, colored);
+
+        let (batch2, _, _, _) =
+            processor.process_vt100(mixed_data.as_bytes(), &formatter, "", false, |_| true);
+
+        let lines2: Vec<&str> = batch2.lines().collect();
+        // "Start"
+        assert_eq!(lines2[0], "Start");
+
+        // "안녕하세요 🚀junk"
+        // VT100 parser regenerates ANSI codes based on cell attributes.
+        // It outputs "\u{1b}[31mjunk" (Red color start + text).
+        // It seems to omit the reset code (\u{1b}[0m) at the end of the line in this context.
+        let expected_mixed = format!("{}\u{1b}[31mjunk", multi_byte);
+        assert_eq!(lines2[1], expected_mixed);
+
+        // "End" is active line (no newline after).
     }
 }
