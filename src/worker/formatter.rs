@@ -1,4 +1,3 @@
-use chrono::Timelike;
 use std::fmt::Write;
 
 pub trait LogFormatterStrategy {
@@ -68,13 +67,13 @@ impl LogFormatter {
     }
 
     pub fn get_timestamp(&self) -> String {
-        let now = chrono::Utc::now();
+        let now = js_sys::Date::new_0();
         format!(
             "[{:02}:{:02}:{:02}.{:03}]",
-            now.hour(),
-            now.minute(),
-            now.second(),
-            now.timestamp_subsec_millis()
+            now.get_hours(),
+            now.get_minutes(),
+            now.get_seconds(),
+            now.get_milliseconds()
         )
     }
 
