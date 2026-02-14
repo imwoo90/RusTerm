@@ -54,9 +54,9 @@ impl LogFormatterStrategy for HexFormatter {
     }
 
     fn max_line_length(&self) -> usize {
-        // Standard Hex View: 16 bytes per line
+        // Standard Hex View: max_bytes per line (usually 16)
         // Each byte is 2 hex chars + 1 space = 3 chars
-        16 * 3
+        self.max_bytes * 3
     }
 }
 
@@ -78,11 +78,16 @@ impl LogFormatter {
         )
     }
 
-    pub fn create_strategy(&self, is_hex: bool, max_bytes: usize) -> Box<dyn LogFormatterStrategy> {
+    pub fn create_strategy(&self, is_hex: bool) -> Box<dyn LogFormatterStrategy> {
         if is_hex {
-            Box::new(HexFormatter { max_bytes })
+            // Hex Mode uses fixed HEX_VIEW_BYTES from config
+            Box::new(HexFormatter {
+                max_bytes: crate::config::HEX_VIEW_BYTES,
+            })
         } else {
-            Box::new(DefaultFormatter { max_bytes })
+            Box::new(DefaultFormatter {
+                max_bytes: crate::config::MAX_LINE_BYTES,
+            })
         }
     }
 }

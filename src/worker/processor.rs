@@ -36,7 +36,7 @@ impl LogProcessor {
     }
 
     pub fn append_chunk(&mut self, chunk: &[u8], is_hex: bool) -> Result<Option<String>, LogError> {
-        let formatter = self.formatter.create_strategy(is_hex, MAX_LINE_BYTES);
+        let formatter = self.formatter.create_strategy(is_hex);
         let timestamp = if self.show_timestamps {
             self.formatter.get_timestamp()
         } else {
