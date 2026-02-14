@@ -47,17 +47,16 @@ impl LogFormatterStrategy for HexFormatter {
     fn format_chunk(&self, chunk: &[u8]) -> String {
         let mut acc = String::with_capacity(chunk.len() * 3);
         for &b in chunk {
-            if b == b'\n' || b == b'\r' {
-                acc.push(b as char);
-            } else {
-                let _ = write!(acc, "{:02X} ", b);
-            }
+            // Hex view should display ALL bytes as hex codes, including control characters.
+            let _ = write!(acc, "{:02X} ", b);
         }
         acc
     }
 
     fn max_line_length(&self) -> usize {
-        self.max_bytes * 3 // 3 chars per byte ("XX ")
+        // Standard Hex View: 16 bytes per line
+        // Each byte is 2 hex chars + 1 space = 3 chars
+        16 * 3
     }
 }
 

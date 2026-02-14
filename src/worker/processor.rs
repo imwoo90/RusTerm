@@ -49,14 +49,14 @@ impl LogProcessor {
 
         let (batch, offsets, filtered, active_line) = if is_hex {
             let text = formatter.format_chunk(chunk);
-            let (b, o, f) = self.chunk_handler.process_hex_lines(
+            let (b, o, f, active) = self.chunk_handler.process_hex_lines(
                 &text,
                 &*formatter,
                 &timestamp,
                 is_filtering,
                 filter_matcher,
             );
-            (b, o, f, None)
+            (b, o, f, active)
         } else {
             self.chunk_handler.process_vt100(
                 chunk,

@@ -110,7 +110,7 @@ impl StreamingLineProcessor {
         timestamp: &str,
         is_filtering: bool,
         filter_matcher: impl Fn(&str) -> bool,
-    ) -> (String, Vec<ByteOffset>, Vec<LineRange>) {
+    ) -> (String, Vec<ByteOffset>, Vec<LineRange>, Option<String>) {
         let max_len = formatter.max_line_length();
 
         // 1. If leftover is already too long, force a split before even adding new chunk
@@ -134,8 +134,13 @@ impl StreamingLineProcessor {
         let mut start = 0;
 
         while start < len {
-            // Hex mode uses basic newline splitting, max_len handled by process_single_line splitting
-            if let Some((end, next_start)) = Self::find_next_line_ending(text_bytes, start) {
+            // Hex Mode: Fixed width splitting logic
+            // We split strictly by max_len (e.g. 16 bytes = 48 chars).
+            // No newline searching.
+            let remaining = len - start;
+            if remaining >= max_len {
+                // If we have enough for a full line, extract it.
+                let end = start + max_len;
                 let line_str = &full_text[start..end];
 
                 self.process_single_line(
@@ -149,18 +154,25 @@ impl StreamingLineProcessor {
                     is_filtering,
                     &filter_matcher,
                 );
-
-                start = next_start;
+                start = end;
             } else {
-                // No more newlines, save the rest as leftover
-                self.leftover_buffer = full_text[start..].to_string();
-                return (batch, offsets, filtered);
+                // Not enough for a full line, buffer it.
+                break;
             }
         }
 
-        // If loop finished exactly (ended with newline), clear leftover
-        self.leftover_buffer.clear();
-        (batch, offsets, filtered)
+        // Save remaining partial line
+        let active_line = if start < len {
+            let leftover = full_text[start..].to_string();
+            self.leftover_buffer = leftover.clone();
+            Some(leftover)
+        } else {
+            self.leftover_buffer.clear();
+            None
+        };
+
+        // Return batch, offsets, filtered, and active_line (partial hex line)
+        (batch, offsets, filtered, active_line)
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -549,5 +561,77 @@ mod tests {
         assert_eq!(lines2[1], expected_mixed);
 
         // "End" is active line (no newline after).
+    }
+    #[test]
+    fn test_hex_formatter_newline_handling() {
+        use crate::worker::formatter::HexFormatter;
+        use crate::worker::formatter::LogFormatterStrategy;
+
+        let formatter = HexFormatter { max_bytes: 16 };
+
+        // Input with newlines and carriage returns
+        let input = b"A\nB\rC"; // 0x41, 0x0A, 0x42, 0x0D, 0x43
+
+        let formatted = formatter.format_chunk(input);
+
+        // Expected: "41 0A 42 0D 43 "
+        assert_eq!(formatted, "41 0A 42 0D 43 ");
+
+        assert_eq!(formatter.max_line_length(), 48);
+    }
+
+    struct MockHexFormatter;
+    impl crate::worker::formatter::LogFormatterStrategy for MockHexFormatter {
+        fn format(&self, text: &str, _timestamp: &str) -> String {
+            format!("{}\n", text)
+        }
+        fn format_chunk(&self, _chunk: &[u8]) -> String {
+            String::new()
+        }
+        fn max_line_length(&self) -> usize {
+            16 * 3 // 48
+        }
+    }
+
+    #[test]
+    fn test_hex_mode_fixed_width_splitting() {
+        let mut processor = StreamingLineProcessor::new();
+        let formatter = MockHexFormatter;
+
+        // Input: "00 11 22 33 44 55 66 77 88 99 AA BB CC DD EE FF " (48 chars)
+        let line1 = "00 11 22 33 44 55 66 77 88 99 AA BB CC DD EE FF ";
+        // Input 2: "10 11 12 13 " (12 chars)
+        let line2_part = "10 11 12 13 ";
+
+        let full_text = format!("{}{}", line1, line2_part); // 60 chars
+
+        // process_hex_lines takes &str, splits by 48 chars.
+        // It now returns active_line (leftover buffer).
+        let (batch, _, _, active) =
+            processor.process_hex_lines(&full_text, &formatter, "", false, |_| true);
+
+        let lines: Vec<&str> = batch.lines().collect();
+        assert_eq!(lines.len(), 1);
+        // lines[0] contains "00 .. FF ", which matches line1 exactly.
+        assert_eq!(lines[0], line1);
+
+        // Check buffer for remainder. It should be returned as active_line too.
+        assert_eq!(processor.leftover_buffer, line2_part);
+        assert_eq!(active, Some(line2_part.to_string()));
+
+        // Send next chunk to complete line 2
+        // We need 36 chars more. "20 .. 2B "
+        let line3_part = "20 21 22 23 24 25 26 27 28 29 2A 2B ";
+        let (batch2, _, _, active2) =
+            processor.process_hex_lines(line3_part, &formatter, "", false, |_| true);
+
+        let lines2: Vec<&str> = batch2.lines().collect();
+        assert_eq!(lines2.len(), 1);
+
+        let expected_line2 = format!("{}{}", line2_part, line3_part);
+        // lines2[0] contains "10 .. 2B ", which matches expected_line2 exactly.
+        assert_eq!(lines2[0], expected_line2);
+
+        assert!(processor.leftover_buffer.is_empty());
     }
 }
