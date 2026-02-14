@@ -50,11 +50,11 @@ pub fn MacroBar() -> Element {
                     _ => {}
                 }
                 if let Some(conn_port) = port {
-                    if serial::send_data(&conn_port, &data).await.is_ok() {
-                        if (state.serial.tx_local_echo)() {
-                            let array = js_sys::Uint8Array::from(data.as_slice());
-                            bridge.append_chunk(array, false);
-                        }
+                    if serial::send_data(&conn_port, &data).await.is_ok()
+                        && (state.serial.tx_local_echo)()
+                    {
+                        let array = js_sys::Uint8Array::from(data.as_slice());
+                        bridge.append_chunk(array, false);
                     }
                 }
             }

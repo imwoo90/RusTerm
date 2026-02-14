@@ -50,14 +50,11 @@ pub fn MonitorViewport(
                 };
                 let port = state.conn.port.peek().as_ref().cloned();
                 let local_echo = *state.serial.tx_local_echo.peek();
-                let bridge = bridge.clone();
                 spawn(async move {
                     if let Some(p) = port {
-                        if serial::send_data(&p, &data).await.is_ok() {
-                            if local_echo {
-                                let array = Uint8Array::from(data.as_slice());
-                                bridge.append_chunk(array, false);
-                            }
+                        if serial::send_data(&p, &data).await.is_ok() && local_echo {
+                            let array = Uint8Array::from(data.as_slice());
+                            bridge.append_chunk(array, false);
                         }
                     }
                 });
@@ -93,7 +90,7 @@ pub fn MonitorViewport(
                                     key: "{0}",
                                     text: text.clone(),
                                     highlights: highlights.clone(),
-                                    show_highlights: false, // Maybe don't highlight active line to avoid flicker? // Maybe don't highlight active line to avoid flicker? // Maybe don't highlight active line to avoid flicker?  Maybe don't highlight active line to avoid flicker?
+                                    show_highlights: false,
                                 }
                             }
                         }

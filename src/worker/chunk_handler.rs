@@ -600,6 +600,7 @@ mod tests {
         let line3_part = "20 21 22 23 24 25 26 27 28 29 2A 2B ";
         let (batch2, _, _, active2) =
             processor.process_hex_lines(line3_part, &formatter, "", false, |_| true);
+        assert!(active2.is_none());
 
         let lines2: Vec<&str> = batch2.lines().collect();
         assert_eq!(lines2.len(), 1);

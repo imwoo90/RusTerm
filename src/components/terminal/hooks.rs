@@ -51,7 +51,7 @@ pub fn setup_terminal(
 
     let term = Terminal::new(&options);
     let fit_addon = XtermFitAddon::new_fit();
-    term.load_addon(&fit_addon.clone().into());
+    term.load_addon(&fit_addon);
     term.open(div);
 
     // Store fit_addon for external access

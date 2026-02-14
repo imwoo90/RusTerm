@@ -7,8 +7,6 @@ use crate::worker::repository::LogRepository;
 
 use web_sys::FileSystemSyncAccessHandle;
 
-use crate::config::MAX_LINE_BYTES;
-
 pub struct LogProcessor {
     pub(crate) repository: LogRepository,
     pub(crate) formatter: LogFormatter,
