@@ -6,6 +6,34 @@
 ![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=for-the-badge)
 ![Version](https://img.shields.io/badge/version-3.0.0-blue?style=for-the-badge)
 
+
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>1. Monitor Mode</h3>
+      <img src="assets/readme/web-serial-demo.gif" width="100%" alt="Monitor Mode Demo">
+      <br>
+      <p>
+        <b>High-Performance Logging</b><br>
+        Effortlessly handles high-speed log streams, such as the full throughput of ESP32-C3 USB-CDC. The UI updates in real-time without stuttering while performing complex regex filtering simultaneously.
+      </p>
+    </td>
+    <td width="50%" valign="top">
+      <h3>2. VT100 & ANSI (Monitor Mode)</h3>
+      <img src="assets/readme/vt100-demo.gif" width="100%" alt="VT100 Demo">
+      <br>
+      <p>
+        <b>Simplified Visualization</b><br>
+        Render ANSI colors and styles directly in Monitor Mode.<br>
+        <em>Need full interaction?</em> Switch to <strong>Terminal Mode</strong>.
+      </p>
+    </td>
+  </tr>
+</table>
+
+
+
 A high-performance, browser-based Serial Monitor & Terminal that requires **no installation**. Built with **Rust (Dioxus)** and **WebAssembly**, it provides a desktop-class experience directly in your browser.
 
 Unlike typical web serial tools, RusTerm leverages **OPFS (Origin Private File System)** and **Web Workers** to handle **Gigabyte-scale logs** without freezing the UI, featuring real-time filtering, virtual scrolling, and a full-featured terminal.

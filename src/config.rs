@@ -7,7 +7,7 @@ pub const HEX_VIEW_BYTES: usize = 16;
 /// --- UI Timing & Intervals ---
 pub const TOAST_DURATION_MS: u32 = 3000;
 pub const WORKER_UPDATE_INTERVAL_MS: u32 = 16;
-pub const APP_SUBTITLE: &str = "RusTerm v3.0.0";
+pub const APP_SUBTITLE: &str = "RusTerm v3.1.0";
 
 /// --- Layout & Virtual Scroll ---
 pub const HEADER_OFFSET: f64 = 150.0;
