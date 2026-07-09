@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html class="dark">
+<head>
+  <meta charset="utf-8">
+  <title></title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="assets/favicon.ico">
+  
+  <!-- Preconnect to Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  
+  <!-- Fonts & Material Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="assets/tailwind.css">
+  <link rel="stylesheet" href="assets/css/xterm.css">
+  
+  <!-- Scripts -->
+  <script src="assets/js/xterm.js" defer></script>
+  <script src="assets/js/xterm-addon-fit.js" defer></script>
+</head>
+<body class="bg-[#0a0b0c] text-white">
+  <!-- Dioxus Mount Point -->
+  <div id="main">
+    <!-- Beautiful static loading screen styled to match dark mode and Tailwind theme -->
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; width: 100vw; background-color: #0a0b0c; color: white; font-family: 'Space Grotesk', sans-serif;">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 1.5rem;">
+        <!-- Spinner -->
+        <div style="position: relative; width: 3.5rem; height: 3.5rem;">
+          <div style="position: absolute; inset: 0; border-radius: 9999px; border-width: 4px; border-style: solid; border-color: rgba(0, 191, 255, 0.15);"></div>
+          <div style="position: absolute; inset: 0; border-radius: 9999px; border-width: 4px; border-style: solid; border-color: transparent; border-top-color: #00bfff; animation: spin 1s linear infinite;"></div>
+        </div>
+        
+        <!-- Text -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.35rem;">
+          <h1 style="font-size: 1.75rem; font-weight: 700; letter-spacing: 0.1em; color: #00bfff; margin: 0; text-transform: uppercase;">RusTerm</h1>
+          <p style="font-size: 0.8rem; color: #4b5563; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace; margin: 0; letter-spacing: 0.02em;">Loading WebAssembly Application...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</body>
+</html>

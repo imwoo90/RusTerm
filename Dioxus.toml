@@ -1,12 +1,15 @@
 [application]
+asset_dir = "assets"
 
 [web.app]
 
 # HTML title tag content
-title = "RusTerm"
+title = "RusTerm - High Performance Serial Monitor & Terminal"
 
 # include `assets` in web platform
 [web.resource]
+style = ["assets/tailwind.css", "assets/css/xterm.css"]
+script = ["assets/js/xterm.js", "assets/js/xterm-addon-fit.js"]
 
 [web.resource.dev]
 
