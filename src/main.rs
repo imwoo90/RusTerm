@@ -16,6 +16,18 @@ fn main() {
         return;
     }
 
+    // Remove the loading screen from the DOM before mounting Dioxus
+    #[cfg(target_arch = "wasm32")]
+    {
+        if let Some(window) = web_sys::window() {
+            if let Some(document) = window.document() {
+                if let Some(loader) = document.get_element_by_id("loading-screen") {
+                    loader.remove();
+                }
+            }
+        }
+    }
+
     dioxus::launch(App);
 }
 
