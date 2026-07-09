@@ -9,7 +9,7 @@ license = "Apache-2.0"
 
 [dependencies]
 chrono = { version = "0.4.43", features = ["wasmbind"] }
-dioxus = { version = "0.7.1", features = ["document", "asset", "web", "html", "macro", "hooks", "signals"] }
+dioxus = { version = "0.7.9", features = ["document", "asset", "web", "html", "macro", "hooks", "signals"] }
 futures-util = "0.3.31"
 gloo-events = "0.2.0"
 gloo-timers = { version = "0.3.0", features = ["futures"] }
