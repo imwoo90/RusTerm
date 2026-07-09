@@ -12,7 +12,7 @@
   <tr>
     <td width="50%" valign="top">
       <h3>1. Monitor Mode</h3>
-      <img src="assets/readme/web-serial-demo.gif" width="100%" alt="Monitor Mode Demo">
+      <img src="public/assets/readme/web-serial-demo.gif" width="100%" alt="Monitor Mode Demo">
       <br>
       <p>
         <b>High-Performance Logging</b><br>
@@ -21,7 +21,7 @@
     </td>
     <td width="50%" valign="top">
       <h3>2. VT100 & ANSI (Monitor Mode)</h3>
-      <img src="assets/readme/vt100-demo.gif" width="100%" alt="VT100 Demo">
+      <img src="public/assets/readme/vt100-demo.gif" width="100%" alt="VT100 Demo">
       <br>
       <p>
         <b>Simplified Visualization</b><br>

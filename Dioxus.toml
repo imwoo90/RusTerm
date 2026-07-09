@@ -1,5 +1,6 @@
 [application]
-asset_dir = "assets"
+tailwind_input = "tailwind.css"
+tailwind_output = "public/assets/tailwind.css"
 
 [web.app]
 
