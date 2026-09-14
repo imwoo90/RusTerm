@@ -6,7 +6,6 @@
 use crate::components::ui::{ToastMessage, ToastType};
 pub use crate::types::*;
 use dioxus::prelude::*;
-use gloo_timers::future::TimeoutFuture;
 use web_sys::{ReadableStreamDefaultReader, SerialPort};
 
 #[derive(Clone, Copy)]
@@ -139,6 +138,8 @@ impl ConnectionState {
     }
 }
 
+static NEXT_TOAST_ID: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(1);
+
 impl LogState {
     pub fn clear(&self) {
         { self.total_lines }.set(0);
@@ -147,7 +148,7 @@ impl LogState {
 
     pub fn add_toast(&self, message: &str, type_: ToastType) {
         let mut toasts = self.toasts;
-        let id = js_sys::Date::now() as usize;
+        let id = NEXT_TOAST_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
         toasts.write().push(ToastMessage {
             id,
@@ -155,10 +156,13 @@ impl LogState {
             type_,
         });
 
-        spawn(async move {
-            TimeoutFuture::new(crate::config::TOAST_DURATION_MS).await;
-            toasts.write().retain(|t| t.id != id);
-        });
+        #[cfg(target_arch = "wasm32")]
+        {
+            gloo_timers::callback::Timeout::new(crate::config::TOAST_DURATION_MS, move || {
+                toasts.write().retain(|t| t.id != id);
+            })
+            .forget();
+        }
     }
 
     pub fn add_highlight(&self, text: String, color: &'static str) {

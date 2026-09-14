@@ -4,7 +4,7 @@
 //! hexadecimal input encoding, and line ending (None, LF, CR, CRLF) dropdown selection.
 
 use crate::state::LineEnding;
-use crate::utils::format_hex_input;
+use crate::utils::{convert_hex_to_text, convert_text_to_hex, format_hex_input};
 use dioxus::prelude::*;
 
 #[component]
@@ -30,13 +30,22 @@ fn EchoToggle(mut echo_signal: Signal<bool>) -> Element {
 }
 
 #[component]
-fn HexToggle(mut is_hex: Signal<bool>) -> Element {
+fn HexToggle(mut is_hex: Signal<bool>, mut value: Signal<String>) -> Element {
     rsx! {
         div { class: "relative group/hex",
             button {
                 class: "w-8 h-8 rounded flex items-center justify-center transition-colors pb-1",
                 class: if is_hex() { "text-primary bg-primary/10 hover:bg-primary/20" } else { "text-gray-500 hover:text-gray-300 hover:bg-white/5" },
-                onclick: move |_| is_hex.set(!is_hex()),
+                onclick: move |_| {
+                    let next = !is_hex();
+                    let cur = value();
+                    if next {
+                        value.set(convert_text_to_hex(&cur));
+                    } else {
+                        value.set(convert_hex_to_text(&cur));
+                    }
+                    is_hex.set(next);
+                },
                 title: "HEX Input",
                 span { class: "material-symbols-outlined text-[20px]", "hexagon" }
             }
@@ -120,6 +129,7 @@ fn LineEndingDropdown(
 fn CommandTrailingControls(
     echo: Option<Signal<bool>>,
     is_hex: Signal<bool>,
+    value: Signal<String>,
     line_ending: Signal<LineEnding>,
     show_line_ending_menu: Signal<bool>,
 ) -> Element {
@@ -128,7 +138,7 @@ fn CommandTrailingControls(
             if let Some(echo_sig) = echo {
                 EchoToggle { echo_signal: echo_sig }
             }
-            HexToggle { is_hex }
+            HexToggle { is_hex, value }
             LineEndingDropdown { line_ending, show_menu: show_line_ending_menu }
         }
     }
@@ -187,6 +197,7 @@ pub fn CommandInputGroup(
             CommandTrailingControls {
                 echo,
                 is_hex,
+                value,
                 line_ending,
                 show_line_ending_menu,
             }

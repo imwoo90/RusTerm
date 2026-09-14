@@ -40,6 +40,42 @@ pub fn format_hex_input(input: &str) -> String {
         .join(" ")
 }
 
+/// Converts arbitrary text to formatted hex bytes string (e.g. "help" -> "68 65 6C 70").
+/// If the input is already valid hex bytes, it standardizes its formatting.
+pub fn convert_text_to_hex(input: &str) -> String {
+    let trimmed = input.trim();
+    if trimmed.is_empty() {
+        return String::new();
+    }
+    if parse_hex_string(trimmed).is_ok() {
+        format_hex_input(trimmed)
+    } else {
+        trimmed
+            .as_bytes()
+            .iter()
+            .map(|b| format!("{:02X}", b))
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
+}
+
+/// Converts a hex bytes string back to UTF-8 text if valid (e.g. "68 65 6C 70" -> "help").
+/// If decoding fails or text contains unprintable control chars, returns the original input string.
+pub fn convert_hex_to_text(input: &str) -> String {
+    let trimmed = input.trim();
+    if trimmed.is_empty() {
+        return String::new();
+    }
+    if let Ok(bytes) = parse_hex_string(trimmed) {
+        if let Ok(text) = String::from_utf8(bytes) {
+            if text.chars().all(|c| !c.is_control() || c == '\n' || c == '\r' || c == '\t') {
+                return text;
+            }
+        }
+    }
+    input.to_string()
+}
+
 /// Helper to send raw byte chunk to worker
 pub fn send_chunk_to_worker(worker: &web_sys::Worker, arr: js_sys::Uint8Array, is_hex: bool) {
     // 1. Get buffer (JS Heap)
@@ -109,5 +145,19 @@ mod tests {
 
         assert_eq!(format_hex_input("hello world"), "ED"); // h(skip), e(E), l(skip)... d(D).
                                                            // e, d. -> ED
+    }
+
+    #[test]
+    fn test_convert_text_to_hex() {
+        assert_eq!(convert_text_to_hex("help"), "68 65 6C 70");
+        assert_eq!(convert_text_to_hex("68 65 6c 70"), "68 65 6C 70");
+        assert_eq!(convert_text_to_hex(""), "");
+    }
+
+    #[test]
+    fn test_convert_hex_to_text() {
+        assert_eq!(convert_hex_to_text("68 65 6C 70"), "help");
+        assert_eq!(convert_hex_to_text("help"), "help");
+        assert_eq!(convert_hex_to_text(""), "");
     }
 }

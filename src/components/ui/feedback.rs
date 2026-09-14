@@ -21,7 +21,7 @@ pub struct ToastMessage {
 }
 
 #[component]
-pub fn ToastContainer(toasts: Signal<Vec<ToastMessage>>) -> Element {
+pub fn ToastContainer(mut toasts: Signal<Vec<ToastMessage>>) -> Element {
     rsx! {
         div { class: "fixed bottom-5 right-5 flex flex-col gap-2 z-50 pointer-events-none",
             for toast in toasts() {
@@ -38,13 +38,16 @@ pub fn ToastContainer(toasts: Signal<Vec<ToastMessage>>) -> Element {
                         ToastType::Warning => "warning",
                         ToastType::Error => "error",
                     };
+                    let toast_id = toast.id;
 
                     rsx! {
                         div {
                             key: "{toast.id}",
-                            class: "pointer-events-auto min-w-[200px] max-w-[300px] p-3 rounded-lg shadow-lg text-xs font-bold flex items-center gap-2 animate-in slide-in-from-right-5 fade-in duration-300 {type_class}",
+                            class: "pointer-events-auto cursor-pointer min-w-[200px] max-w-[300px] p-3 rounded-lg shadow-lg text-xs font-bold flex items-center gap-2 animate-in slide-in-from-right-5 fade-in duration-300 {type_class} hover:opacity-90 transition-opacity",
+                            onclick: move |_| toasts.write().retain(|t| t.id != toast_id),
                             span { class: "material-symbols-outlined text-[18px]", "{icon}" }
-                            span { "{toast.message}" }
+                            span { class: "flex-1", "{toast.message}" }
+                            span { class: "material-symbols-outlined text-[14px] opacity-60 hover:opacity-100", "close" }
                         }
                     }
                 }

@@ -10,6 +10,7 @@ pub const MAX_LINE_BYTES: usize = 256;
 pub const HEX_VIEW_BYTES: usize = 16;
 
 /// --- UI Timing & Intervals ---
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 pub const TOAST_DURATION_MS: u32 = 3000;
 pub const WORKER_UPDATE_INTERVAL_MS: u32 = 16;
 pub const APP_SUBTITLE: &str = "RusTerm v3.2.0";
