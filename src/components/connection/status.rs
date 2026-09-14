@@ -1,3 +1,8 @@
+//! Serial port status and connection badge component.
+//!
+//! Visually displays the current serial device link status, providing color-coded status badges
+//! and connection indicators to inform the user of port availability.
+
 use dioxus::prelude::*;
 
 #[component]

@@ -1,3 +1,8 @@
+//! Individual virtualized log line rendering component.
+//!
+//! Efficiently renders a single log entry, formatting ANSI terminal colors, timestamp prefixes,
+//! and applying keyword highlight overlays with minimal DOM overhead.
+
 use crate::config::line_height_from_font;
 use crate::state::{AppState, Highlight};
 use crate::utils::decode_ansi_text;

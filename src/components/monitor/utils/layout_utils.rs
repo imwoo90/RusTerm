@@ -1,3 +1,8 @@
+//! Mathematical layout calculation utilities for virtual scrolling.
+//!
+//! Computes total content heights, offset translations, and scale factors to map large line indices
+//! within browser DOM height limitations without visual distortion.
+
 use crate::config::HEADER_OFFSET;
 use dioxus::prelude::*;
 use std::rc::Rc;

@@ -1,3 +1,8 @@
+//! Highlight rule configuration modal and active tag chips.
+//!
+//! Renders keyword highlight rules and colorful removable tag chips that highlight matches
+//! in real time across streaming monitor lines.
+
 use crate::components::monitor::utils::style::get_highlight_classes;
 use crate::components::ui::{IconButton, PanelHeader};
 use crate::config::HIGHLIGHT_COLORS;

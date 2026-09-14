@@ -1,3 +1,8 @@
+//! Monitor subsystem module catalog (mod.rs = index.md).
+//!
+//! Centralizes high-performance virtualized log viewing, search filter bars, macro strips,
+//! highlight tagging rules, and streaming line formatters.
+
 pub mod highlight;
 pub mod hooks;
 pub mod macro_bar;

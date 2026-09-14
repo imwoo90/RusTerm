@@ -1,3 +1,8 @@
+//! Abstract storage backend trait for persistent logging.
+//!
+//! Declares the [`StorageBackend`] trait specifying required read, write, truncate, and flush
+//! operations across different storage implementations.
+
 use crate::worker::error::LogError;
 use crate::worker::repository::index::ByteOffset;
 

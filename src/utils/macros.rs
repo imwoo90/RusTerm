@@ -1,3 +1,8 @@
+//! Quick command macro persistent storage manager.
+//!
+//! Manages serial macro definitions, labels, hexadecimal flags, and line endings,
+//! persisting user-configured quick commands in browser storage.
+
 use serde::{Deserialize, Serialize};
 use web_sys::window;
 

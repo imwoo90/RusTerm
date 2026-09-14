@@ -1,3 +1,8 @@
+//! Regex and keyword query filter builder for log indexing.
+//!
+//! Implements [`ActiveFilterBuilder`] and compiled filter evaluators supporting case-sensitivity,
+//! regular expressions, and inverted logic for fast log matching.
+
 use regex::Regex;
 
 /// Active filter for log searching

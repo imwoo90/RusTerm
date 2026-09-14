@@ -1,3 +1,8 @@
+//! Log line formatting strategies for worker processing.
+//!
+//! Defines the [`LogFormatterStrategy`] trait and implementations for PlainText and Hex formatters,
+//! adding timestamps and normalizing line lengths.
+
 use std::fmt::Write;
 
 pub trait LogFormatterStrategy {

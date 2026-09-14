@@ -1,3 +1,8 @@
+//! Execution handlers for worker commands.
+//!
+//! Implements specific handler routines executing file clearance, filter updates,
+//! search cancellations, and status inquiries within the worker.
+
 use crate::worker::commands::command::WorkerCommand;
 use crate::worker::error::LogError;
 use crate::worker::export::LogExporter;

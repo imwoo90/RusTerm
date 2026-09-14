@@ -1,3 +1,8 @@
+//! Text formatting and hexadecimal string parsing utilities.
+//!
+//! Provides robust formatting functions for hex dump displays, byte slice conversions,
+//! and user input sanitization.
+
 // function format_hex removed
 
 pub fn parse_hex_string(input: &str) -> Result<Vec<u8>, String> {

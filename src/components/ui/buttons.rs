@@ -1,3 +1,8 @@
+//! Standard button controls and icon button variants.
+//!
+//! Implements styled action buttons, resume-scroll floating pills, and icon toggles
+//! following the application dark theme palette and hover micro-interactions.
+
 use dioxus::prelude::*;
 
 /// A reusable icon-only button with consistent hover and active states.

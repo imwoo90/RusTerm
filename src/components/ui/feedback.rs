@@ -1,3 +1,8 @@
+//! Feedback notifications and toast alert components.
+//!
+//! Displays transient floating notification banners for successes, warnings, and error messages
+//! triggered by serial communication events or user interactions.
+
 use dioxus::prelude::*;
 
 #[derive(Clone, PartialEq, Debug)]

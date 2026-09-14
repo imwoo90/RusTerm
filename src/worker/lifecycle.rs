@@ -1,3 +1,8 @@
+//! Web Worker lifecycle initialization and bootstrap.
+//!
+//! Initializes the dedicated worker global scope, locates application script bundles in the DOM,
+//! and attaches message listener event loops.
+
 use crate::worker::dispatcher;
 use crate::worker::state::WorkerState;
 use std::cell::RefCell;

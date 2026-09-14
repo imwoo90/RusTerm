@@ -1,3 +1,8 @@
+//! Terminal control toolbar component for xterm.js view.
+//!
+//! Provides top-level actions for clearing terminal buffers, resetting screen state,
+//! and toggling autoscroll behavior when operating in full VT100 terminal mode.
+
 use crate::components::ui::console::UnifiedConsoleToolbar;
 use crate::state::AppState;
 use dioxus::prelude::*;

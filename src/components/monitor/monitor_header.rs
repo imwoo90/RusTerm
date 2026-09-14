@@ -1,3 +1,8 @@
+//! Header metrics and status indicator for monitor view.
+//!
+//! Displays line count statistics, OPFS storage persistence status, and active filter indicators
+//! directly above the virtualized log stream.
+
 use crate::components::ui::console::{
     ConsoleSeparator, ConsoleToggleButton, UnifiedConsoleToolbar,
 };

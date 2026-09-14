@@ -1,3 +1,8 @@
+//! Low-level Web Serial API bindings and stream readers.
+//!
+//! Directly interacts with `web_sys::SerialPort` and readable/writable streams,
+//! executing async read loops with error recovery and lock management.
+
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;

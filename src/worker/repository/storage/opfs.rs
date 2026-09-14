@@ -1,3 +1,8 @@
+//! Origin Private File System (OPFS) storage implementation.
+//!
+//! Leverages `FileSystemSyncAccessHandle` in Web Workers for ultra-low latency, non-blocking
+//! binary disk persistence of streaming serial logs.
+
 use crate::worker::error::LogError;
 use crate::worker::repository::index::ByteOffset;
 use crate::worker::repository::storage::backend::StorageBackend;

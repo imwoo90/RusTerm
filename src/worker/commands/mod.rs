@@ -1,3 +1,8 @@
+//! Worker command handlers catalog (mod.rs = index.md).
+//!
+//! Contains modular command execution routines processing specific client requests
+//! like search, export, clear, and settings synchronization.
+
 pub mod command;
 pub mod handlers;
 

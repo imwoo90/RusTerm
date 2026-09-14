@@ -1,3 +1,8 @@
+//! General utility algorithms catalog (mod.rs = index.md).
+//!
+//! Contains formatting utilities, command history storage, hex parsers, file export helpers,
+//! and JavaScript interop bindings.
+
 pub mod ansi_decoder;
 pub mod file_save;
 pub mod format;

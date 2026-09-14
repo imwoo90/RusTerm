@@ -1,3 +1,8 @@
+//! Memory line indexing and search index catalog (mod.rs = index.md).
+//!
+//! Manages byte offset tables, active query filters, and filtered line projections
+//! enabling instant O(1) lookup of millions of persisted lines.
+
 pub mod filter;
 pub mod log_index;
 pub mod types;

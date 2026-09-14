@@ -1,3 +1,8 @@
+//! Web Worker inbound message dispatcher.
+//!
+//! Deserializes incoming messages from the main UI thread and routes them to appropriate
+//! worker handlers such as chunk ingestion, search requests, or cache resets.
+
 use crate::worker::commands::{create_command_from_msg, AppendChunkCommand, WorkerCommand};
 use crate::worker::state::WorkerState;
 use crate::worker::types::WorkerMsg;

@@ -1,3 +1,8 @@
+//! Error types and error conversion logic for worker tasks.
+//!
+//! Encapsulates OPFS filesystem errors, JS interop failures, regex errors, and storage faults
+//! into a unified [`LogError`] enum for structured error reporting.
+
 use std::fmt::Display;
 use wasm_bindgen::prelude::*;
 

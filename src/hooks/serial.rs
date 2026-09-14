@@ -1,3 +1,8 @@
+//! Web Serial connection controller and async lifecycle hook.
+//!
+//! Manages opening, configuring, reading, and closing browser Web Serial ports,
+//! bridging incoming byte streams to Web Workers and UI terminals.
+
 use crate::hooks::{use_worker_controller, WorkerController};
 use crate::state::AppState;
 use dioxus::prelude::*;

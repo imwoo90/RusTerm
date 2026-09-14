@@ -1,3 +1,8 @@
+//! Global configuration constants and tuning parameters for RusTerm.
+//!
+//! Centralizes line buffer limits, typography settings, padding dimensions, and virtual scrolling
+//! thresholds to guarantee consistent rendering and optimal memory usage across the application.
+
 /// --- Networking & Buffer Config ---
 pub const READ_BUFFER_SIZE: usize = 64 * 1024;
 pub const EXPORT_CHUNK_SIZE: u64 = 64 * 1024;

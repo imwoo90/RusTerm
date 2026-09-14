@@ -1,3 +1,8 @@
+//! Indexing coordinate types and byte offset wrappers.
+//!
+//! Defines [`ByteOffset`], [`LineIndex`], and [`LineRange`] types ensuring type safety
+//! across filesystem operations and memory indices.
+
 use std::ops::{Add, Sub};
 
 /// Byte offset in the storage file

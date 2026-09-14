@@ -1,3 +1,8 @@
+//! Web Worker bridge and messaging controller hook.
+//!
+//! Spawns and manages the dedicated Web Worker, transmitting chunk ingestion requests,
+//! search filter commands, and receiving batched log lines for display.
+
 use crate::state::AppState;
 use crate::types::WorkerMsg;
 use crate::utils::{send_chunk_to_worker, send_worker_msg};

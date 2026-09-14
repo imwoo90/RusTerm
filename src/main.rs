@@ -1,3 +1,8 @@
+//! Application entry point for RusTerm WebAssembly serial monitor and terminal.
+//!
+//! Handles Web Worker bootstrapping, DOM splash screen removal, and mounts the root Dioxus application.
+//! Acts as the top-level coordination root for reactive state and Web Serial communication.
+
 use dioxus::prelude::*;
 
 mod components;

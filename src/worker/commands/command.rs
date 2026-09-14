@@ -1,3 +1,8 @@
+//! Worker command enum definitions and dispatch traits.
+//!
+//! Encapsulates discrete worker commands and their associated payloads into strongly typed
+//! message variants.
+
 use crate::worker::state::WorkerState;
 use std::cell::RefCell;
 use std::rc::Rc;

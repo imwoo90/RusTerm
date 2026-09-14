@@ -1,3 +1,8 @@
+//! High-capacity in-memory line offset index.
+//!
+//! Maintains byte offsets of all newline delimiters stored in OPFS, supporting filtered views
+//! and range-based line slice lookups.
+
 use crate::worker::repository::index::filter::ActiveFilter;
 use crate::worker::repository::index::types::{ByteOffset, LineIndex, LineRange};
 

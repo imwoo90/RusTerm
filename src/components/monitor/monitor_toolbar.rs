@@ -1,3 +1,8 @@
+//! Action toolbar for log monitor view.
+//!
+//! Hosts font size adjustments, timestamp toggles, autoscroll controls, clear console triggers,
+//! and log export operations.
+
 use crate::components::monitor::{HighlightButton, SearchBar, TransmitBar};
 use dioxus::prelude::*;
 

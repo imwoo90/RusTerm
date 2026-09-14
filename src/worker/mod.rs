@@ -1,3 +1,8 @@
+//! Web Worker backend subsystem catalog (mod.rs = index.md).
+//!
+//! Implements a dedicated background Web Worker handling high-throughput log ingestion,
+//! OPFS persistence, indexing, regex searching, and formatted batch delivery.
+
 #![allow(dead_code)]
 
 pub mod chunk_handler;

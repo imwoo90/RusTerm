@@ -1,3 +1,8 @@
+//! Scroll position math and virtual boundary calculations.
+//!
+//! Helper algorithms for determining scrollbar progress, bottom proximity detection,
+//! and line height index mapping.
+
 pub fn calculate_start_index(scroll_y: f64, line_height: f64, top_buffer: usize) -> usize {
     let raw_index = (scroll_y / line_height).floor() as usize;
     raw_index.saturating_sub(top_buffer)

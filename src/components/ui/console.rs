@@ -1,3 +1,8 @@
+//! Outer console framing container and border styling.
+//!
+//! Provides the primary dark-themed bounding box and background styling for log viewports,
+//! terminal sessions, and scrollable monitor panels.
+
 use dioxus::prelude::*;
 
 #[component]

@@ -1,3 +1,8 @@
+//! Log data export serialization worker logic.
+//!
+//! Streams persisted logs from OPFS storage and formats them into plain text or hex dumps
+//! for file download by the main thread.
+
 use crate::config::EXPORT_CHUNK_SIZE;
 use crate::worker::error::LogError;
 use crate::worker::repository::index::ByteOffset;

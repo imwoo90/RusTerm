@@ -1,3 +1,8 @@
+//! DOM lifecycle side-effects for monitor viewport.
+//!
+//! Handles automatic scroll positioning, element measurements, and responsive recalculations
+//! upon log additions or window resize events.
+
 use crate::hooks::WorkerController;
 use crate::state::AppState;
 use dioxus::prelude::*;

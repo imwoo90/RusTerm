@@ -1,3 +1,8 @@
+//! Browser file download and save utility.
+//!
+//! Creates transient Blob URLs and triggers browser file save dialogs for exporting logs
+//! and session recordings to local disk.
+
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen(module = "/public/assets/js/file_save.js")]

@@ -1,3 +1,8 @@
+//! Persistent command history manager backed by local storage.
+//!
+//! Stores previously executed commands in browser local storage, providing terminal-style
+//! ArrowUp and ArrowDown recall across application sessions.
+
 use serde::{Deserialize, Serialize};
 use web_sys::window;
 

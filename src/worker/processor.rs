@@ -1,3 +1,8 @@
+//! Core log processor coordinating streaming and repository storage.
+//!
+//! Couples streaming chunk handlers with OPFS log repositories, managing live ingestion,
+//! timestamp state, and line count tracking.
+
 use crate::worker::chunk_handler::StreamingLineProcessor;
 use crate::worker::error::LogError;
 

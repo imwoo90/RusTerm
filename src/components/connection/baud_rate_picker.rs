@@ -1,3 +1,8 @@
+//! Serial baud rate selection dropdown component.
+//!
+//! Renders standard serial communication baud rates (e.g., 9600, 115200, 921600) with custom input
+//! support, updating shared serial configuration state before connection initiation.
+
 use crate::components::ui::CustomInputSelect;
 use crate::state::AppState;
 use dioxus::prelude::*;

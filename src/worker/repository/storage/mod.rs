@@ -1,3 +1,8 @@
+//! Storage backends sub-module catalog (mod.rs = index.md).
+//!
+//! Defines storage abstractions and implementations for browser Origin Private File System (OPFS)
+//! sync access handles.
+
 pub mod backend;
 pub mod opfs;
 

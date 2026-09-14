@@ -1,3 +1,8 @@
+//! Log repository subsystem catalog (mod.rs = index.md).
+//!
+//! Manages indexed log storage, combining memory line offset indices with OPFS filesystem backends
+//! for high-capacity log persistence.
+
 pub mod index;
 pub mod storage;
 

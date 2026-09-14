@@ -1,3 +1,8 @@
+//! Hardware serial simulation generator for testing.
+//!
+//! Synthesizes mock serial log streams with sensor data, ANSI color codes, and errors
+//! to verify end-to-end performance and filtering without physical serial devices.
+
 use gloo_timers::future::TimeoutFuture;
 use wasm_bindgen::prelude::*;
 use wasm_streams::ReadableStream;

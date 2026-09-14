@@ -1,3 +1,8 @@
+//! Core domain types and common data structures for RusTerm.
+//!
+//! Contains shared enumerations and helper models used across both UI presentation layers
+//! and background worker communication channels.
+
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
