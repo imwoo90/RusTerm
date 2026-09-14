@@ -20,21 +20,31 @@ To prevent documentation drift and maximize signal-to-noise ratio in LLM context
 
 ---
 
-## 2. LLM-Agent Constraints (Enforced at Compile-Time via `build.rs`)
+## 2. LLM-Agent Constraints (Enforced at Compile-Time via `build.rs` & `build_linter.rs`)
 
 To keep files compact, modular, and optimized for LLM context windows, strict architectural limits are enforced during `cargo check`, `cargo build`, and `cargo test`:
 
-1. **Rule 1: File-Level Documentation Header (Min 100 Characters)**:
+1. **Rule 1: File-Level Living Wiki Header (Min 100 Characters)**:
    * Every non-test production `.rs` file must begin with a file-level doc comment (`//!`) of **at least 100 characters** describing its purpose, responsibilities, and architecture.
-2. **Rule 2: File Logical Code Limit (Max 10,000 Characters)**:
-   * The total character count of active executable code lines (excluding comments, doc comments, and empty lines) must be **under 10,000 characters** (approx. 200–300 lines of SLOC).
+2. **Rule 2: Production Logical Code Limit (Max 10,000 Characters)**:
+   * The total character count of active production code lines (excluding comments, doc comments, empty lines, and `#[cfg(test)]` blocks) must be **under 10,000 characters** (approx. 200–300 lines of SLOC).
    * Exceeding this limit indicates bloated responsibility; split into cohesive submodules.
-3. **Rule 3: File Documentation Limit (Max 4,000 Characters)**:
+   * *Strict Enforcement*: Limits cannot be bypassed via code attributes (`#[allow(...)]`). To adjust ceilings globally, edit `.agent-lint.toml`.
+3. **Rule 2b: Inline Unit Test Limit in `src/` (Max 5,000 Characters)**:
+   * Inline unit tests (`#[cfg(test)]`) inside a `src/` file must not exceed **5,000 characters**.
+   * When tests exceed 5,000 characters:
+     - **Integration tests** (public API): move to the root `tests/` directory (e.g., `tests/<module>_test.rs`).
+     - **Unit tests** (requiring access to private/crate items): extract into a dedicated submodule file (e.g., `src/<module>/tests.rs` or `src/<module>_tests.rs` with `#[cfg(test)] mod tests;`).
+     This preserves encapsulation while keeping production files compact for LLM context windows.
+4. **Rule 3: File Documentation Limit (Max 4,000 Characters)**:
    * The total character count of documentation comments (`//`, `///`, `//!`, `/* */`) must be **under 4,000 characters** (approx. 50–80 lines).
    * This forces descriptions to remain concise and high-signal, preventing LLM context bloat.
-4. **Rule 4: Function Physical Size Limit (Max 2,000 Characters)**:
-   * A single function (including its signature, body, comments, and braces) must be **under 2,000 characters** (approx. 40–50 physical lines).
-   * Ensures every function fits cleanly on a single screen or within a single context window turn.
+5. **Rule 4: Function Physical Size Limit (Max 2,000 Characters)**:
+   * A single function (production or test, including signature, body, comments, and braces) must be **under 2,000 characters** (approx. 40–50 physical lines).
+   * Ensures every function fits cleanly on a single screen or within a single context window turn. Oversized test functions must be refactored into smaller test cases or helper assertions.
+   * *Strict Enforcement*: Functions cannot bypass limits via code attributes (`#[allow(...)]`). Decompose into smaller helper functions.
+6. **Anti-Code-Golfing Principle**:
+   * Never compress variable names (e.g. `transaction_context` -> `tc`), eliminate idiomatic whitespace/newlines, or abuse macros to artificially circumvent character limits. Limits exist to force clean architectural decomposition into cohesive submodules and helper functions.
 
 ---
 
@@ -56,7 +66,7 @@ When contributing or adding features, always adhere to the verification cycle:
    ```
 3. **Verify Runtime UX & Browser Behavior (E2E Integration Test)**:
    ```bash
-   # Execute full 12-checkpoint Playwright E2E interactive test suite
+   # Execute full 25-checkpoint Playwright E2E interactive test suite
    npm run test:e2e
    ```
 

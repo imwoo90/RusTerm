@@ -143,56 +143,70 @@ pub fn ConsoleToggleButton(
 }
 
 #[component]
-pub fn UnifiedConsoleToolbar(
-    /// Content for the left side of the toolbar (e.g., line count, custom controls)
-    left: Element,
-    /// Font size signal
+fn ToolbarRightActions(
     font_size: Signal<u32>,
-    /// Auto-scroll state
     is_autoscroll: bool,
-    /// Whether the tracking indicator is clickable
+    is_tracking_interactive: bool,
+    on_toggle_autoscroll: EventHandler<MouseEvent>,
+    on_clear: EventHandler<MouseEvent>,
+    on_export: Option<EventHandler<MouseEvent>>,
+    min_font_size: u32,
+    max_font_size: u32,
+) -> Element {
+    rsx! {
+        ConsoleTrackingIndicator {
+            is_tracking: is_autoscroll,
+            interactive: is_tracking_interactive,
+            ontoggle: move |evt| on_toggle_autoscroll.call(evt),
+        }
+        ConsoleSeparator {}
+        ConsoleFontSizeControl { font_size, min_size: min_font_size, max_size: max_font_size }
+        ConsoleSeparator {}
+        ConsoleActionButton {
+            icon: "delete",
+            title: "Clear Logs",
+            onclick: move |evt| on_clear.call(evt),
+            hover_color_class: "hover:text-red-500",
+        }
+        if let Some(export_handler) = on_export {
+            ConsoleActionButton {
+                icon: "download",
+                title: "Export Logs",
+                onclick: move |evt| export_handler.call(evt),
+                hover_color_class: "hover:text-primary",
+            }
+        }
+    }
+}
+
+#[component]
+pub fn UnifiedConsoleToolbar(
+    left: Element,
+    font_size: Signal<u32>,
+    is_autoscroll: bool,
     #[props(default = true)]
     is_tracking_interactive: bool,
-    /// Handler for toggling auto-scroll
     on_toggle_autoscroll: EventHandler<MouseEvent>,
-    /// Handler for clearing logs
     on_clear: EventHandler<MouseEvent>,
-    /// Optional handler for exporting logs (if None, button is hidden)
     on_export: Option<EventHandler<MouseEvent>>,
-    /// Min font size
     #[props(default = 8)]
     min_font_size: u32,
-    /// Max font size
     #[props(default = 36)]
     max_font_size: u32,
 ) -> Element {
     rsx! {
         ConsoleToolbar {
-            left: rsx! {
-                {left}
-            },
+            left: rsx! { {left} },
             right: rsx! {
-                ConsoleTrackingIndicator {
-                    is_tracking: is_autoscroll,
-                    interactive: is_tracking_interactive,
-                    ontoggle: move |evt| on_toggle_autoscroll.call(evt),
-                }
-                ConsoleSeparator {}
-                ConsoleFontSizeControl { font_size, min_size: min_font_size, max_size: max_font_size }
-                ConsoleSeparator {}
-                ConsoleActionButton {
-                    icon: "delete",
-                    title: "Clear Logs",
-                    onclick: move |evt| on_clear.call(evt),
-                    hover_color_class: "hover:text-red-500",
-                }
-                if let Some(export_handler) = on_export {
-                    ConsoleActionButton {
-                        icon: "download",
-                        title: "Export Logs",
-                        onclick: move |evt| export_handler.call(evt),
-                        hover_color_class: "hover:text-primary",
-                    }
+                ToolbarRightActions {
+                    font_size,
+                    is_autoscroll,
+                    is_tracking_interactive,
+                    on_toggle_autoscroll,
+                    on_clear,
+                    on_export,
+                    min_font_size,
+                    max_font_size,
                 }
             },
         }
