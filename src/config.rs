@@ -13,7 +13,7 @@ pub const HEX_VIEW_BYTES: usize = 16;
 #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 pub const TOAST_DURATION_MS: u32 = 3000;
 pub const WORKER_UPDATE_INTERVAL_MS: u32 = 16;
-pub const APP_SUBTITLE: &str = "RusTerm v3.2.0";
+pub const APP_SUBTITLE: &str = "RusTerm v3.3.0";
 
 /// --- Layout & Virtual Scroll ---
 pub const HEADER_OFFSET: f64 = 150.0;
