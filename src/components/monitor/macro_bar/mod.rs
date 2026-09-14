@@ -22,14 +22,13 @@ async fn execute_macro_send(
     port: Option<web_sys::SerialPort>,
     local_echo: bool,
     bridge: crate::hooks::WorkerController,
+    state: AppState,
 ) {
     let mut data = if is_hex {
         match parse_hex_string(&cmd) {
             Ok(d) => d,
             Err(e) => {
-                if let Some(w) = web_sys::window() {
-                    let _ = w.alert_with_message(&format!("Macro Hex Error: {}", e));
-                }
+                state.error(&format!("Macro Hex Error: {}", e));
                 return;
             }
         }
@@ -52,27 +51,9 @@ async fn execute_macro_send(
             let array = js_sys::Uint8Array::from(data.as_slice());
             bridge.append_chunk(array, false);
         }
+    } else {
+        state.warning("Serial port is not connected");
     }
-}
-
-fn use_macro_runner(
-    state: &AppState,
-    current_macro: Signal<Option<(String, bool, LineEnding)>>,
-    bridge: crate::hooks::WorkerController,
-) -> Resource<()> {
-    let port = (state.conn.port).peek().as_ref().cloned();
-    let local_echo = (state.serial.tx_local_echo)();
-
-    use_resource(move || {
-        let macro_data = current_macro();
-        let p = port.clone();
-        let b = bridge.clone();
-        async move {
-            if let Some((cmd, is_hex, ending)) = macro_data {
-                execute_macro_send(cmd, is_hex, ending, p, local_echo, b).await;
-            }
-        }
-    })
 }
 
 #[component]
@@ -123,10 +104,9 @@ fn GitHubLink() -> Element {
 #[component]
 fn MacroList(
     storage: Signal<MacroStorage>,
-    mut current_macro: Signal<Option<(String, bool, LineEnding)>>,
-    macro_task: Resource<()>,
     mut context_menu: Signal<Option<(u64, i32, i32)>>,
-    mut on_add: EventHandler<()>,
+    on_send: EventHandler<(String, bool, LineEnding)>,
+    on_add: EventHandler<()>,
 ) -> Element {
     rsx! {
         div { class: "flex gap-2 flex-1 items-center",
@@ -141,10 +121,7 @@ fn MacroList(
                             key: "{id}",
                             label: item.label.clone(),
                             title: item.command.clone(),
-                            onclick: move |_| {
-                                current_macro.set(Some((cmd.clone(), is_hex, line_ending)));
-                                macro_task.restart();
-                            },
+                            onclick: move |_| on_send.call((cmd.clone(), is_hex, line_ending)),
                             oncontextmenu: move |evt: MouseEvent| {
                                 evt.prevent_default();
                                 let coords = evt.client_coordinates();
@@ -172,9 +149,16 @@ pub fn MacroBar() -> Element {
     let mut new_ending = use_signal(|| LineEnding::None);
     let mut editing_id = use_signal(|| None::<u64>);
     let context_menu = use_signal(|| None::<(u64, i32, i32)>);
-    let current_macro = use_signal(|| None::<(String, bool, LineEnding)>);
 
-    let macro_task = use_macro_runner(&state, current_macro, bridge);
+    let on_send = move |(cmd, is_hex, ending): (String, bool, LineEnding)| {
+        let port = state.conn.port.peek().as_ref().cloned();
+        let local_echo = (state.serial.tx_local_echo)();
+        let b = bridge.clone();
+        let s = state;
+        spawn(async move {
+            execute_macro_send(cmd, is_hex, ending, port, local_echo, b, s).await;
+        });
+    };
 
     let on_add = move |_| {
         editing_id.set(None);
@@ -187,7 +171,7 @@ pub fn MacroBar() -> Element {
 
     rsx! {
         div { class: "flex gap-2 p-2 bg-background-dark border-t border-[#2a2e33] min-h-[40px] items-center overflow-x-auto",
-            MacroList { storage, current_macro, macro_task, context_menu, on_add }
+            MacroList { storage, context_menu, on_send, on_add }
 
             if let Some((id, x, y)) = context_menu() {
                 MacroContextMenu {
