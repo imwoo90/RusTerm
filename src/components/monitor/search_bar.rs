@@ -1,6 +1,48 @@
+//! Search and filter bar component for monitor log inspection.
+//!
+//! Provides a real-time text input with inline toggles for case sensitivity (Aa),
+//! regular expressions (.*), and inverted matching (!), updating shared log filter state.
+
 use crate::components::ui::FilterOptionButton;
 use crate::state::AppState;
 use dioxus::prelude::*;
+
+#[component]
+fn FilterButtons() -> Element {
+    let mut state = use_context::<AppState>();
+
+    rsx! {
+        div { class: "absolute right-1 flex items-center gap-0.5",
+            FilterOptionButton {
+                title: "Match Case",
+                label: "Aa",
+                active: (state.log.match_case)(),
+                onclick: move |_| {
+                    let v = (state.log.match_case)();
+                    state.log.match_case.set(!v);
+                },
+            }
+            FilterOptionButton {
+                title: "Regex",
+                label: ".*",
+                active: (state.log.use_regex)(),
+                onclick: move |_| {
+                    let v = (state.log.use_regex)();
+                    state.log.use_regex.set(!v);
+                },
+            }
+            FilterOptionButton {
+                title: "Invert",
+                label: "!",
+                active: (state.log.invert_filter)(),
+                onclick: move |_| {
+                    let v = (state.log.invert_filter)();
+                    state.log.invert_filter.set(!v);
+                },
+            }
+        }
+    }
+}
 
 #[component]
 pub fn SearchBar() -> Element {
@@ -18,35 +60,7 @@ pub fn SearchBar() -> Element {
                 value: "{state.log.filter_query}",
                 oninput: move |evt| state.log.filter_query.set(evt.value()),
             }
-            div { class: "absolute right-1 flex items-center gap-0.5",
-                FilterOptionButton {
-                    title: "Match Case",
-                    label: "Aa",
-                    active: (state.log.match_case)(),
-                    onclick: move |_| {
-                        let v = (state.log.match_case)();
-                        state.log.match_case.set(!v);
-                    },
-                }
-                FilterOptionButton {
-                    title: "Regex",
-                    label: ".*",
-                    active: (state.log.use_regex)(),
-                    onclick: move |_| {
-                        let v = (state.log.use_regex)();
-                        state.log.use_regex.set(!v);
-                    },
-                }
-                FilterOptionButton {
-                    title: "Invert",
-                    label: "!",
-                    active: (state.log.invert_filter)(),
-                    onclick: move |_| {
-                        let v = (state.log.invert_filter)();
-                        state.log.invert_filter.set(!v);
-                    },
-                }
-            }
+            FilterButtons {}
         }
     }
 }

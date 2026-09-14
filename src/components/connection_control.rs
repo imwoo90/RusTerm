@@ -1,3 +1,8 @@
+//! Connection toolbar controls for Web Serial lifecycle management.
+//!
+//! Hosts the port status indicator, baud rate picker, settings toggle button,
+//! simulation stream trigger, and connect/disconnect execution button.
+
 use crate::components::connection::{BaudRatePicker, PortStatus, SettingsDropdown};
 use crate::components::ui::IconButton;
 use crate::hooks::use_serial_controller;
@@ -5,9 +10,79 @@ use crate::state::AppState;
 use dioxus::prelude::*;
 
 #[component]
-pub fn ConnectionControl() -> Element {
+fn SimulationButton() -> Element {
     let state = use_context::<AppState>();
     let controller = use_serial_controller();
+
+    rsx! {
+        if cfg!(debug_assertions) {
+            button {
+                class: if (state.conn.is_simulating)() { "flex items-center justify-center w-9 h-9 bg-yellow-500/80 hover:bg-yellow-500 border border-yellow-500/50 rounded-lg transition-all active:scale-95 shadow-lg shadow-yellow-500/20 text-white gap-2" } else { "flex items-center justify-center w-9 h-9 bg-[#16181a] border border-[#2a2e33] rounded-lg hover:border-yellow-500/50 hover:text-yellow-500 transition-colors text-gray-400 gap-2" },
+                onclick: move |_| {
+                    if (state.conn.is_simulating)() {
+                        controller.stop_simulation();
+                    } else {
+                        controller.start_simulation();
+                    }
+                },
+                title: "Test Mode",
+                span { class: "material-symbols-outlined text-[18px]", "bug_report" }
+            }
+        }
+    }
+}
+
+#[component]
+fn ConnectButton() -> Element {
+    let state = use_context::<AppState>();
+    let controller = use_serial_controller();
+
+    let is_busy = (state.conn.is_busy)();
+    let is_connected = state.conn.is_connected();
+
+    let button_class = if is_busy {
+        "group relative flex items-center gap-2 bg-gray-500/50 cursor-not-allowed border border-gray-500/30 pl-3 pr-4 py-1.5 rounded-lg ml-2 opacity-50"
+    } else if is_connected {
+        "group relative flex items-center gap-2 bg-red-500/80 hover:bg-red-500 border border-red-500/50 pl-3 pr-4 py-1.5 rounded-lg transition-all duration-300 active:scale-95 shadow-lg shadow-red-500/20 ml-2"
+    } else {
+        "group relative flex items-center gap-2 bg-primary hover:brightness-110 border border-primary/50 pl-3 pr-4 py-1.5 rounded-lg transition-all duration-300 active:scale-95 shadow-lg shadow-primary/20 ml-2"
+    };
+
+    rsx! {
+        button {
+            disabled: is_busy,
+            class: button_class,
+            onclick: move |_| {
+                if state.conn.is_connected() {
+                    controller.disconnect();
+                } else {
+                    controller.connect();
+                }
+            },
+            div { class: "relative flex h-2 w-2",
+                if !is_busy {
+                    span { class: "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-white" }
+                }
+                span { class: "relative inline-flex rounded-full h-2 w-2 bg-white" }
+            }
+            span {
+                class: "text-xs font-bold transition-colors uppercase tracking-wide",
+                class: if is_connected { "text-white" } else { "text-black group-hover:text-black/80" },
+                if is_busy {
+                    "WAIT..."
+                } else if is_connected {
+                    "Disconnect"
+                } else {
+                    "Connect"
+                }
+            }
+        }
+    }
+}
+
+#[component]
+pub fn ConnectionControl() -> Element {
+    let state = use_context::<AppState>();
     let is_open = (state.ui.show_settings)();
 
     let settings_icon_class = if is_open {
@@ -18,13 +93,9 @@ pub fn ConnectionControl() -> Element {
 
     rsx! {
         div { class: "flex items-center gap-3 h-full",
-            // Port Info
             PortStatus { connected: state.conn.is_connected() }
-
-            // Baud Rate
             BaudRatePicker {}
 
-            // Settings Button
             IconButton {
                 icon: "settings",
                 active: is_open,
@@ -34,63 +105,9 @@ pub fn ConnectionControl() -> Element {
                 title: "Settings",
             }
 
-            // Test Mode Button
-            if cfg!(debug_assertions) {
-                button {
-                    class: if (state.conn.is_simulating)() { "flex items-center justify-center w-9 h-9 bg-yellow-500/80 hover:bg-yellow-500 border border-yellow-500/50 rounded-lg transition-all active:scale-95 shadow-lg shadow-yellow-500/20 text-white gap-2" } else { "flex items-center justify-center w-9 h-9 bg-[#16181a] border border-[#2a2e33] rounded-lg hover:border-yellow-500/50 hover:text-yellow-500 transition-colors text-gray-400 gap-2" },
-                    onclick: move |_| {
-                        if (state.conn.is_simulating)() {
-                            controller.stop_simulation();
-                        } else {
-                            controller.start_simulation();
-                        }
-                    },
-                    title: "Test Mode",
-                    span { class: "material-symbols-outlined text-[18px]", "bug_report" }
-                }
-            }
+            SimulationButton {}
+            ConnectButton {}
 
-            // Connect Button
-            button {
-                disabled: (state.conn.is_busy)(),
-                class: {
-                    let is_busy = (state.conn.is_busy)();
-                    let is_connected = state.conn.is_connected();
-                    if is_busy {
-                        "group relative flex items-center gap-2 bg-gray-500/50 cursor-not-allowed border border-gray-500/30 pl-3 pr-4 py-1.5 rounded-lg ml-2 opacity-50"
-                    } else if is_connected {
-                        "group relative flex items-center gap-2 bg-red-500/80 hover:bg-red-500 border border-red-500/50 pl-3 pr-4 py-1.5 rounded-lg transition-all duration-300 active:scale-95 shadow-lg shadow-red-500/20 ml-2"
-                    } else {
-                        "group relative flex items-center gap-2 bg-primary hover:brightness-110 border border-primary/50 pl-3 pr-4 py-1.5 rounded-lg transition-all duration-300 active:scale-95 shadow-lg shadow-primary/20 ml-2"
-                    }
-                },
-                onclick: move |_| {
-                    if state.conn.is_connected() {
-                        controller.disconnect();
-                    } else {
-                        controller.connect();
-                    }
-                },
-                div { class: "relative flex h-2 w-2",
-                    if !(state.conn.is_busy)() {
-                        span { class: "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-white" }
-                    }
-                    span { class: "relative inline-flex rounded-full h-2 w-2 bg-white" }
-                }
-                span {
-                    class: "text-xs font-bold transition-colors uppercase tracking-wide",
-                    class: if state.conn.is_connected() { "text-white" } else { "text-black group-hover:text-black/80" },
-                    if (state.conn.is_busy)() {
-                        "WAIT..."
-                    } else if state.conn.is_connected() {
-                        "Disconnect"
-                    } else {
-                        "Connect"
-                    }
-                }
-            }
-
-            // Settings Dropdown Panel
             SettingsDropdown {
                 is_open,
                 onclose: move |_| {

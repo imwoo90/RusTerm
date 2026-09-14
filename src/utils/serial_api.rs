@@ -59,6 +59,17 @@ pub enum ReadStatus {
     Fatal(String),
 }
 
+fn handle_read_error(e: JsValue, reader: &ReadableStreamDefaultReader) -> ReadStatus {
+    reader.release_lock();
+    let err_str = format!("{:?}", e);
+    if err_str.contains("NetworkError") || err_str.contains("device has been lost") {
+        ReadStatus::Fatal(format!("Fatal Error: {:?}", e))
+    } else {
+        web_sys::console::warn_1(&format!("Non-fatal read error (recovering): {:?}", e).into());
+        ReadStatus::Retry
+    }
+}
+
 pub async fn read_loop(
     reader: ReadableStreamDefaultReader,
     mut on_data: impl FnMut(js_sys::Uint8Array) + 'static,
@@ -89,23 +100,7 @@ pub async fn read_loop(
                     on_data(array);
                 }
             }
-            Err(e) => {
-                let err_str = format!("{:?}", e);
-                // Check for fatal errors that require closing the connection
-                if err_str.contains("NetworkError") || err_str.contains("device has been lost") {
-                    reader.release_lock();
-                    return ReadStatus::Fatal(format!("Fatal Error: {:?}", e));
-                } else {
-                    // Non-fatal errors (Framing, Parity, Break, BufferOverrun)
-                    // The stream is technically broken (Reader errored), so we must release and re-acquire.
-                    // We return Retry status so logic layer can handle it.
-                    web_sys::console::warn_1(
-                        &format!("Non-fatal read error (recovering): {:?}", e).into(),
-                    );
-                    reader.release_lock();
-                    return ReadStatus::Retry;
-                }
-            }
+            Err(e) => return handle_read_error(e, &reader),
         }
     }
 }

@@ -1,6 +1,12 @@
+//! Asynchronous log searching and filtering engine for worker threads.
+//!
+//! Scans historical log buffers in batches using configured [`ActiveFilterBuilder`] patterns,
+//! yielding periodically to avoid blocking the Web Worker event loop.
+
 use crate::worker::error::LogError;
 use crate::worker::repository::index::{ActiveFilterBuilder, LineRange};
 use crate::worker::repository::storage::StorageBackend;
+use crate::worker::repository::LogRepository;
 use crate::worker::state::WorkerState;
 use gloo_timers::future::TimeoutFuture;
 use std::cell::RefCell;
@@ -9,6 +15,55 @@ use std::rc::Rc;
 pub struct LogSearcher;
 
 const SEARCH_BATCH_SIZE: usize = 5000;
+
+fn process_search_batch(
+    repo: &mut LogRepository,
+    batch_start: usize,
+    batch_end: usize,
+    buf: &mut Vec<u8>,
+) -> Result<(), LogError> {
+    if batch_end > repo.index.line_count {
+        return Ok(());
+    }
+
+    let (s_off, e_off) = {
+        let off = &repo.index.line_offsets;
+        (off[batch_start], off[batch_end])
+    };
+    let size = (e_off.0 - s_off.0) as usize;
+
+    if buf.len() < size {
+        buf.resize(size, 0);
+    }
+
+    repo.storage.backend.read_at(s_off, &mut buf[..size])?;
+
+    let text = repo
+        .storage
+        .decoder
+        .decode_with_u8_array(&buf[..size])
+        .map_err(LogError::Js)?;
+
+    let filter = repo.index.active_filter.as_ref().unwrap().clone();
+    let mut batch_matches = Vec::new();
+
+    for (j, line) in text.trim_end_matches('\n').split('\n').enumerate() {
+        if filter.matches(line) {
+            let off_ptr = &repo.index.line_offsets;
+            let abs_line_idx = batch_start + j;
+
+            if abs_line_idx + 1 < off_ptr.len() {
+                let range = LineRange {
+                    start: off_ptr[abs_line_idx],
+                    end: off_ptr[abs_line_idx + 1],
+                };
+                batch_matches.push(range);
+            }
+        }
+    }
+    repo.index.prepend_filtered(batch_matches);
+    Ok(())
+}
 
 impl LogSearcher {
     pub async fn search_async(
@@ -56,49 +111,12 @@ impl LogSearcher {
 
             {
                 let mut state = state_rc.borrow_mut();
-                let repo = &mut state.proc.repository;
-
-                // Ensure index consistency (if cleared during search)
-                if batch_end > repo.index.line_count {
-                    break;
-                }
-
-                let (s_off, e_off) = {
-                    let off = &repo.index.line_offsets;
-                    (off[batch_start], off[batch_end])
-                };
-                let size = (e_off.0 - s_off.0) as usize;
-
-                if buf.len() < size {
-                    buf.resize(size, 0);
-                }
-
-                repo.storage.backend.read_at(s_off, &mut buf[..size])?;
-
-                let text = repo
-                    .storage
-                    .decoder
-                    .decode_with_u8_array(&buf[..size])
-                    .map_err(LogError::Js)?;
-
-                let filter = repo.index.active_filter.as_ref().unwrap().clone();
-                let mut batch_matches = Vec::new();
-
-                for (j, line) in text.trim_end_matches('\n').split('\n').enumerate() {
-                    if filter.matches(line) {
-                        let off_ptr = &repo.index.line_offsets;
-                        let abs_line_idx = batch_start + j;
-
-                        if abs_line_idx + 1 < off_ptr.len() {
-                            let range = LineRange {
-                                start: off_ptr[abs_line_idx],
-                                end: off_ptr[abs_line_idx + 1],
-                            };
-                            batch_matches.push(range);
-                        }
-                    }
-                }
-                state.proc.repository.index.prepend_filtered(batch_matches);
+                process_search_batch(
+                    &mut state.proc.repository,
+                    batch_start,
+                    batch_end,
+                    &mut buf,
+                )?;
             }
 
             idx = batch_start;

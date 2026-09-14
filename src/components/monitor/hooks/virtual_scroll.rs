@@ -1,3 +1,8 @@
+//! Virtual scrolling orchestration hook for high-frequency serial logs.
+//!
+//! Coordinates element dimensions, dynamic scale factors, scroll offset tracking,
+//! and data window requests to sustain 60fps rendering over millions of log lines.
+
 use crate::components::monitor::hooks::data_request::use_data_request;
 use crate::components::monitor::utils::layout_utils::{
     calculate_scroll_state, calculate_virtual_metrics, use_auto_scroller, use_window_resize,
@@ -16,11 +21,63 @@ pub struct VirtualScroll {
     pub scroll_task: Resource<()>,
 }
 
+fn use_height_observer(
+    console_handle: Signal<Option<Rc<MountedData>>>,
+    mut console_height: Signal<f64>,
+) {
+    use_resource(move || {
+        let handle = console_handle();
+        async move {
+            if let Some(handle) = handle {
+                if let Ok(rect) = handle.get_client_rect().await {
+                    console_height.set(rect.height());
+                }
+            }
+        }
+    });
+}
+
+fn use_scroll_observer(
+    console_handle: Signal<Option<Rc<MountedData>>>,
+    console_height: Signal<f64>,
+    total_height: f64,
+    scale_factor: f64,
+    line_height: f64,
+    mut start_index: Signal<usize>,
+    state: AppState,
+) -> Resource<()> {
+    use_resource(move || {
+        let handle = console_handle.peek().as_ref().cloned();
+        let total_lines = (state.log.total_lines)();
+        let current_height = *console_height.read();
+        async move {
+            if let Some(handle) = handle {
+                if let Ok(offset) = handle.get_scroll_offset().await {
+                    let (new_index, is_at_bottom) = calculate_scroll_state(
+                        offset.y,
+                        current_height,
+                        total_lines,
+                        scale_factor,
+                        total_height,
+                        line_height,
+                    );
+                    if (start_index)() != new_index {
+                        start_index.set(new_index);
+                    }
+                    if (state.ui.autoscroll)() != is_at_bottom {
+                        state.ui.set_autoscroll(is_at_bottom);
+                    }
+                }
+            }
+        }
+    })
+}
+
 pub fn use_virtual_scroll() -> VirtualScroll {
     let state = use_context::<AppState>();
 
-    let mut start_index = use_signal(|| 0usize);
-    let mut console_height = use_signal(|| 600.0);
+    let start_index = use_signal(|| 0usize);
+    let console_height = use_signal(|| 600.0);
 
     let console_handle = use_signal(|| None::<Rc<MountedData>>);
     let sentinel_handle = use_signal(|| None::<Rc<MountedData>>);
@@ -42,47 +99,17 @@ pub fn use_virtual_scroll() -> VirtualScroll {
     let (total_height, offset_top, scale_factor) =
         calculate_virtual_metrics(total_lines(), start_index(), console_height(), line_height);
 
-    // Height update task
-    let _height_task = use_resource(move || {
-        let handle = (console_handle)();
-        async move {
-            if let Some(handle) = handle {
-                if let Ok(rect) = handle.get_client_rect().await {
-                    console_height.set(rect.height());
-                }
-            }
-        }
-    });
+    use_height_observer(console_handle, console_height);
 
-    // Scroll task
-    let scroll_task = use_resource(move || {
-        let handle = console_handle.peek().as_ref().cloned();
-        let total_lines = (state.log.total_lines)();
-        let current_height = *console_height.read();
-        let current_total_height = total_height;
-        let current_scale = scale_factor;
-        let lh = line_height;
-        async move {
-            if let Some(handle) = handle {
-                if let Ok(offset) = handle.get_scroll_offset().await {
-                    let (new_index, is_at_bottom) = calculate_scroll_state(
-                        offset.y,
-                        current_height,
-                        total_lines,
-                        current_scale,
-                        current_total_height,
-                        lh,
-                    );
-                    if (start_index)() != new_index {
-                        start_index.set(new_index);
-                    }
-                    if (state.ui.autoscroll)() != is_at_bottom {
-                        state.ui.set_autoscroll(is_at_bottom);
-                    }
-                }
-            }
-        }
-    });
+    let scroll_task = use_scroll_observer(
+        console_handle,
+        console_height,
+        total_height,
+        scale_factor,
+        line_height,
+        start_index,
+        state,
+    );
 
     VirtualScroll {
         total_height,

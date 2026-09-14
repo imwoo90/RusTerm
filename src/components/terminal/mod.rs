@@ -1,5 +1,10 @@
-mod hooks;
-mod toolbar;
+//! xterm.js terminal emulation component for RusTerm.
+//!
+//! Embeds full VT100/ANSI terminal emulation via WebAssembly bindings to xterm.js v6.0.
+//! Manages input throttling buffers, periodic screen writes, and automatic window resizing.
+
+pub mod hooks;
+pub mod toolbar;
 
 use crate::components::ui::buttons::ResumeScrollButton;
 use crate::components::ui::console::ConsoleFrame;
@@ -13,6 +18,7 @@ use web_sys::window;
 
 pub use toolbar::TerminalToolbar;
 
+/// RAII wrapper for Terminal that disposes it on drop
 pub struct AutoDisposeTerminal(pub Terminal);
 
 #[component]
@@ -21,13 +27,8 @@ pub fn TerminalView(term_instance: Signal<Option<AutoDisposeTerminal>>) -> Eleme
 
     rsx! {
         ConsoleFrame {
-            // Toolbar
             TerminalToolbar { term_instance }
-
-            // Terminal Content
             Xterm { term_instance }
-
-            // Resume Scroll Button
             if !*app_state.terminal.autoscroll.read() {
                 ResumeScrollButton {
                     onclick: move |_| {
@@ -60,6 +61,78 @@ pub struct XtermProps {
     term_instance: Signal<Option<AutoDisposeTerminal>>,
 }
 
+fn use_options_sync(
+    state: &AppState,
+    term_instance: Signal<Option<AutoDisposeTerminal>>,
+    fit_addon: Signal<Option<XtermFitAddon>>,
+) {
+    let font_size_sig = state.ui.font_size;
+    let scrollback_sig = state.terminal.scrollback;
+    use_effect(move || {
+        let font_size = *font_size_sig.read();
+        let scrollback = *scrollback_sig.read();
+
+        if let Some(term) = term_instance.read().as_ref() {
+            let options = term.options();
+            options.set_font_size(font_size);
+            options.set_scrollback(scrollback);
+
+            if let Some(fit) = fit_addon.read().as_ref() {
+                fit.fit();
+            }
+        }
+    });
+}
+
+fn use_terminal_writer(
+    mut lines_signal: Signal<usize>,
+    term_instance: Signal<Option<AutoDisposeTerminal>>,
+    aggregation_buffer: Signal<Rc<RefCell<Vec<u8>>>>,
+) {
+    use_resource(move || async move {
+        loop {
+            gloo_timers::future::TimeoutFuture::new(100).await;
+            if let Some(term) = term_instance.read().as_ref() {
+                let buffer_rc = aggregation_buffer.read().clone();
+                let mut data_vec = buffer_rc.borrow_mut();
+                if !data_vec.is_empty() {
+                    let chunk = std::mem::take(&mut *data_vec);
+                    drop(data_vec);
+                    let array = js_sys::Uint8Array::from(chunk.as_slice());
+                    term.write_chunk(&array);
+
+                    let lines = term.buffer().active().length();
+                    *lines_signal.write() = lines as usize;
+                }
+            }
+        }
+    });
+}
+
+fn use_serial_sender(
+    port_sig: Signal<Option<web_sys::SerialPort>>,
+    send_buffer: Signal<Rc<RefCell<Vec<u8>>>>,
+) {
+    use_resource(move || async move {
+        loop {
+            gloo_timers::future::TimeoutFuture::new(16).await;
+            let data = {
+                let buffer_rc = send_buffer.read().clone();
+                let mut buf = buffer_rc.borrow_mut();
+                if buf.is_empty() {
+                    continue;
+                }
+                std::mem::take(&mut *buf)
+            };
+            if let Some(port) = port_sig.peek().clone() {
+                if let Err(e) = crate::utils::serial_api::send_data(&port, &data).await {
+                    web_sys::console::error_1(&e);
+                }
+            }
+        }
+    });
+}
+
 #[component]
 pub fn Xterm(props: XtermProps) -> Element {
     let mut terminal_div = use_signal(|| None::<web_sys::HtmlElement>);
@@ -67,12 +140,10 @@ pub fn Xterm(props: XtermProps) -> Element {
     let fit_addon = use_signal(|| None::<XtermFitAddon>);
     let state = use_context::<AppState>();
 
-    // Buffers for throttled operations - persisted across renders
     let aggregation_buffer = use_signal(|| Rc::new(RefCell::new(Vec::<u8>::new())));
     let send_buffer = use_signal(|| Rc::new(RefCell::new(Vec::<u8>::new())));
     let resize_listener = use_signal(|| None::<gloo_events::EventListener>);
 
-    // Terminal setup effect
     use_effect(move || {
         if let Some(div) = terminal_div.read().as_ref() {
             if term_instance.read().is_some() {
@@ -90,24 +161,8 @@ pub fn Xterm(props: XtermProps) -> Element {
         }
     });
 
-    // Option updates effect - also call fit() when font size changes
-    use_effect(move || {
-        let font_size = *state.ui.font_size.read();
-        let scrollback = *state.terminal.scrollback.read();
+    use_options_sync(&state, term_instance, fit_addon);
 
-        if let Some(term) = term_instance.read().as_ref() {
-            let options = term.options();
-            options.set_font_size(font_size);
-            options.set_scrollback(scrollback);
-
-            // Call fit() after font size change to recalculate rows/cols
-            if let Some(fit) = fit_addon.read().as_ref() {
-                fit.fit();
-            }
-        }
-    });
-
-    // Data ingestion loop
     use_effect(move || {
         let _ = state.terminal.received_data.read();
         let data = state.terminal.take_data();
@@ -116,52 +171,10 @@ pub fn Xterm(props: XtermProps) -> Element {
         }
     });
 
-    // Terminal write loop (100ms)
-    use_resource(move || {
-        let mut lines_signal = state.terminal.lines;
-        async move {
-            loop {
-                gloo_timers::future::TimeoutFuture::new(100).await;
-                if let Some(term) = term_instance.read().as_ref() {
-                    let buffer_rc = aggregation_buffer.read().clone();
-                    let mut data_vec = buffer_rc.borrow_mut();
-                    if !data_vec.is_empty() {
-                        let chunk = std::mem::take(&mut *data_vec);
-                        drop(data_vec);
-                        let array = js_sys::Uint8Array::from(chunk.as_slice());
-                        term.write_chunk(&array);
-
-                        // Update line count
-                        let lines = term.buffer().active().length();
-                        *lines_signal.write() = lines as usize;
-                    }
-                }
-            }
-        }
-    });
-
-    // Serial send loop (60Hz)
-    use_resource(move || async move {
-        loop {
-            gloo_timers::future::TimeoutFuture::new(16).await;
-            let data = {
-                let buffer_rc = send_buffer.read().clone();
-                let mut buf = buffer_rc.borrow_mut();
-                if buf.is_empty() {
-                    continue;
-                }
-                std::mem::take(&mut *buf)
-            };
-            if let Some(port) = state.conn.port.peek().clone() {
-                if let Err(e) = crate::utils::serial_api::send_data(&port, &data).await {
-                    web_sys::console::error_1(&e);
-                }
-            }
-        }
-    });
+    use_terminal_writer(state.terminal.lines, term_instance, aggregation_buffer);
+    use_serial_sender(state.conn.port, send_buffer);
 
     rsx! {
-        // Terminal Container
         div {
             class: "flex-1 w-full bg-transparent overflow-hidden pl-2",
             id: "xterm-container",

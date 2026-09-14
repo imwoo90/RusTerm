@@ -144,72 +144,68 @@ async fn cleanup_serial_connection(state: AppState) {
     // state.conn.set_busy(false); // Caller is now responsible for setting busy to false
 }
 
-/// Starts an explicit read task that handles the serial read loop and retries
-fn start_read_task(state: AppState, bridge: WorkerController, port: web_sys::SerialPort) {
+async fn handle_read_completion(
+    status: crate::utils::serial_api::ReadStatus,
+    state: AppState,
+    bridge: WorkerController,
+    port: web_sys::SerialPort,
+) {
     use crate::utils::serial_api::ReadStatus;
 
+    match status {
+        ReadStatus::Retry => {
+            TimeoutFuture::new(100).await;
+            if (state.conn.is_busy)() {
+                return;
+            }
+            start_read_task(state, bridge, port);
+        }
+        ReadStatus::Done => {
+            if state.conn.is_connected() && !(state.conn.is_busy)() {
+                state.conn.set_busy(true);
+                state.info("Connection Closed");
+                cleanup_serial_connection(state).await;
+                state.conn.set_busy(false);
+            }
+        }
+        ReadStatus::Fatal(msg) => {
+            if !(state.conn.is_busy)() {
+                state.conn.set_busy(true);
+                state.error(&format!("Connection Lost: {}", msg));
+                cleanup_serial_connection(state).await;
+                state.conn.set_busy(false);
+            }
+        }
+    }
+}
+
+/// Starts an explicit read task that handles the serial read loop and retries
+fn start_read_task(state: AppState, bridge: WorkerController, port: web_sys::SerialPort) {
     spawn(async move {
-        // 1. Get Reader
         let readable = port.readable();
         let reader = readable
             .get_reader()
             .unchecked_into::<ReadableStreamDefaultReader>();
 
-        // 2. Update State (Primary location for reader)
-        // We clone the port because we need to keep it for retries
         state
             .conn
             .set_connected(Some(port.clone()), Some(reader.clone()));
         state.conn.set_reading(true);
 
-        // 3. Run Loop
+        let s_clone = state;
+        let b_clone = bridge.clone();
         let status = crate::utils::serial_api::read_loop(reader, move |data| {
-            if (state.ui.view_mode)() == crate::state::ViewMode::Terminal {
-                state.terminal.push_data(data.to_vec());
+            if (s_clone.ui.view_mode)() == crate::state::ViewMode::Terminal {
+                s_clone.terminal.push_data(data.to_vec());
             } else {
-                let is_hex = (state.ui.is_hex_view)();
-                bridge.append_chunk(data, is_hex);
+                let is_hex = (s_clone.ui.is_hex_view)();
+                b_clone.append_chunk(data, is_hex);
             }
         })
         .await;
 
-        // Loop finished (Lock released inside read_loop before return)
         state.conn.set_reading(false);
-
-        // 4. Handle Result
-        match status {
-            ReadStatus::Retry => {
-                // Prevent hot-looping on continuous errors (e.g. wrong baud rate)
-                TimeoutFuture::new(100).await;
-
-                // If busy (e.g. user clicked disconnect), stop retrying
-                if (state.conn.is_busy)() {
-                    return;
-                }
-
-                // Recursive restart
-                start_read_task(state, bridge, port);
-            }
-            ReadStatus::Done => {
-                if state.conn.is_connected() {
-                    // If already busy, someone else (Disconnect button) is handling cleanup
-                    if !(state.conn.is_busy)() {
-                        state.conn.set_busy(true);
-                        state.info("Connection Closed");
-                        cleanup_serial_connection(state).await;
-                        state.conn.set_busy(false); // Release busy lock
-                    }
-                }
-            }
-            ReadStatus::Fatal(msg) => {
-                if !(state.conn.is_busy)() {
-                    state.conn.set_busy(true);
-                    state.error(&format!("Connection Lost: {}", msg));
-                    cleanup_serial_connection(state).await;
-                    state.conn.set_busy(false); // Release busy lock
-                }
-            }
-        }
+        handle_read_completion(status, state, bridge, port).await;
     });
 }
 
