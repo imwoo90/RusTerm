@@ -110,17 +110,17 @@ fn test_device_alias_handling() {
         Some(0xEA60),
         Some(1),
         1,
-        Some("센서보드".to_string()),
+        Some("SensorBoard".to_string()),
     );
-    assert_eq!(dev.label, "센서보드 [CP2102 #1]");
-    assert!(dev.description.contains("센서보드"));
+    assert_eq!(dev.label, "SensorBoard [CP2102 #1]");
+    assert!(dev.description.contains("SensorBoard"));
 
     // Dynamic alias update
     let mut dev2 = build_device_info(Some(0x10C4), Some(0xEA60), Some(2), 2, None);
     assert_eq!(dev2.label, "CP2102 #2");
 
-    dev2.update_alias(Some("모터제어기".to_string()));
-    assert_eq!(dev2.label, "모터제어기 [CP2102 #2]");
+    dev2.update_alias(Some("MotorController".to_string()));
+    assert_eq!(dev2.label, "MotorController [CP2102 #2]");
 
     dev2.update_alias(None);
     assert_eq!(dev2.label, "CP2102 #2");

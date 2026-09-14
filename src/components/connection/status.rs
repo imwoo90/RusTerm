@@ -13,7 +13,7 @@ fn ModalHeader(onclose: EventHandler<()>) -> Element {
         div { class: "flex items-center justify-between border-b border-[#2a2e33] pb-3",
             div { class: "flex items-center gap-2",
                 span { class: "material-symbols-outlined text-emerald-500 text-[20px]", "edit_note" }
-                h3 { class: "text-sm font-bold text-white tracking-wide", "기기 별칭 설정" }
+                h3 { class: "text-sm font-bold text-white tracking-wide", "Set Device Alias" }
             }
             button {
                 class: "text-gray-400 hover:text-white transition-colors text-lg leading-none",
@@ -34,14 +34,14 @@ fn ModalBody(
     rsx! {
         div { class: "flex flex-col gap-1.5",
             p { class: "text-xs text-gray-400",
-                "동일한 칩셋의 여러 포트를 직관적으로 구별할 수 있도록 고유 별칭을 지정합니다."
+                "Assign a custom alias to easily distinguish between multiple ports."
             }
             p { class: "text-[11px] text-gray-500 font-mono", "{description}" }
         }
         input {
             class: "w-full px-3 py-2 bg-[#0d0e10] border border-[#2a2e33] rounded-lg text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition-colors",
             r#type: "text",
-            placeholder: "예: COM3, 센서 모듈, 메인보드",
+            placeholder: "e.g. COM3, Sensor Board, Motor Controller",
             value: "{alias_text}",
             oninput: move |e| alias_text.set(e.value()),
             onkeydown: move |e| {
@@ -66,18 +66,18 @@ fn ModalFooter(
             button {
                 class: "px-3 py-1.5 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors",
                 onclick: move |_| onreset.call(()),
-                "초기화"
+                "Reset"
             }
             div { class: "flex items-center gap-2",
                 button {
                     class: "px-3 py-1.5 text-xs text-gray-400 hover:text-white transition-colors",
                     onclick: move |_| onclose.call(()),
-                    "취소"
+                    "Cancel"
                 }
                 button {
                     class: "px-3 py-1.5 text-xs font-bold bg-emerald-500 text-black hover:bg-emerald-400 rounded-lg transition-colors shadow-md",
                     onclick: move |_| onsave.call(()),
-                    "저장"
+                    "Save"
                 }
             }
         }
@@ -133,11 +133,19 @@ fn DisconnectedBadge() -> Element {
 #[component]
 fn ConnectedBadge(info: SerialDeviceInfo, onclick: EventHandler<()>) -> Element {
     let is_sim = info.label == "Simulation";
-    let border = if is_sim { "border-yellow-500/30" } else { "border-emerald-500/30 hover:border-emerald-500/60 cursor-pointer group" };
+    let border = if is_sim {
+        "border-yellow-500/30"
+    } else {
+        "border-emerald-500/30 hover:border-emerald-500/60 cursor-pointer group"
+    };
     let icon = if is_sim { "bug_report" } else { "usb" };
     let icon_color = if is_sim { "text-yellow-500" } else { "text-emerald-500" };
     let text_color = if is_sim { "text-yellow-400" } else { "text-emerald-400" };
-    let tooltip = if is_sim { info.description.clone() } else { format!("{} (클릭하여 별칭 수정)", info.description) };
+    let tooltip = if is_sim {
+        info.description.clone()
+    } else {
+        format!("{} (Click to edit alias)", info.description)
+    };
 
     rsx! {
         div {
@@ -193,7 +201,7 @@ pub fn PortStatus(device_info: Option<SerialDeviceInfo>) -> Element {
                     let mut updated = info_save.clone();
                     updated.update_alias(Some(alias));
                     { state.conn.device_info }.set(Some(updated));
-                    state.success("기기 별칭이 저장되었습니다.");
+                    state.success("Device alias saved");
                     show_alias_modal.set(false);
                 },
                 onreset: move |_| {
@@ -206,7 +214,7 @@ pub fn PortStatus(device_info: Option<SerialDeviceInfo>) -> Element {
                     let mut updated = info_reset.clone();
                     updated.update_alias(None);
                     { state.conn.device_info }.set(Some(updated));
-                    state.info("기기 별칭이 초기화되었습니다.");
+                    state.info("Device alias reset");
                     show_alias_modal.set(false);
                 },
             }
