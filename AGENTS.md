@@ -48,7 +48,20 @@ To keep files compact, modular, and optimized for LLM context windows, strict ar
 
 ---
 
-## 3. Development Workflow (TDD & Quality Verification)
+## 3. Standard Quality & Safety Lints (Enforced via `Cargo.toml [lints]`)
+
+Leveraging Rust 1.74+ package-level lint declarations, standard compiler and Clippy lints are elevated to hard compilation errors:
+
+1. **`missing_docs = "deny"` (Rust Standard Lint)**:
+   * Enforces the Living LLM-Wiki contract: every public struct, enum, function, trait, and type alias must have outer doc comments (`///`).
+2. **`clippy::unwrap_used = "deny"` & `clippy::expect_used = "deny"` (Clippy Standard Lints)**:
+   * Prohibits `.unwrap()` and `.expect()` in production code, enforcing typed error handling (`Result<T, E>` and `?`).
+   * *Test Exception*: In tests (`tests/` or `#[cfg(test)]`), you may annotate `#![allow(clippy::unwrap_used, clippy::expect_used)]` or return `Result<(), Box<dyn std::error::Error>>` to streamline assertions.
+   * Editor real-time checking is configured via `.vscode/settings.json` (`"rust-analyzer.check.command": "clippy"`).
+
+---
+
+## 4. Development Workflow (TDD & Quality Verification)
 
 When contributing or adding features, always adhere to the verification cycle:
 
@@ -58,8 +71,8 @@ When contributing or adding features, always adhere to the verification cycle:
    # 1. Check compiler linter rules (Agent-Native constraints)
    cargo check
 
-   # 2. Run unit tests and doctests
-   cargo test
+   # 2. Run unit tests and integration tests
+   cargo test --all-targets
 
    # 3. Verify doc link integrity and ensure zero warnings
    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps
@@ -72,14 +85,14 @@ When contributing or adding features, always adhere to the verification cycle:
 
 ---
 
-## 4. AI Agent Navigation Guide
+## 5. AI Agent Navigation Guide
 
 For AI Agents interacting with this repository:
 
 1. **Entry Points**: Start with `AGENTS.md` (this file) and `README.md` to grasp project guidelines and compilation rules.
 2. **Module Indexing**: Treat `mod.rs` in any directory as the module's architecture map. Read the `//!` header to understand submodules and dependencies before diving into child files.
 3. **Graph Traversal via Rustdoc Links**: Follow compile-checked intra-doc links (`[Type]`) to traverse dependencies deterministically.
-4. **Pre-commit Verification**: Never consider a task complete without passing `cargo check`, `cargo test`, `cargo doc`, and `npm run test:e2e`.
+4. **Pre-commit Verification**: Never consider a task complete without passing `cargo check`, `cargo test`, `cargo clippy`, `cargo doc`, and `npm run test:e2e`.
 
 ---
 

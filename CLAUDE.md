@@ -15,11 +15,17 @@ This repository adheres to the **Agent-Native** architecture and compiler-enforc
    - **Function Budget**: Every function (production or test) must be under **2,000 characters** (~40–50 lines). Decompose large functions into single-responsibility helpers.
    - **No Escape Hatches & Anti-Code-Golfing**: Limits cannot be bypassed via `#[allow(...)]`. Never shorten variable names or cram logic into macros to bypass character limits. Use clean modular decomposition.
 
-3. **Required Verification Suite**:
+3. **Public API Contracts & Panic-Free Guarantee (`Cargo.toml [lints]`)**:
+   - Every public item (`pub fn`, `pub struct`, `pub enum`, `pub trait`, `pub type`, and public inherent method) must have `///` doc comments with executable doctests (`missing_docs = "deny"`).
+   - **Never** use `.unwrap()` or `.expect()` in production code. Use typed `Result<T, E>` and `?` error propagation (`clippy::unwrap_used = "deny"`).
+   - *Test Exception*: In tests (`tests/` or `#[cfg(test)]`), you may annotate `#![allow(clippy::unwrap_used, clippy::expect_used)]` or return `Result<(), Box<dyn std::error::Error>>` to streamline assertions.
+
+4. **Required Verification Suite**:
    Never consider a task complete without executing and passing:
    ```bash
    cargo check
-   cargo test
+   cargo test --all-targets
+   cargo clippy --all-targets
    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps
    npm run test:e2e
    ```

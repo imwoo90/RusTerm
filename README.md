@@ -1,8 +1,9 @@
 # 📡 RusTerm (Built with Rust & Dioxus)
 
-![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white)
+[![Rust 2024](https://img.shields.io/badge/Rust-2024_Edition-orange?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org)
 ![Dioxus](https://img.shields.io/badge/Dioxus-0.7-blue?style=for-the-badge)
 ![WASM](https://img.shields.io/badge/WebAssembly-purple?style=for-the-badge)
+[![Agent-Native](https://img.shields.io/badge/Architecture-Agent--Native-emerald?style=for-the-badge)](AGENTS.md)
 ![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=for-the-badge)
 ![Version](https://img.shields.io/badge/version-3.3.0-blue?style=for-the-badge)
 
