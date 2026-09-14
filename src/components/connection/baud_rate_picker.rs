@@ -1,7 +1,10 @@
-//! Serial baud rate selection dropdown component.
+//! # Baud Rate Picker Dropdown
 //!
-//! Renders standard serial communication baud rates (e.g., 9600, 115200, 921600) with custom input
-//! support, updating shared serial configuration state before connection initiation or hot-reloading active ports.
+//! ## Overview
+//! Provides a customizable selection dropdown for standard serial baud rates (9600 to 921600 bps) and custom user-entered communication speeds.
+//!
+//! ## Search Tags
+//! #baud-rate, #picker, #dropdown, #serial-speed
 
 use crate::components::ui::CustomInputSelect;
 use crate::hooks::use_serial_controller;

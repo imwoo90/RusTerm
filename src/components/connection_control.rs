@@ -1,7 +1,10 @@
-//! Connection toolbar controls for Web Serial lifecycle management.
+//! # Connection Control Toolbar
 //!
-//! Hosts the port status indicator, baud rate picker, settings toggle button,
-//! simulation stream trigger, and connect/disconnect execution button.
+//! ## Overview
+//! Hosts the port status indicator, baud rate picker, settings toggle button, simulation stream trigger, and connect/disconnect execution button for Web Serial lifecycle management.
+//!
+//! ## Search Tags
+//! #connection-control, #toolbar, #serial-port, #baud-rate, #simulation
 
 use crate::components::connection::{BaudRatePicker, PortStatus, SettingsDropdown};
 use crate::components::ui::IconButton;

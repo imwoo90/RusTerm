@@ -1,7 +1,10 @@
-//! Error types and error conversion logic for worker tasks.
+//! # Worker Domain Error Types
 //!
-//! Encapsulates OPFS filesystem errors, JS interop failures, regex errors, and storage faults
-//! into a unified [`LogError`] enum for structured error reporting.
+//! ## Overview
+//! Encapsulates OPFS filesystem errors, JS interop failures, regex errors, and storage faults into a unified Error enum for structured error reporting.
+//!
+//! ## Search Tags
+//! #error, #log-error, #result-types, #error-handling, #faults
 
 use std::fmt::Display;
 use wasm_bindgen::prelude::*;

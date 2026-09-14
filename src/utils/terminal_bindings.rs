@@ -1,7 +1,10 @@
-//! WebAssembly extern bindings for xterm.js and addons.
+//! # xterm.js WebAssembly Bindings
 //!
-//! Provides type-safe Rust bindings for the external `xterm.js` Terminal instance,
-//! FitAddon, and terminal event listeners.
+//! ## Overview
+//! Provides type-safe Rust extern bindings for the external xterm.js Terminal instance, FitAddon, and terminal event listeners.
+//!
+//! ## Search Tags
+//! #terminal-bindings, #xtermjs, #wasm, #fit-addon, #extern-c
 
 use wasm_bindgen::prelude::*;
 

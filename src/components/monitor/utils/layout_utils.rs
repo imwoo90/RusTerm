@@ -1,7 +1,10 @@
-//! Mathematical layout calculation utilities for virtual scrolling.
+//! # Monitor Layout Math Utilities
 //!
-//! Computes total content heights, offset translations, and scale factors to map large line indices
-//! within browser DOM height limitations without visual distortion.
+//! ## Overview
+//! Calculates virtual viewport dimensions, scroll thumb offsets, row heights, and line indexing boundaries for smooth virtualized scrolling.
+//!
+//! ## Search Tags
+//! #layout-utils, #scroll-math, #viewport-dimensions, #row-height
 
 use crate::config::HEADER_OFFSET;
 use dioxus::prelude::*;

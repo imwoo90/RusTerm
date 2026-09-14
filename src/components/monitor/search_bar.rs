@@ -1,7 +1,10 @@
-//! Search and filter bar component for monitor log inspection.
+//! # Monitor Search & Filter Bar
 //!
-//! Provides a real-time text input with inline toggles for case sensitivity (Aa),
-//! regular expressions (.*), and inverted matching (!), updating shared log filter state.
+//! ## Overview
+//! Provides an incremental regex and keyword search bar with match count indicators, navigation buttons, and invert filter toggles.
+//!
+//! ## Search Tags
+//! #search-bar, #regex-search, #filter, #match-navigation
 
 use crate::components::ui::FilterOptionButton;
 use crate::state::AppState;

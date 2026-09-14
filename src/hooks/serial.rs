@@ -1,7 +1,10 @@
-//! Web Serial connection controller and async lifecycle hook.
+//! # Web Serial Connection Hook
 //!
-//! Manages opening, configuring, reading, and closing browser Web Serial ports,
-//! bridging incoming byte streams to Web Workers and UI terminals.
+//! ## Overview
+//! Manages opening, configuring, reading, and closing browser Web Serial ports, bridging incoming byte streams to Web Workers and UI terminals.
+//!
+//! ## Search Tags
+//! #serial-hook, #web-serial, #port-lifecycle, #stream-reader, #hardware
 
 use crate::hooks::{use_worker_controller, WorkerController};
 use crate::state::AppState;

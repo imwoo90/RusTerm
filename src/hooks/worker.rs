@@ -1,7 +1,10 @@
-//! Web Worker bridge and messaging controller hook.
+//! # Web Worker Bridge Hook
 //!
-//! Spawns and manages the dedicated Web Worker, transmitting chunk ingestion requests,
-//! search filter commands, and receiving batched log lines for display.
+//! ## Overview
+//! Spawns and manages the dedicated Web Worker, transmitting chunk ingestion requests, search filter commands, and receiving batched log lines for display.
+//!
+//! ## Search Tags
+//! #worker-hook, #web-worker, #ipc-bridge, #batch-delivery, #background-thread
 
 use crate::state::AppState;
 use crate::types::WorkerMsg;

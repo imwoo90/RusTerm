@@ -1,7 +1,10 @@
-//! Web Worker lifecycle initialization and bootstrap.
+//! # Web Worker Bootstrap & Lifecycle
 //!
-//! Initializes the dedicated worker global scope, locates application script bundles in the DOM,
-//! and attaches message listener event loops.
+//! ## Overview
+//! Initializes the dedicated worker global scope, locates application script bundles in the DOM, and attaches message listener event loops.
+//!
+//! ## Search Tags
+//! #lifecycle, #worker-bootstrap, #script-loader, #event-loop, #wasm-worker
 
 use crate::worker::dispatcher;
 use crate::worker::state::WorkerState;

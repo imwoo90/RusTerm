@@ -1,7 +1,10 @@
-//! Quick command macro persistent storage manager.
+//! # Quick Command Macro Storage Manager
 //!
-//! Manages serial macro definitions, labels, hexadecimal flags, and line endings,
-//! persisting user-configured quick commands in browser storage.
+//! ## Overview
+//! Manages persistent storage and serialization for user-defined macro buttons, saving command strings, labels, and shortcuts to browser local storage.
+//!
+//! ## Search Tags
+//! #macros, #macro-storage, #local-storage, #command-shortcuts, #persistence
 
 use serde::{Deserialize, Serialize};
 #[cfg(target_arch = "wasm32")]

@@ -1,7 +1,10 @@
-//! Asynchronous log searching and filtering engine for worker threads.
+//! # Asynchronous Log Search Engine
 //!
-//! Scans historical log buffers in batches using configured [`ActiveFilterBuilder`] patterns,
-//! yielding periodically to avoid blocking the Web Worker event loop.
+//! ## Overview
+//! Scans historical log buffers in batches using configured query filters, yielding periodically to avoid blocking the Web Worker event loop.
+//!
+//! ## Search Tags
+//! #search, #regex-search, #batched-scan, #yield-loop, #filter-engine
 
 use crate::worker::error::LogError;
 use crate::worker::repository::index::{ActiveFilterBuilder, LineRange};

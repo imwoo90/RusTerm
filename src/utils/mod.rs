@@ -1,14 +1,13 @@
 //! # Utility Subsystem (index.md)
 //!
 //! ## Overview
-//! General helper utilities covering terminal ANSI parsing, device identification,
-//! hex/text format conversions, command history, and Web Serial API interop bindings.
+//! General helper utilities covering terminal ANSI parsing, device identification, hex/text format conversions, command history, and Web Serial API interop bindings.
 //!
 //! ## Submodules
 //! - [`ansi_decoder`]: Fast ANSI terminal color and styling escape code parser.
 //! - [`device_id`]: USB VID/PID hardware chip identification and user-defined port aliases.
 //! - [`file_save`]: Browser file download triggers for exported log files.
-//! - [`mod@format`]: Bidirectional text-to-hex formatting, hex parsing, and worker message senders.
+//! - [`format`](mod@format): Bidirectional text-to-hex formatting, hex parsing, and worker message senders.
 //! - [`history`]: FIFO command history ring buffer with deduplication and persistence.
 //! - [`macros`]: User-configurable macro buttons with keybindings and hex/ascii transmission.
 //! - [`scroll`]: Virtual scrolling window index and viewport offset math.

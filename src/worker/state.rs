@@ -1,7 +1,10 @@
-//! Web Worker internal mutable runtime state container.
+//! # Worker Runtime State Container
 //!
-//! Maintains worker global references, storage handles, active search IDs, and debounce timers
-//! for periodic UI batch updates.
+//! ## Overview
+//! Maintains worker global references, storage handles, active search IDs, and debounce timers for periodic UI batch updates.
+//!
+//! ## Search Tags
+//! #worker-state, #thread-local, #storage-handles, #debounce-timers
 
 use crate::worker::processor::LogProcessor;
 use crate::worker::repository::storage::{get_opfs_root, init_opfs_session, new_session};

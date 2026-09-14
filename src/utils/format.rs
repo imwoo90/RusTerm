@@ -1,7 +1,10 @@
-//! Text formatting and hexadecimal string parsing utilities.
+//! # Data Format & Hex Conversion Utilities
 //!
-//! Provides robust formatting functions for hex dump displays, byte slice conversions,
-//! and user input sanitization.
+//! ## Overview
+//! Provides bidirectional conversion between ASCII text and hexadecimal byte strings, formatted byte dumps, and worker message encoding.
+//!
+//! ## Search Tags
+//! #format, #hex-conversion, #byte-dump, #ascii, #serialization
 
 // function format_hex removed
 

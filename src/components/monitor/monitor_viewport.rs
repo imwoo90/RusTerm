@@ -1,7 +1,10 @@
-//! Virtual scrolling console viewport component.
+//! # Virtualized Monitor Viewport
 //!
-//! Renders virtualized log rows within a dynamic translation container,
-//! handles console keyboard event passthrough to serial ports, and tracks scroll sentinels.
+//! ## Overview
+//! Implements the high-speed virtualized scrolling viewport that only mounts DOM elements for visible lines, maintaining 60fps rendering over large histories.
+//!
+//! ## Search Tags
+//! #viewport, #virtual-scroll, #dom-recycling, #high-performance
 
 use crate::components::monitor::monitor_log_line::MonitorLogLine;
 use crate::config::{CONSOLE_BOTTOM_PADDING, CONSOLE_TOP_PADDING};

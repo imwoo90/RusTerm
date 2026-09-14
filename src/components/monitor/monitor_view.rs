@@ -1,7 +1,10 @@
-//! High-performance virtualized log monitor container.
+//! # Monitor View Container
 //!
-//! Coordinates the virtual scroll viewport, search bar, toolbar, and highlight chips,
-//! subscribing to Web Worker chunk batches for real-time log visualization.
+//! ## Overview
+//! Combines the virtualized scroll viewport, monitor toolbar, search filter bar, and command transmit strip into a unified serial monitor interface.
+//!
+//! ## Search Tags
+//! #monitor-view, #container, #layout, #serial-monitor
 
 use crate::components::monitor::hooks::effects::{use_search_sync, use_settings_sync};
 use crate::components::monitor::monitor_header::MonitorHeader;

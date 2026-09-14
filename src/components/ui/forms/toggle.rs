@@ -1,7 +1,10 @@
-//! Animated toggle switch component for application settings.
+//! # Toggle Switch Component
 //!
-//! Provides an accessible, animated pill-style toggle switch for boolean settings.
-//! Features active state glow effects and responsive transitions.
+//! ## Overview
+//! Implements an animated boolean toggle switch control with customizable labels, active indicators, and disabled states.
+//!
+//! ## Search Tags
+//! #toggle, #switch, #boolean-control, #animated
 
 use dioxus::prelude::*;
 

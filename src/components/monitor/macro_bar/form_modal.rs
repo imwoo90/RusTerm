@@ -1,7 +1,10 @@
-//! Modal dialog component for creating and updating quick command macros.
+//! # Macro Configuration Modal
 //!
-//! Provides inputs for label, command string, HEX toggle, and line ending selection.
-//! Validates hexadecimal input before saving and handles local state cleanup on submit or cancellation.
+//! ## Overview
+//! Provides a modal dialog form for creating and editing quick command macros, including label names, command payloads, format types, and hotkeys.
+//!
+//! ## Search Tags
+//! #form-modal, #macro-editor, #dialog, #hotkeys
 
 use crate::components::ui::forms::CommandInputGroup;
 use crate::state::{AppState, LineEnding};

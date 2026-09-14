@@ -1,7 +1,10 @@
-//! Log line formatting strategies for worker processing.
+//! # Worker Log Line Formatter
 //!
-//! Defines the [`LogFormatterStrategy`] trait and implementations for PlainText and Hex formatters,
-//! adding timestamps and normalizing line lengths.
+//! ## Overview
+//! Defines log line formatting strategies for worker processing, adding timestamps and normalizing line lengths for plain text and hex modes.
+//!
+//! ## Search Tags
+//! #formatter, #log-formatting, #timestamps, #hex-mode, #line-normalizer
 
 use std::fmt::Write;
 

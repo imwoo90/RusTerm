@@ -1,7 +1,10 @@
-//! Color style utilities for highlight rules and tags.
+//! # Monitor Styling & Color Utilities
 //!
-//! Maps semantic color identifiers to corresponding Tailwind CSS border, hover,
-//! and text color classes for rendering tags and chips across the monitor interface.
+//! ## Overview
+//! Generates CSS color classes, hex background shades, and highlight style rules for log lines, severity levels, and tag chips.
+//!
+//! ## Search Tags
+//! #style, #colors, #highlights, #css-classes, #badges
 
 const COLOR_MAP: &[(&str, &str, &str)] = &[
     ("red", "border-red-500/30 hover:border-red-500/60", "text-red-400"),

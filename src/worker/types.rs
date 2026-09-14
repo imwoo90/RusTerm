@@ -1,6 +1,9 @@
-//! Worker messaging types and inter-thread IPC protocols.
+//! # Worker IPC Messaging Protocols
 //!
-//! Defines message schemas exchanged between the main UI thread and background Web Worker
-//! via postMessage serialization.
+//! ## Overview
+//! Defines message schemas exchanged between the main UI thread and background Web Worker via postMessage serialization.
+//!
+//! ## Search Tags
+//! #worker-types, #ipc-protocol, #message-schema, #post-message
 
 pub use crate::types::WorkerMsg;

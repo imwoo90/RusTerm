@@ -1,7 +1,10 @@
-//! Main application top header bar.
+//! # Application Top Header
 //!
-//! Hosts branding, mode switcher dropdown (Monitor Log Viewer vs xterm.js Terminal),
-//! and the primary connection controls toolbar.
+//! ## Overview
+//! Hosts application branding, the view mode switcher dropdown (Monitor Log Viewer vs xterm.js Terminal), and the primary connection controls toolbar.
+//!
+//! ## Search Tags
+//! #header, #branding, #mode-switcher, #navigation, #ui
 
 use crate::components::connection_control::ConnectionControl;
 use crate::config::APP_SUBTITLE;

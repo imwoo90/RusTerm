@@ -1,7 +1,10 @@
-//! Core domain types and common data structures for RusTerm.
+//! # Core Domain Types & Models
 //!
-//! Contains shared enumerations and helper models used across both UI presentation layers
-//! and background worker communication channels.
+//! ## Overview
+//! Contains shared enumerations and helper models used across both UI presentation layers and background worker communication channels.
+//!
+//! ## Search Tags
+//! #types, #models, #domain, #enums, #serial-types
 
 use serde::{Deserialize, Serialize};
 use std::fmt;

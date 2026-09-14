@@ -1,7 +1,10 @@
-//! Individual virtualized log line rendering component.
+//! # Virtualized Log Line Renderer
 //!
-//! Efficiently renders a single log entry, formatting ANSI terminal colors, timestamp prefixes,
-//! and applying keyword highlight overlays with minimal DOM overhead.
+//! ## Overview
+//! Renders individual log lines with precise timestamping, line numbering, ANSI color styling segments, and custom tag highlights.
+//!
+//! ## Search Tags
+//! #log-line, #virtualized-line, #timestamp, #ansi-styling, #renderer
 
 use crate::config::line_height_from_font;
 use crate::state::{AppState, Highlight};

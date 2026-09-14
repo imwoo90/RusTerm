@@ -1,7 +1,10 @@
-//! Header metrics and status indicator for monitor view.
+//! # Monitor Viewport Header
 //!
-//! Displays line count statistics, OPFS storage persistence status, and active filter indicators
-//! directly above the virtualized log stream.
+//! ## Overview
+//! Displays viewport statistics including total line counts, filtered match counters, memory consumption, and quick buffer clearance buttons.
+//!
+//! ## Search Tags
+//! #monitor-header, #stats, #line-counter, #metrics, #clear-buffer
 
 use crate::components::ui::console::{
     ConsoleSeparator, ConsoleToggleButton, UnifiedConsoleToolbar,

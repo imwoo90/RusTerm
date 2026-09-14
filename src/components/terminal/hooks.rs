@@ -1,7 +1,10 @@
-//! Initialization and event lifecycle hooks for xterm.js terminal emulation.
+//! # Terminal Lifecycle Hooks
 //!
-//! Configures terminal DOM mount, terminal visual options, fit addon resizing,
-//! and throttled scroll offset listeners to track viewport bottom states.
+//! ## Overview
+//! Provides reactive hooks for mounting xterm.js terminal instances, attaching Web Serial I/O streams, handling DOM resize events, and cleaning up terminal bindings.
+//!
+//! ## Search Tags
+//! #terminal-hooks, #xtermjs, #lifecycle, #streams, #resize
 
 use crate::state::AppState;
 use crate::utils::terminal_bindings::*;

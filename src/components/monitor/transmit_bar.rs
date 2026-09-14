@@ -1,7 +1,10 @@
-//! Command transmit bar component for sending serial data.
+//! # Serial Transmit Bar
 //!
-//! Provides the primary serial data entry bar with local history recall (ArrowUp/ArrowDown),
-//! Hex/ASCII encoding, line termination appending, and local echo simulation.
+//! ## Overview
+//! Renders the bottom command entry bar for sending ASCII text, escape sequences, or raw hexadecimal bytes directly to connected serial devices.
+//!
+//! ## Search Tags
+//! #transmit-bar, #send-command, #hex-transmit, #serial-tx
 
 use crate::components::ui::forms::CommandInputGroup;
 use crate::state::{AppState, LineEnding};

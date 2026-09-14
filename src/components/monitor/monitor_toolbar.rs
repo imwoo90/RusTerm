@@ -1,7 +1,10 @@
-//! Action toolbar for log monitor view.
+//! # Monitor Control Toolbar
 //!
-//! Hosts font size adjustments, timestamp toggles, autoscroll controls, clear console triggers,
-//! and log export operations.
+//! ## Overview
+//! Provides quick action controls for toggling autoscroll, line wrapping, hex/ascii display modes, pause stream, and log export downloads.
+//!
+//! ## Search Tags
+//! #monitor-toolbar, #actions, #autoscroll, #hex-mode, #line-wrap
 
 use crate::components::monitor::{HighlightButton, SearchBar, TransmitBar};
 use dioxus::prelude::*;

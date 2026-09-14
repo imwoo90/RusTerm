@@ -1,7 +1,10 @@
-//! Custom dropdown select and combo-box input components.
+//! # Select Dropdown Component
 //!
-//! Provides styled dropdown selectors (`CustomSelect`) and combo-box input selectors (`CustomInputSelect`)
-//! with custom user text input, smooth animations, and click-outside dismissal.
+//! ## Overview
+//! Provides a styled generic select dropdown component supporting keyboard navigation, custom option renderers, and accessible focus states.
+//!
+//! ## Search Tags
+//! #select, #dropdown, #combo-box, #form-control
 
 use dioxus::prelude::*;
 

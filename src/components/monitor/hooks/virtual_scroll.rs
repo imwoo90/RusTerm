@@ -1,7 +1,10 @@
-//! Virtual scrolling orchestration hook for high-frequency serial logs.
+//! # Virtual Scroll Calculation Hook
 //!
-//! Coordinates element dimensions, dynamic scale factors, scroll offset tracking,
-//! and data window requests to sustain 60fps rendering over millions of log lines.
+//! ## Overview
+//! Maintains state for the virtual scrolling window, computing visible start/end indices and overscan buffer margins based on scroll offsets.
+//!
+//! ## Search Tags
+//! #virtual-scroll, #window-indices, #overscan, #scroll-offset
 
 use crate::components::monitor::hooks::data_request::use_data_request;
 use crate::components::monitor::utils::layout_utils::{

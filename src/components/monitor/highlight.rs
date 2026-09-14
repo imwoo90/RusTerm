@@ -1,7 +1,10 @@
-//! Highlight rule configuration modal and active tag chips.
+//! # Log Highlight Configuration
 //!
-//! Renders keyword highlight rules and colorful removable tag chips that highlight matches
-//! in real time across streaming monitor lines.
+//! ## Overview
+//! Manages highlight rule configuration modals, color tag badges, regex pattern matchers, and line text decoration styling.
+//!
+//! ## Search Tags
+//! #highlight, #rules, #tags, #color-accents, #regex-matching
 
 use crate::components::monitor::utils::style::get_highlight_classes;
 use crate::components::ui::{IconButton, PanelHeader};

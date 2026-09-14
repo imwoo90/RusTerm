@@ -1,7 +1,10 @@
-//! Low-level Web Serial API bindings and stream readers.
+//! # Web Serial API JavaScript Bindings
 //!
-//! Directly interacts with `web_sys::SerialPort` and readable/writable streams,
-//! executing async read loops with error recovery and lock management.
+//! ## Overview
+//! Low-level Web Serial API bindings and stream readers wrapping browser JavaScript navigator.serial calls in type-safe Rust abstractions.
+//!
+//! ## Search Tags
+//! #serial-api, #web-serial, #js-sys, #wasm-bindgen, #hardware-io
 
 use serde::Serialize;
 use wasm_bindgen::prelude::*;

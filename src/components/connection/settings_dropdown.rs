@@ -1,7 +1,10 @@
-//! Serial port parameters dropdown settings panel.
+//! # Serial Port Settings Dropdown
 //!
-//! Provides interactive configuration for serial communication parameters:
-//! data bits (5, 6, 7, 8), stop bits (1, 2), parity (None, Even, Odd), and flow control (None, Hardware).
+//! ## Overview
+//! Provides a modal dropdown configuration panel for adjusting serial port parameters such as data bits, stop bits, parity checking, and hardware/software flow control.
+//!
+//! ## Search Tags
+//! #settings, #serial-parameters, #parity, #flow-control, #stop-bits
 
 use crate::components::ui::CustomSelect;
 use crate::state::AppState;

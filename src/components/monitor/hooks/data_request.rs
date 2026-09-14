@@ -1,7 +1,10 @@
-//! Virtual scroll data window request hook.
+//! # Log Data Request Hook
 //!
-//! Dispatches window range requests to the Web Worker backend based on current viewport offsets,
-//! ensuring only visible lines are transferred to the main UI thread.
+//! ## Overview
+//! Coordinates asynchronous range requests to the background Web Worker, fetching cached log line slices and search matches for the visible viewport window.
+//!
+//! ## Search Tags
+//! #data-request, #worker-ipc, #log-fetching, #range-query
 
 use dioxus::prelude::*;
 

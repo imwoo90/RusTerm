@@ -1,7 +1,10 @@
-//! DOM lifecycle side-effects for monitor viewport.
+//! # Monitor DOM Effects Hook
 //!
-//! Handles automatic scroll positioning, element measurements, and responsive recalculations
-//! upon log additions or window resize events.
+//! ## Overview
+//! Manages reactive DOM lifecycle effects such as pinning scroll to bottom during autoscroll, synchronizing resize observers, and handling scroll wheel momentum.
+//!
+//! ## Search Tags
+//! #effects, #autoscroll, #dom-effects, #resize-observer
 
 use crate::hooks::WorkerController;
 use crate::state::AppState;

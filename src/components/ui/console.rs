@@ -1,7 +1,10 @@
-//! Outer console framing container and border styling.
+//! # Console Framing Container
 //!
-//! Provides the primary dark-themed bounding box and background styling for log viewports,
-//! terminal sessions, and scrollable monitor panels.
+//! ## Overview
+//! Provides outer framing, border styling, header bars, and responsive flex containers for terminal viewports and serial log monitors.
+//!
+//! ## Search Tags
+//! #console, #framing, #layout, #borders, #styling
 
 use dioxus::prelude::*;
 

@@ -1,7 +1,10 @@
-//! Browser file download and save utility.
+//! # Browser File Download Utility
 //!
-//! Creates transient Blob URLs and triggers browser file save dialogs for exporting logs
-//! and session recordings to local disk.
+//! ## Overview
+//! Triggers browser file downloads via DOM Blob URL creation and temporary link clicks for saving exported log sessions to user disk.
+//!
+//! ## Search Tags
+//! #file-save, #download, #blob, #export, #browser-fs
 
 use wasm_bindgen::prelude::*;
 

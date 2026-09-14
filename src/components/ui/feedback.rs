@@ -1,7 +1,10 @@
-//! Feedback notifications and toast alert components.
+//! # Feedback & Toast Notifications
 //!
-//! Displays transient floating notification banners for successes, warnings, and error messages
-//! triggered by serial communication events or user interactions.
+//! ## Overview
+//! Renders user feedback notifications, status toast popups, auto-dismissing error alerts, and informational banners.
+//!
+//! ## Search Tags
+//! #feedback, #toast, #notifications, #alerts, #banners
 
 use dioxus::prelude::*;
 

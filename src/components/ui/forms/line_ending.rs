@@ -1,7 +1,10 @@
-//! Line ending selector component for serial communication.
+//! # Line Ending Selector
 //!
-//! Renders horizontal segmented buttons for switching between NONE/RAW, LF, CR, and CRLF line endings.
-//! Provides distinct labels and active styles depending on whether it is configured for RX or TX streams.
+//! ## Overview
+//! Renders a dropdown selector for configuring serial line termination characters including None, CR, LF, and CRLF sequences.
+//!
+//! ## Search Tags
+//! #line-ending, #cr, #lf, #crlf, #serial-protocol
 
 use crate::state::LineEnding;
 use dioxus::prelude::*;

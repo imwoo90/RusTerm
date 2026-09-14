@@ -1,7 +1,10 @@
-//! Context menu component for the quick command macro bar.
+//! # Macro Context Menu
 //!
-//! Provides edit and delete actions triggered by right-clicking on macro buttons.
-//! It automatically positions itself relative to cursor coordinates and handles click-outside dismissal.
+//! ## Overview
+//! Renders right-click context menus for individual macro buttons, enabling quick editing, duplicating, or removing command macros.
+//!
+//! ## Search Tags
+//! #context-menu, #macro-actions, #edit-macro, #delete-macro
 
 use crate::state::LineEnding;
 use crate::utils::MacroStorage;

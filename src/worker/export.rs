@@ -1,7 +1,10 @@
-//! Log data export serialization worker logic.
+//! # Log Export Serialization Worker
 //!
-//! Streams persisted logs from OPFS storage and formats them into plain text or hex dumps
-//! for file download by the main thread.
+//! ## Overview
+//! Streams persisted logs from OPFS storage and formats them into plain text or hex dumps for file download by the main thread.
+//!
+//! ## Search Tags
+//! #export, #log-streaming, #file-download, #plain-text, #hex-dump
 
 use crate::config::EXPORT_CHUNK_SIZE;
 use crate::worker::error::LogError;

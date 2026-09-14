@@ -1,6 +1,10 @@
-//! Asynchronous port resolver and alias persistence for Web Serial API.
+//! # Serial Device Port Resolver
 //!
-//! Queries authorized browser serial ports to disambiguate identical chipsets and manages user alias storage.
+//! ## Overview
+//! Queries authorized browser serial ports to disambiguate identical chipsets, resolves vendor information, and manages user alias storage.
+//!
+//! ## Search Tags
+//! #resolver, #port-disambiguation, #user-alias, #web-serial
 
 use super::{identify_device, SerialDeviceInfo};
 

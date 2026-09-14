@@ -1,6 +1,10 @@
-//! Vendor lookup tables and chipset metadata mappings for USB-to-UART serial bridges.
+//! # USB Serial Vendor Database
 //!
-//! Maps vendor IDs (VID) and product IDs (PID) to human-readable hardware identifiers and chip descriptions.
+//! ## Overview
+//! Provides static lookup tables and chipset metadata mappings for USB-to-UART serial bridges such as FTDI, CP210x, CH340, and STM32.
+//!
+//! ## Search Tags
+//! #vendors, #usb-bridges, #ftdi, #cp210x, #ch340, #hardware-db
 
 fn lookup_silabs(pid: Option<u16>) -> (&'static str, &'static str) {
     match pid {

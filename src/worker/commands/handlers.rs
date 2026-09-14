@@ -1,7 +1,10 @@
-//! Execution handlers for worker commands.
+//! # Worker Command Execution Handlers
 //!
-//! Implements specific handler routines executing file clearance, filter updates,
-//! search cancellations, and status inquiries within the worker.
+//! ## Overview
+//! Implements specific handler routines executing file clearance, filter updates, search cancellations, and status inquiries within the worker.
+//!
+//! ## Search Tags
+//! #command-handlers, #execution, #clear-logs, #filter-updates, #search-cancellation
 
 use crate::worker::commands::command::WorkerCommand;
 use crate::worker::error::LogError;

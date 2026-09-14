@@ -1,8 +1,14 @@
-//! Quick command macro bar module for RusTerm.
+//! # Macro Bar Catalog (index.md)
 //!
-//! Provides a persistent horizontal strip of quick-access macro buttons at the bottom of the screen.
-//! Users can trigger pre-configured serial commands with a single click, add new macros via "+",
-//! and edit or delete existing entries through context menus and modal dialogs.
+//! ## Overview
+//! Provides a persistent horizontal strip of quick-access macro buttons for triggering pre-configured serial commands, adding macros, and editing entries.
+//!
+//! ## Submodules
+//! - [`context_menu`]: Context menu for editing, reordering, or deleting existing macro buttons.
+//! - [`form_modal`]: Modal dialog for creating and editing macro titles, commands, and keybindings.
+//!
+//! ## Search Tags
+//! #macro-bar, #quick-commands, #macros, #shortcuts
 
 mod context_menu;
 mod form_modal;

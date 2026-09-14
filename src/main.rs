@@ -1,7 +1,19 @@
-//! Application entry point for RusTerm WebAssembly serial monitor and terminal.
+//! # RusTerm Application Entry Point
 //!
-//! Handles Web Worker bootstrapping, DOM splash screen removal, and mounts the root Dioxus application.
-//! Acts as the top-level coordination root for reactive state and Web Serial communication.
+//! ## Overview
+//! Bootstraps the Web Worker background thread, manages DOM splash screen transitions, and mounts the root Dioxus reactive UI tree for Web Serial communication.
+//!
+//! ## Submodules
+//! - [`components`]: High-level UI component tree including headers, toolbars, monitors, and terminals.
+//! - [`config`]: Global configuration constants, UI limits, and virtual scrolling thresholds.
+//! - [`hooks`]: Reactive state hooks for Web Serial hardware streams and Web Worker IPC bridges.
+//! - [`state`]: Application-wide reactive state management and global context signals.
+//! - [`types`]: Core domain types, shared models, and serialization envelopes.
+//! - [`utils`]: Utility functions for ANSI decoding, formatting, device IDs, and browser APIs.
+//! - [`worker`]: High-throughput background Web Worker handling serial ingestion and OPFS persistence.
+//!
+//! ## Search Tags
+//! #main, #entry-point, #dioxus, #web-worker, #web-serial
 
 use dioxus::prelude::*;
 

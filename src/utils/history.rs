@@ -1,7 +1,10 @@
-//! Persistent command history manager backed by local storage.
+//! # Command History Manager
 //!
-//! Stores previously executed commands in browser local storage, providing terminal-style
-//! ArrowUp and ArrowDown recall across application sessions.
+//! ## Overview
+//! Implements a persistent command history ring buffer with deduplication and local storage backup for shell command recall.
+//!
+//! ## Search Tags
+//! #history, #ring-buffer, #local-storage, #command-recall, #deduplication
 
 use serde::{Deserialize, Serialize};
 #[cfg(target_arch = "wasm32")]

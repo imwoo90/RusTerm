@@ -1,7 +1,10 @@
-//! Worker command enum definitions and dispatch traits.
+//! # Worker Command Definitions
 //!
-//! Encapsulates discrete worker commands and their associated payloads into strongly typed
-//! message variants.
+//! ## Overview
+//! Encapsulates discrete worker commands and their associated payloads into strongly typed message variants.
+//!
+//! ## Search Tags
+//! #command-enum, #command-types, #ipc-payloads, #message-variants
 
 use crate::worker::state::WorkerState;
 use std::cell::RefCell;

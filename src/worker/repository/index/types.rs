@@ -1,7 +1,10 @@
-//! Indexing coordinate types and byte offset wrappers.
+//! # Log Index Coordinate Types
 //!
-//! Defines [`ByteOffset`], [`LineIndex`], and [`LineRange`] types ensuring type safety
-//! across filesystem operations and memory indices.
+//! ## Overview
+//! Defines byte offset and line index coordinate wrapper types ensuring type safety across filesystem operations and memory indices.
+//!
+//! ## Search Tags
+//! #index-types, #byte-offset, #line-index, #line-range, #type-safety
 
 use std::ops::{Add, Sub};
 

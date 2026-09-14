@@ -1,7 +1,14 @@
-//! xterm.js terminal emulation component for RusTerm.
+//! # Terminal Emulation Subsystem (index.md)
 //!
-//! Embeds full VT100/ANSI terminal emulation via WebAssembly bindings to xterm.js v6.0.
-//! Manages input throttling buffers, periodic screen writes, and automatic window resizing.
+//! ## Overview
+//! Embeds full VT100/ANSI terminal emulation via WebAssembly bindings to xterm.js v6.0, managing input throttling buffers, periodic screen writes, and window resizing.
+//!
+//! ## Submodules
+//! - [`hooks`]: Terminal lifecycle hooks managing xterm.js instance initialization and resizing.
+//! - [`toolbar`]: Action bar hosting clear buffer, copy output, and auto-scroll controls.
+//!
+//! ## Search Tags
+//! #terminal, #xtermjs, #vt100, #ansi, #emulation
 
 pub mod hooks;
 pub mod toolbar;

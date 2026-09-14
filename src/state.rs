@@ -1,7 +1,10 @@
-//! Central reactive application state management for RusTerm.
+//! # Central Application State
 //!
-//! Defines global signals, UI modes, serial connection parameters, log buffers, and notification toasts.
-//! State is shared down the component tree using Dioxus context providers for zero-prop-drilling reactivity.
+//! ## Overview
+//! Defines global signals, UI modes, serial connection parameters, log buffers, and notification toasts. Shared across the component tree using Dioxus context providers for zero-prop-drilling reactivity.
+//!
+//! ## Search Tags
+//! #state, #signals, #context, #reactivity, #app-state
 
 use crate::components::ui::{ToastMessage, ToastType};
 pub use crate::types::*;

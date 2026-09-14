@@ -1,7 +1,10 @@
-//! ANSI escape sequence parser and user highlight segmenter.
+//! # ANSI Color & Style Decoder
 //!
-//! Parses terminal SGR color codes and cursor movements into styled text spans,
-//! then applies keyword-based user highlight overrides for console rendering.
+//! ## Overview
+//! Parses ANSI escape sequences into styled text spans and applies user highlight rules to break lines into formatted visual segments.
+//!
+//! ## Search Tags
+//! #ansi-decoder, #escape-sequences, #styling, #color-parser, #highlights
 
 use crate::state::Highlight;
 use regex::Regex;

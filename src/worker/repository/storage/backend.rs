@@ -1,7 +1,10 @@
-//! Abstract storage backend trait for persistent logging.
+//! # Storage Backend Abstraction
 //!
-//! Declares the [`StorageBackend`] trait specifying required read, write, truncate, and flush
-//! operations across different storage implementations.
+//! ## Overview
+//! Declares the storage backend trait specifying required read, write, truncate, and flush operations across different persistent log storage implementations.
+//!
+//! ## Search Tags
+//! #storage-backend, #trait-abstraction, #disk-io, #read-write, #flush
 
 use crate::worker::error::LogError;
 use crate::worker::repository::index::ByteOffset;

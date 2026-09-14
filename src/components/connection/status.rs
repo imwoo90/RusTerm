@@ -1,7 +1,10 @@
-//! Serial port status and connection badge component.
+//! # Serial Port Status Badge
 //!
-//! Visually displays the current serial device link status, providing color-coded status badges,
-//! hardware chipset labels, multi-port disambiguation, and user device alias management.
+//! ## Overview
+//! Renders visual status indicators and connection state badges representing disconnected, connecting, open, and error states with descriptive tooltips.
+//!
+//! ## Search Tags
+//! #status, #connection-badge, #port-state, #indicator
 
 use crate::state::AppState;
 use crate::utils::SerialDeviceInfo;

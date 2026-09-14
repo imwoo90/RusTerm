@@ -1,8 +1,10 @@
-//! Hardware serial simulation generator for testing.
+//! # Serial Hardware Simulation Generator
 //!
-//! Synthesizes mock serial log streams with sensor data, ANSI color codes, and errors
-//! to verify end-to-end performance and filtering without physical serial devices.
-
+//! ## Overview
+//! Synthesizes mock serial log streams with sensor data, ANSI color codes, and errors to verify end-to-end performance and filtering without physical serial devices.
+//!
+//! ## Search Tags
+//! #simulation, #mock-serial, #testing, #stream-generator, #synthetic-data
 
 /// Generates a single simulated log chunk with randomized sensor data or warnings
 pub fn generate_simulated_chunk() -> js_sys::Uint8Array {

@@ -1,7 +1,10 @@
-//! Root layout shell and view router for the RusTerm application.
+//! # RusTerm Root View Shell
 //!
-//! Manages top-level state provider injection, serial worker bridge initialization,
-//! and switches dynamically between the High-Performance Monitor and xterm.js Terminal views.
+//! ## Overview
+//! Acts as the root layout shell and view router for the application, dynamically rendering either the high-performance Monitor or xterm.js Terminal view based on active state.
+//!
+//! ## Search Tags
+//! #rust-term, #shell, #root-view, #layout, #router
 
 use crate::components::ui::ToastContainer;
 use dioxus::prelude::*;

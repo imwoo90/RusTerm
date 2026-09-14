@@ -1,7 +1,10 @@
-//! Command input group component with inline toggles.
+//! # Command Input Bar
 //!
-//! Provides a text/hex input field equipped with integrated buttons for local echo toggling,
-//! hexadecimal input encoding, and line ending (None, LF, CR, CRLF) dropdown selection.
+//! ## Overview
+//! Provides a text entry bar for typing and transmitting serial commands, supporting command history recall via arrow keys and format toggles.
+//!
+//! ## Search Tags
+//! #command-input, #text-entry, #history, #serial-transmit
 
 use crate::state::LineEnding;
 use crate::utils::{convert_hex_to_text, convert_text_to_hex, format_hex_input};

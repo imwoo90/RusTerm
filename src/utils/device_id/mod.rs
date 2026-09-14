@@ -1,6 +1,14 @@
-//! Hardware serial device identification via USB Vendor ID (VID) and Product ID (PID).
+//! # Device Identification Subsystem (index.md)
 //!
-//! Provides lookup tables, multi-device disambiguation, and user alias persistence for serial ports.
+//! ## Overview
+//! Provides lookup tables, multi-device disambiguation, and user alias persistence for serial ports using USB Vendor ID (VID) and Product ID (PID).
+//!
+//! ## Submodules
+//! - [`resolver`]: Maps USB VID/PID pairs to hardware vendor descriptions and persistent user aliases.
+//! - [`vendors`]: Static lookup database of known USB serial hardware manufacturers.
+//!
+//! ## Search Tags
+//! #device-id, #usb-vid-pid, #chipset-lookup, #hardware-aliases
 
 mod resolver;
 mod vendors;

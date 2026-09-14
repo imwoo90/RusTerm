@@ -1,7 +1,10 @@
-//! Standard button controls and icon button variants.
+//! # Standard Button Controls
 //!
-//! Implements styled action buttons, resume-scroll floating pills, and icon toggles
-//! following the application dark theme palette and hover micro-interactions.
+//! ## Overview
+//! Provides reusable button components, variant styles (primary, secondary, danger, ghost), size presets, and icon-wrapped buttons with loading states.
+//!
+//! ## Search Tags
+//! #buttons, #icon-buttons, #design-system, #controls
 
 use dioxus::prelude::*;
 
