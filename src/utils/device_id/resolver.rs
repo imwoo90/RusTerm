@@ -170,6 +170,6 @@ pub async fn resolve_port_info(port: &web_sys::SerialPort) -> SerialDeviceInfo {
     #[cfg(not(target_arch = "wasm32"))]
     {
         let _ = port;
-        identify_device(None, None)
+        build_device_info(None, None, None, 0, None)
     }
 }

@@ -93,6 +93,25 @@ impl SerialController {
         });
     }
 
+    pub fn change_baud_rate(&self, new_baud_rate: u32) {
+        let state = self.state;
+        let bridge = self.bridge;
+
+        if !state.conn.is_connected() {
+            state.serial.set_baud_rate(new_baud_rate);
+            return;
+        }
+
+        if (state.serial.baud_rate)() == new_baud_rate || (state.conn.is_busy)() {
+            return;
+        }
+        state.conn.set_busy(true);
+
+        spawn(async move {
+            hot_reopen_serial(state, bridge, new_baud_rate).await;
+        });
+    }
+
     pub fn start_simulation(&self) {
         self.state.conn.set_simulating(true);
         { self.state.conn.device_info }.set(Some(crate::utils::SerialDeviceInfo::simulation()));
@@ -186,15 +205,79 @@ async fn handle_read_completion(
     }
 }
 
+async fn hot_reopen_serial(state: AppState, bridge: WorkerController, new_baud_rate: u32) {
+    TimeoutFuture::new(50).await;
+
+    let maybe_port = (state.conn.port)();
+    let maybe_reader = (state.conn.reader)();
+    let maybe_device_info = (state.conn.device_info)();
+
+    let Some(port) = maybe_port else {
+        state.serial.set_baud_rate(new_baud_rate);
+        state.conn.set_busy(false);
+        return;
+    };
+
+    if let Some(reader) = maybe_reader {
+        let _ = crate::utils::serial_api::cancel_reader(&reader).await;
+    }
+
+    let mut retries = 0;
+    while (state.conn.is_reading)() && retries < 50 {
+        TimeoutFuture::new(50).await;
+        retries += 1;
+    }
+
+    if crate::utils::serial_api::close_port(&port).await.is_err() {
+        web_sys::console::warn_1(&"Failed to close port during baud rate change".into());
+    }
+
+    state.serial.set_baud_rate(new_baud_rate);
+
+    if crate::utils::serial_api::open_port(
+        &port,
+        new_baud_rate,
+        (state.serial.data_bits)(),
+        (state.serial.stop_bits)(),
+        &(state.serial.parity)().to_string(),
+        &(state.serial.flow_control)().to_string(),
+    )
+    .await
+    .is_err()
+    {
+        state.error("Failed to reopen port with new baud rate");
+        state.conn.set_connected(None, None, None);
+        state.conn.set_busy(false);
+        return;
+    }
+
+    start_read_task_with_info(state, bridge, port, maybe_device_info);
+    state.success(&format!("Baud rate changed to {}", new_baud_rate));
+    state.conn.set_busy(false);
+}
+
 /// Starts an explicit read task that handles the serial read loop and retries
 fn start_read_task(state: AppState, bridge: WorkerController, port: web_sys::SerialPort) {
+    start_read_task_with_info(state, bridge, port, None);
+}
+
+fn start_read_task_with_info(
+    state: AppState,
+    bridge: WorkerController,
+    port: web_sys::SerialPort,
+    cached_info: Option<crate::utils::SerialDeviceInfo>,
+) {
     spawn(async move {
         let readable = port.readable();
         let reader = readable
             .get_reader()
             .unchecked_into::<ReadableStreamDefaultReader>();
 
-        let device_info = crate::utils::get_port_info(&port).await;
+        let device_info = match cached_info {
+            Some(info) => info,
+            None => crate::utils::get_port_info(&port).await,
+        };
+
         state
             .conn
             .set_connected(Some(port.clone()), Some(reader.clone()), Some(device_info));

@@ -95,7 +95,7 @@ fn AliasModal(
 
     rsx! {
         div {
-            class: "fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fadeIn",
+            class: "fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-[1px] animate-fadeIn",
             onclick: move |_| onclose.call(()),
             div {
                 class: "w-full max-w-sm bg-[#16181a] border border-[#2a2e33] rounded-xl p-5 shadow-2xl flex flex-col gap-4 animate-scaleUp",
