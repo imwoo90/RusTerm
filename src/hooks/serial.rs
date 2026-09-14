@@ -194,7 +194,7 @@ fn start_read_task(state: AppState, bridge: WorkerController, port: web_sys::Ser
             .get_reader()
             .unchecked_into::<ReadableStreamDefaultReader>();
 
-        let device_info = crate::utils::get_port_info(&port);
+        let device_info = crate::utils::get_port_info(&port).await;
         state
             .conn
             .set_connected(Some(port.clone()), Some(reader.clone()), Some(device_info));

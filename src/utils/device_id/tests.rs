@@ -85,3 +85,43 @@ fn test_identify_fallback_and_simulation() {
     let sim = SerialDeviceInfo::simulation();
     assert_eq!(sim.label, "Simulation");
 }
+
+#[test]
+fn test_multi_device_disambiguation() {
+    // Single device - no number suffix needed
+    let dev1 = build_device_info(Some(0x1A86), Some(0x7523), Some(1), 1, None);
+    assert_eq!(dev1.label, "CH340");
+
+    // Multiple identical devices - port numbers appended
+    let dev_multi1 = build_device_info(Some(0x1A86), Some(0x7523), Some(1), 2, None);
+    assert_eq!(dev_multi1.label, "CH340 #1");
+    assert!(dev_multi1.description.contains("Port #1"));
+
+    let dev_multi2 = build_device_info(Some(0x1A86), Some(0x7523), Some(2), 2, None);
+    assert_eq!(dev_multi2.label, "CH340 #2");
+    assert!(dev_multi2.description.contains("Port #2"));
+}
+
+#[test]
+fn test_device_alias_handling() {
+    // With alias set on a single port
+    let dev = build_device_info(
+        Some(0x10C4),
+        Some(0xEA60),
+        Some(1),
+        1,
+        Some("센서보드".to_string()),
+    );
+    assert_eq!(dev.label, "센서보드 [CP2102 #1]");
+    assert!(dev.description.contains("센서보드"));
+
+    // Dynamic alias update
+    let mut dev2 = build_device_info(Some(0x10C4), Some(0xEA60), Some(2), 2, None);
+    assert_eq!(dev2.label, "CP2102 #2");
+
+    dev2.update_alias(Some("모터제어기".to_string()));
+    assert_eq!(dev2.label, "모터제어기 [CP2102 #2]");
+
+    dev2.update_alias(None);
+    assert_eq!(dev2.label, "CP2102 #2");
+}
