@@ -101,8 +101,9 @@ impl SerialController {
 
     pub fn stop_simulation(&self) {
         self.state.conn.set_simulating(false);
+        self.state.conn.set_reading(false);
+        self.state.conn.set_connected(None, None);
         self.state.warning("Simulation Stopped");
-        self.disconnect();
     }
 }
 
@@ -214,27 +215,25 @@ fn start_read_task(state: AppState, bridge: WorkerController, port: web_sys::Ser
     });
 }
 
-/// Starts a simulation read task
+/// Starts a simulation read task with direct loop cancellation
 fn start_simulation_task(state: AppState, bridge: WorkerController) {
     spawn(async move {
-        let stream = crate::utils::simulation::create_simulation_stream();
-        let reader = stream
-            .get_reader()
-            .unchecked_into::<ReadableStreamDefaultReader>();
-
-        state.conn.set_connected(None, Some(reader.clone()));
         state.conn.set_reading(true);
 
-        // Run Loop
-        let _ = crate::utils::serial_api::read_loop(reader, move |data| {
+        while (state.conn.is_simulating)() {
+            TimeoutFuture::new(10).await;
+            if !(state.conn.is_simulating)() {
+                break;
+            }
+
+            let chunk = crate::utils::simulation::generate_simulated_chunk();
             if (state.ui.view_mode)() == crate::state::ViewMode::Terminal {
-                state.terminal.push_data(data.to_vec());
+                state.terminal.push_data(chunk.to_vec());
             } else {
                 let is_hex = (state.ui.is_hex_view)();
-                bridge.append_chunk(data, is_hex);
+                bridge.append_chunk(chunk, is_hex);
             }
-        })
-        .await;
+        }
 
         state.conn.set_reading(false);
     });
