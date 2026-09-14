@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub mod chunk_handler;
 pub mod commands;
 pub mod dispatcher;
