@@ -90,11 +90,7 @@ impl WorkerCommand for RequestWindowCommand {
             if let Some(range) = repo.get_line_range(LineIndex(i)) {
                 let buf = repo.read_line(range).map_err(JsValue::from)?;
 
-                let text = repo
-                    .storage
-                    .decoder
-                    .decode_with_u8_array(&buf)
-                    .map_err(|e| JsValue::from_str(&format!("{:?}", e)))?
+                let text = String::from_utf8_lossy(&buf)
                     .trim_end_matches('\n')
                     .to_string();
                 lines.push((i, text));

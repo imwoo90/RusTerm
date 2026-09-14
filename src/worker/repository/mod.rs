@@ -6,6 +6,9 @@
 pub mod index;
 pub mod storage;
 
+#[cfg(test)]
+pub mod tests;
+
 const NEWLINE: u8 = b'\n';
 
 use self::index::{ByteOffset, LineIndex, LineRange, LogIndex};
@@ -66,7 +69,7 @@ impl LogRepository {
         // Write to storage first
         self.storage
             .backend
-            .write_at(start, self.storage.encoder.encode_with_input(text).as_ref())?;
+            .write_at(start, text.as_bytes())?;
 
         // Only update index if write succeeded
         for off in offsets {

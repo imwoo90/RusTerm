@@ -8,8 +8,6 @@ use crate::worker::repository::index::ByteOffset;
 use crate::worker::repository::storage::backend::StorageBackend;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::TextDecoder;
-use web_sys::TextEncoder;
 
 /// OPFS-based storage backend with in-memory fallback for non-secure contexts
 pub struct OpfsBackend {
@@ -102,11 +100,9 @@ impl StorageBackend for OpfsBackend {
     }
 }
 
-/// Log storage wrapper with encoder/decoder
+/// Log storage wrapper
 pub struct LogStorage {
     pub backend: OpfsBackend,
-    pub encoder: TextEncoder,
-    pub decoder: TextDecoder,
 }
 
 impl LogStorage {
@@ -116,8 +112,6 @@ impl LogStorage {
                 handle: None,
                 fallback: std::sync::RwLock::new(Vec::new()),
             },
-            encoder: TextEncoder::new().map_err(LogError::from)?,
-            decoder: TextDecoder::new().map_err(LogError::from)?,
         })
     }
 }

@@ -38,11 +38,7 @@ fn process_search_batch(
 
     repo.storage.backend.read_at(s_off, &mut buf[..size])?;
 
-    let text = repo
-        .storage
-        .decoder
-        .decode_with_u8_array(&buf[..size])
-        .map_err(LogError::Js)?;
+    let text = String::from_utf8_lossy(&buf[..size]);
 
     let filter = repo.index.active_filter.as_ref().unwrap().clone();
     let mut batch_matches = Vec::new();

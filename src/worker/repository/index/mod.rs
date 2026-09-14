@@ -11,3 +11,6 @@ pub mod types;
 pub use filter::ActiveFilterBuilder;
 pub use log_index::LogIndex;
 pub use types::{ByteOffset, LineIndex, LineRange};
+
+#[cfg(test)]
+pub mod tests;
