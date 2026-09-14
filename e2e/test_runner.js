@@ -133,7 +133,7 @@ async function runExhaustiveSuite() {
 
   page.on('pageerror', err => {
     pageErrors.push(err.message);
-    console.log(`  ❌ [Browser Page Error] ${err.message}`);
+    console.log(`  ❌ [Browser Page Error] ${err.stack || err.message}`);
   });
 
   try {

@@ -179,9 +179,8 @@ pub fn check_source_with_config(
     if !is_test_file {
         let mut module_doc_len = 0;
         for attr in &syn_file.attrs {
-            if matches!(attr.style, syn::AttrStyle::Inner(_))
-                && attr.path().is_ident("doc")
-                && let syn::Meta::NameValue(syn::MetaNameValue {
+            if matches!(attr.style, syn::AttrStyle::Inner(_)) && attr.path().is_ident("doc") {
+                if let syn::Meta::NameValue(syn::MetaNameValue {
                     value:
                         syn::Expr::Lit(syn::ExprLit {
                             lit: syn::Lit::Str(s),
@@ -189,9 +188,10 @@ pub fn check_source_with_config(
                         }),
                     ..
                 }) = &attr.meta
-            {
-                // Measure actual Unicode characters, not UTF-8 bytes (prevents CJK penalty)
-                module_doc_len += s.value().trim().chars().count();
+                {
+                    // Measure actual Unicode characters, not UTF-8 bytes (prevents CJK penalty)
+                    module_doc_len += s.value().trim().chars().count();
+                }
             }
         }
 
@@ -283,9 +283,8 @@ fn is_cfg_test(attrs: &[syn::Attribute]) -> bool {
         {
             return true;
         }
-        if attr.path().is_ident("cfg")
-            && let syn::Meta::List(list) = &attr.meta
-        {
+        if attr.path().is_ident("cfg") {
+            if let syn::Meta::List(list) = &attr.meta {
             let compact = list.tokens.to_string().replace(' ', "");
             // Direct #[cfg(test)]
             if compact == "test"
@@ -318,8 +317,9 @@ fn is_cfg_test(attrs: &[syn::Attribute]) -> bool {
                     .any(|w| w == "test");
             }
         }
-        false
-    })
+    }
+    false
+})
 }
 
 /// Inspects functions across modules, impl blocks, and traits for physical character limits.
@@ -608,11 +608,12 @@ fn find_inline_comment(line: &str, mut in_string: bool) -> (Option<usize>, bool)
                     }
                 }
             }
-        } else if ch == '/'
-            && let Some(&(_, next_ch)) = chars.peek()
-            && next_ch == '/'
-        {
-            return (Some(idx), in_string);
+        } else if ch == '/' {
+            if let Some(&(_, next_ch)) = chars.peek() {
+                if next_ch == '/' {
+                    return (Some(idx), in_string);
+                }
+            }
         }
     }
     (None, in_string)

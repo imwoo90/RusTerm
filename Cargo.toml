@@ -2,7 +2,7 @@
 name = "rusterm"
 version = "3.3.0"
 authors = ["imwoo90 <wim90@kakao.com>"]
-edition = "2024"
+edition = "2021"
 license = "Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

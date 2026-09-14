@@ -1,7 +1,7 @@
 # 📡 RusTerm (Built with Rust & Dioxus)
 
 ![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white)
-![Dioxus](https://img.shields.io/badge/Dioxus-0.6-blue?style=for-the-badge)
+![Dioxus](https://img.shields.io/badge/Dioxus-0.7-blue?style=for-the-badge)
 ![WASM](https://img.shields.io/badge/WebAssembly-purple?style=for-the-badge)
 ![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=for-the-badge)
 ![Version](https://img.shields.io/badge/version-3.3.0-blue?style=for-the-badge)
