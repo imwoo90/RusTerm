@@ -1,7 +1,15 @@
-//! Storage backends sub-module catalog (mod.rs = index.md).
+//! # Storage Subsystem (index.md)
 //!
-//! Defines storage abstractions and implementations for browser Origin Private File System (OPFS)
-//! sync access handles.
+//! ## Overview
+//! Storage backend abstractions and implementations interfacing with the browser's
+//! Origin Private File System (OPFS) synchronous access handles for zero-copy file persistence.
+//!
+//! ## Submodules
+//! - [`backend`]: Generic `StorageBackend` trait abstracting disk and memory backends.
+//! - [`opfs`]: OPFS synchronous access handle implementation and session directory management.
+//!
+//! ## Search Tags
+//! #storage, #opfs, #file-persistence, #sync-access-handle
 
 pub mod backend;
 pub mod opfs;

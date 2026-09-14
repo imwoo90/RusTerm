@@ -1,7 +1,15 @@
-//! Log repository subsystem catalog (mod.rs = index.md).
+//! # Log Repository Subsystem (index.md)
 //!
+//! ## Overview
 //! Manages indexed log storage, combining memory line offset indices with OPFS filesystem backends
-//! for high-capacity log persistence.
+//! for high-capacity log persistence and fast random-access retrieval.
+//!
+//! ## Submodules
+//! - [`index`]: In-memory byte offset indexing, filtered line ranges, and active filter evaluation.
+//! - [`storage`]: Storage backends (OPFS synchronous file access handle, in-memory buffer fallback).
+//!
+//! ## Search Tags
+//! #repository, #opfs-storage, #line-index, #persistence, #random-access
 
 pub mod index;
 pub mod storage;

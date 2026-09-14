@@ -1,7 +1,16 @@
-//! Memory line indexing and search index catalog (mod.rs = index.md).
+//! # Line Index Subsystem (index.md)
 //!
+//! ## Overview
 //! Manages byte offset tables, active query filters, and filtered line projections
-//! enabling instant O(1) lookup of millions of persisted lines.
+//! enabling instant O(1) random-access and virtual scroll lookups across persisted logs.
+//!
+//! ## Submodules
+//! - [`log_index`]: Core LogIndex structure maintaining line start/end byte offsets and filtered line mapping.
+//! - [`filter`]: Active regex and case-sensitive/inverted search filter compilers.
+//! - [`types`]: Strongly-typed primitives (`ByteOffset`, `LineIndex`, `LineRange`).
+//!
+//! ## Search Tags
+//! #line-index, #byte-offset, #filter, #virtual-scroll, #fast-lookup
 
 pub mod filter;
 pub mod log_index;

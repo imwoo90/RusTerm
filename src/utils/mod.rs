@@ -1,7 +1,23 @@
-//! General utility algorithms catalog (mod.rs = index.md).
+//! # Utility Subsystem (index.md)
 //!
-//! Contains formatting utilities, command history storage, hex parsers, file export helpers,
-//! and JavaScript interop bindings.
+//! ## Overview
+//! General helper utilities covering terminal ANSI parsing, device identification,
+//! hex/text format conversions, command history, and Web Serial API interop bindings.
+//!
+//! ## Submodules
+//! - [`ansi_decoder`]: Fast ANSI terminal color and styling escape code parser.
+//! - [`device_id`]: USB VID/PID hardware chip identification and user-defined port aliases.
+//! - [`file_save`]: Browser file download triggers for exported log files.
+//! - [`mod@format`]: Bidirectional text-to-hex formatting, hex parsing, and worker message senders.
+//! - [`history`]: FIFO command history ring buffer with deduplication and persistence.
+//! - [`macros`]: User-configurable macro buttons with keybindings and hex/ascii transmission.
+//! - [`scroll`]: Virtual scrolling window index and viewport offset math.
+//! - [`serial_api`]: Web Serial API browser JavaScript interop wrappers.
+//! - [`simulation`]: Mock serial port generator for local development without hardware.
+//! - [`terminal_bindings`]: DOM keyboard and terminal event binding handlers.
+//!
+//! ## Search Tags
+//! #utils, #ansi-decoder, #device-id, #hex-format, #history, #macros, #virtual-scroll
 
 pub mod ansi_decoder;
 pub mod device_id;

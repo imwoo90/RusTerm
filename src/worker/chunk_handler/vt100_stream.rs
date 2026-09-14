@@ -1,7 +1,11 @@
-//! VT100 ANSI terminal escape sequence streaming line processor.
+//! # VT100 Stream Processor
 //!
+//! ## Overview
 //! Processes raw byte chunks through an internal `vt100::Parser`, parses escape codes,
 //! extracts completed lines, and tracks the current unfinished active line on screen.
+//!
+//! ## Search Tags
+//! #vt100, #ansi-parser, #screen-row, #stream-processor
 
 use crate::config::MAX_LINE_BYTES;
 use crate::worker::chunk_handler::line_builder::format_and_append_line;

@@ -1,7 +1,11 @@
-//! Fixed-width hexadecimal stream line processor.
+//! # Hex Stream Processor
 //!
+//! ## Overview
 //! Splits streaming hex output into fixed-width lines based on formatter configuration,
 //! retaining partial leftover chunks across stream frames.
+//!
+//! ## Search Tags
+//! #hex, #hex-stream, #fixed-width, #leftover-buffer
 
 use crate::worker::chunk_handler::line_builder::format_and_append_line;
 use crate::worker::formatter::LogFormatterStrategy;

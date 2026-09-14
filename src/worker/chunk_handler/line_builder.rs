@@ -1,7 +1,11 @@
-//! Sub-line formatting and indexing logic for streaming chunks.
+//! # Line Builder & Formatter
 //!
+//! ## Overview
 //! Handles line length clamping, UTF-8 char boundary adjustments,
 //! and writes formatted outputs alongside byte offsets and filter matches.
+//!
+//! ## Search Tags
+//! #line-builder, #line-clamping, #utf8-boundary, #offset-indexing
 
 use crate::worker::formatter::LogFormatterStrategy;
 use crate::worker::repository::index::{ByteOffset, LineRange};

@@ -1,7 +1,11 @@
-//! Delimiter scanning and UTF-8 safe chunk slicing for stream processors.
+//! # Scanner Utilities
 //!
+//! ## Overview
 //! Scans byte slices for newline delimiters (`\n`, `\r`, `\r\n`) within buffer limits
 //! and calculates safe split boundaries that preserve multi-byte UTF-8 code point integrity.
+//!
+//! ## Search Tags
+//! #scanner, #line-ending, #buffer-full, #utf8-boundary
 
 /// Scans for next newline delimiter or reports buffer full boundary.
 /// Returns `Some((content_end_index, next_start_index))` if found.

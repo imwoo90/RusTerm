@@ -1,8 +1,17 @@
-//! Streaming line processor and chunk coordinator for worker log ingestion.
+//! # Chunk Handler Module (index.md)
 //!
-//! Provides the primary [`StreamingLineProcessor`] which buffers incoming serial chunks,
-//! handles terminal escape code parsing via VT100 emulation, splits lines safely along
-//! UTF-8 and maximum byte boundaries, and formats logs for display and OPFS storage.
+//! ## Overview
+//! Coordinates incoming serial chunk buffering, VT100 terminal escape sequence emulation,
+//! byte-boundary line splitting, and log line formatting for display and OPFS storage.
+//!
+//! ## Submodules
+//! - [`vt100_stream`]: VT100 ANSI sequence streaming parser and virtual terminal row updates.
+//! - [`scanner`]: Scans chunk for line endings (`\n`, `\r`) and splits lines on buffer-full using safe UTF-8 cuts.
+//! - [`line_builder`]: Downstream subline formatting, line length clamping, and timestamping.
+//! - [`hex`]: Hexadecimal dump mode formatter.
+//!
+//! ## Search Tags
+//! #chunk-handler, #vt100, #line-wrapping, #terminal-stream, #utf8-boundary
 
 mod hex;
 mod line_builder;
