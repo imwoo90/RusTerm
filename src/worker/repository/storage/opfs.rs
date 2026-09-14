@@ -11,61 +11,94 @@ use wasm_bindgen::JsCast;
 use web_sys::TextDecoder;
 use web_sys::TextEncoder;
 
-/// OPFS-based storage backend
+/// OPFS-based storage backend with in-memory fallback for non-secure contexts
 pub struct OpfsBackend {
     pub handle: Option<web_sys::FileSystemSyncAccessHandle>,
+    pub fallback: std::sync::RwLock<Vec<u8>>,
 }
 
 impl StorageBackend for OpfsBackend {
     fn read_at(&self, offset: ByteOffset, buf: &mut [u8]) -> Result<usize, LogError> {
-        let handle = self
-            .handle
-            .as_ref()
-            .ok_or_else(|| LogError::Storage("No handle".into()))?;
-        let opts = web_sys::FileSystemReadWriteOptions::new();
-        opts.set_at(offset.0 as f64);
-        handle
-            .read_with_u8_array_and_options(buf, &opts)
-            .map(|n| n as usize)
-            .map_err(LogError::from)
+        if let Some(handle) = self.handle.as_ref() {
+            let opts = web_sys::FileSystemReadWriteOptions::new();
+            opts.set_at(offset.0 as f64);
+            handle
+                .read_with_u8_array_and_options(buf, &opts)
+                .map(|n| n as usize)
+                .map_err(LogError::from)
+        } else {
+            let guard = self
+                .fallback
+                .read()
+                .map_err(|_| LogError::Storage("Lock error".into()))?;
+            let start = offset.0 as usize;
+            if start >= guard.len() {
+                return Ok(0);
+            }
+            let to_copy = (guard.len() - start).min(buf.len());
+            buf[..to_copy].copy_from_slice(&guard[start..start + to_copy]);
+            Ok(to_copy)
+        }
     }
 
     fn write_at(&self, offset: ByteOffset, data: &[u8]) -> Result<usize, LogError> {
-        let handle = self
-            .handle
-            .as_ref()
-            .ok_or_else(|| LogError::Storage("No handle".into()))?;
-        let opts = web_sys::FileSystemReadWriteOptions::new();
-        opts.set_at(offset.0 as f64);
-        handle
-            .write_with_u8_array_and_options(data, &opts)
-            .map(|n| n as usize)
-            .map_err(LogError::from)
+        if let Some(handle) = self.handle.as_ref() {
+            let opts = web_sys::FileSystemReadWriteOptions::new();
+            opts.set_at(offset.0 as f64);
+            handle
+                .write_with_u8_array_and_options(data, &opts)
+                .map(|n| n as usize)
+                .map_err(LogError::from)
+        } else {
+            let mut guard = self
+                .fallback
+                .write()
+                .map_err(|_| LogError::Storage("Lock error".into()))?;
+            let start = offset.0 as usize;
+            if start + data.len() > guard.len() {
+                guard.resize(start + data.len(), 0);
+            }
+            guard[start..start + data.len()].copy_from_slice(data);
+            Ok(data.len())
+        }
     }
 
     fn get_file_size(&self) -> Result<ByteOffset, LogError> {
-        self.handle
-            .as_ref()
-            .ok_or_else(|| LogError::Storage("No handle".into()))?
-            .get_size()
-            .map(|s| ByteOffset(s as u64))
-            .map_err(LogError::from)
+        if let Some(handle) = self.handle.as_ref() {
+            handle
+                .get_size()
+                .map(|s| ByteOffset(s as u64))
+                .map_err(LogError::from)
+        } else {
+            let guard = self
+                .fallback
+                .read()
+                .map_err(|_| LogError::Storage("Lock error".into()))?;
+            Ok(ByteOffset(guard.len() as u64))
+        }
     }
 
     fn truncate(&self, size: u64) -> Result<(), LogError> {
-        self.handle
-            .as_ref()
-            .ok_or_else(|| LogError::Storage("No handle".into()))?
-            .truncate_with_f64(size as f64)
-            .map_err(LogError::from)
+        if let Some(handle) = self.handle.as_ref() {
+            handle
+                .truncate_with_f64(size as f64)
+                .map_err(LogError::from)
+        } else {
+            let mut guard = self
+                .fallback
+                .write()
+                .map_err(|_| LogError::Storage("Lock error".into()))?;
+            guard.truncate(size as usize);
+            Ok(())
+        }
     }
 
     fn flush(&self) -> Result<(), LogError> {
-        self.handle
-            .as_ref()
-            .ok_or_else(|| LogError::Storage("No handle".into()))?
-            .flush()
-            .map_err(LogError::from)
+        if let Some(handle) = self.handle.as_ref() {
+            handle.flush().map_err(LogError::from)
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -79,7 +112,10 @@ pub struct LogStorage {
 impl LogStorage {
     pub fn new() -> Result<Self, LogError> {
         Ok(Self {
-            backend: OpfsBackend { handle: None },
+            backend: OpfsBackend {
+                handle: None,
+                fallback: std::sync::RwLock::new(Vec::new()),
+            },
             encoder: TextEncoder::new().map_err(LogError::from)?,
             decoder: TextDecoder::new().map_err(LogError::from)?,
         })
@@ -90,7 +126,15 @@ impl LogStorage {
 pub async fn get_opfs_root() -> Result<web_sys::FileSystemDirectoryHandle, JsValue> {
     let global = js_sys::global();
     let navigator = js_sys::Reflect::get(&global, &"navigator".into())?;
+    if navigator.is_undefined() || navigator.is_null() {
+        return Err(JsValue::from_str("navigator is unavailable"));
+    }
     let storage = js_sys::Reflect::get(&navigator, &"storage".into())?;
+    if storage.is_undefined() || storage.is_null() {
+        return Err(JsValue::from_str(
+            "navigator.storage is undefined (requires secure context)",
+        ));
+    }
     let storage: web_sys::StorageManager = storage.unchecked_into();
     let root = wasm_bindgen_futures::JsFuture::from(storage.get_directory()).await?;
     Ok(root.into())

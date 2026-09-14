@@ -15,7 +15,7 @@ use wasm_bindgen_futures::spawn_local;
 pub(crate) struct WorkerState {
     pub(crate) proc: LogProcessor,
     pub(crate) filename: Option<String>,
-    pub(crate) root: web_sys::FileSystemDirectoryHandle,
+    pub(crate) root: Option<web_sys::FileSystemDirectoryHandle>,
     pub(crate) scope: web_sys::DedicatedWorkerGlobalScope,
     pub(crate) last_reported_count: usize,
     pub(crate) current_search_id: u32,
@@ -33,7 +33,7 @@ impl WorkerState {
         }
 
         let scope = js_sys::global().unchecked_into::<web_sys::DedicatedWorkerGlobalScope>();
-        let root = get_opfs_root().await?;
+        let root = get_opfs_root().await.ok();
 
         Ok(Self {
             proc,
@@ -88,10 +88,17 @@ impl WorkerState {
                 (s.root.clone(), s.filename.clone())
             };
             let mut filename = filename_opt;
-            if let Ok(lock) = new_session(&root, true, &mut filename).await {
+            if let Some(root) = root.as_ref() {
+                if let Ok(lock) = new_session(root, true, &mut filename).await {
+                    let mut s = state_rc.borrow_mut();
+                    s.filename = filename;
+                    let _ = s.proc.set_sync_handle(lock);
+                    let _ = s.proc.clear();
+                    s.send_msg(WorkerMsg::TotalLines(0));
+                }
+            } else {
                 let mut s = state_rc.borrow_mut();
-                s.filename = filename;
-                let _ = s.proc.set_sync_handle(lock);
+                s.filename = None;
                 let _ = s.proc.clear();
                 s.send_msg(WorkerMsg::TotalLines(0));
             }
