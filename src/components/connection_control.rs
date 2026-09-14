@@ -78,6 +78,23 @@ fn ConnectButton() -> Element {
     }
 }
 
+fn is_test_mode_enabled() -> bool {
+    #[cfg(debug_assertions)]
+    {
+        true
+    }
+    #[cfg(not(debug_assertions))]
+    {
+        #[cfg(target_arch = "wasm32")]
+        if let Some(win) = web_sys::window() {
+            if let Ok(search) = win.location().search() {
+                return search.contains("test=true") || search.contains("debug=true");
+            }
+        }
+        false
+    }
+}
+
 #[component]
 pub fn ConnectionControl() -> Element {
     let state = use_context::<AppState>();
@@ -103,7 +120,9 @@ pub fn ConnectionControl() -> Element {
                 title: "Settings",
             }
 
-            SimulationButton {}
+            if is_test_mode_enabled() {
+                SimulationButton {}
+            }
             ConnectButton {}
 
             SettingsDropdown {

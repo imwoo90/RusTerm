@@ -139,7 +139,7 @@ async function runExhaustiveSuite() {
   try {
     // --- STEP 3: Initial DOM Mount ---
     console.log(`[03/25] Testing Secure Context Mount on http://127.0.0.1:${PORT}...`);
-    await page.goto(`http://127.0.0.1:${PORT}`, { waitUntil: 'networkidle', timeout: 15000 });
+    await page.goto(`http://127.0.0.1:${PORT}/?test=true`, { waitUntil: 'networkidle', timeout: 15000 });
     await page.waitForSelector('button[title="Test Mode"]', { timeout: 10000 });
     console.log('  ✓ Application mounted cleanly. Header, Test Mode button, and Control Bar present.');
 
@@ -528,7 +528,7 @@ async function runExhaustiveSuite() {
       }
     });
 
-    await lanPage.goto(`http://${lanIp}:${PORT}`, { waitUntil: 'networkidle', timeout: 15000 });
+    await lanPage.goto(`http://${lanIp}:${PORT}/?test=true`, { waitUntil: 'networkidle', timeout: 15000 });
     await lanPage.waitForSelector('button[title="Test Mode"]', { timeout: 10000 });
 
     // Verify navigator.storage is undefined or restricted in non-secure context
