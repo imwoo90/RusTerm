@@ -323,25 +323,53 @@ async function runExhaustiveE2ETests() {
       console.log('  ✓ Transmit bar interactive controls verified.');
     }
 
-    // --- STEP 8: Macro Bar Interaction ---
-    console.log('[11/12] Testing Macro Bar Modal Interaction...');
+    // --- STEP 8: Macro Bar Interaction ('+' Add Macro Lifecycle) ---
+    console.log('[11/12] Testing Bottom "+" Add Macro Lifecycle (Create -> Render -> Trigger -> Delete)...');
     const addMacroBtn = page.locator('button[title="Add Macro"]');
     if (await addMacroBtn.count() > 0) {
+      // 1. Click '+' button
       await addMacroBtn.click();
       await page.waitForTimeout(300);
 
-      // Verify Add Macro form opened
-      const macroForm = page.locator('text=Add Quick Command');
-      const isMacroOpen = await macroForm.count() > 0;
-      console.log(`  ✓ Add Macro form modal opened: ${isMacroOpen}`);
-
-      // Close modal (Click cancel or backdrop)
-      const cancelBtn = page.locator('button:has-text("Cancel")');
-      if (await cancelBtn.count() > 0) {
-        await cancelBtn.click();
-        await page.waitForTimeout(200);
+      // Verify Add Macro modal opened
+      const macroModal = page.locator('text=Add Quick Command');
+      if (await macroModal.count() === 0) {
+        throw new Error('Failed to open Add Quick Command modal on "+" click');
       }
-      console.log('  ✓ Macro modal closed.');
+      console.log('  ✓ Bottom "+" button clicked -> "Add Quick Command" modal opened.');
+
+      // 2. Fill in Label and Command
+      const labelInput = page.locator('input[placeholder="e.g. Reboot"]');
+      const cmdInputModal = page.locator('input[placeholder="e.g. AT+RST"]');
+      await labelInput.fill('PING');
+      await cmdInputModal.fill('AT+PING');
+      await page.waitForTimeout(200);
+
+      // 3. Click Add button in modal
+      const modalAddBtn = page.locator('div.fixed button:has-text("Add")').last();
+      await modalAddBtn.click();
+      await page.waitForTimeout(400);
+
+      // 4. Verify new macro button appears on the bottom Macro Bar
+      const createdMacroBtn = page.locator('button:has-text("PING")').first();
+      const isMacroRendered = await createdMacroBtn.count() > 0;
+      console.log(`  ✓ New Macro button [ PING ] rendered on bottom bar: ${isMacroRendered}`);
+      if (!isMacroRendered) throw new Error('New macro button "PING" was not created in the DOM');
+
+      // 5. Trigger the macro button
+      await createdMacroBtn.click();
+      await page.waitForTimeout(200);
+      console.log('  ✓ Macro button [ PING ] clicked & triggered.');
+
+      // 6. Right-click macro button to test context menu & deletion
+      await createdMacroBtn.click({ button: 'right' });
+      await page.waitForTimeout(300);
+      const deleteMenuOption = page.locator('.fixed.inset-0.z-50 button:has-text("Delete")').first();
+      if (await deleteMenuOption.count() > 0) {
+        await deleteMenuOption.click();
+        await page.waitForTimeout(300);
+        console.log('  ✓ Macro button [ PING ] deleted via context menu.');
+      }
     }
 
     // --- STEP 9: Mode Switching & Terminal ---
