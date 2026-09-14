@@ -4,6 +4,7 @@
 //! and JavaScript interop bindings.
 
 pub mod ansi_decoder;
+pub mod device_id;
 pub mod file_save;
 pub mod format;
 pub mod history;
@@ -14,6 +15,7 @@ pub mod simulation;
 pub mod terminal_bindings;
 
 pub use ansi_decoder::decode_ansi_text;
+pub use device_id::{get_port_info, SerialDeviceInfo};
 pub use format::{
     convert_hex_to_text, convert_text_to_hex, format_hex_input, parse_hex_string,
     send_chunk_to_worker, send_worker_msg,

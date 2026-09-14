@@ -1278,6 +1278,9 @@
   .text-yellow-400 {
     color: var(--color-yellow-400);
   }
+  .text-yellow-500 {
+    color: var(--color-yellow-500);
+  }
   .text-yellow-500\/60 {
     color: color-mix(in srgb, oklch(79.5% 0.184 86.047) 60%, transparent);
     @supports (color: color-mix(in lab, red, red)) {

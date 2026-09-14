@@ -95,6 +95,7 @@ impl SerialController {
 
     pub fn start_simulation(&self) {
         self.state.conn.set_simulating(true);
+        { self.state.conn.device_info }.set(Some(crate::utils::SerialDeviceInfo::simulation()));
         self.state.success("Simulation Started");
         self.bridge.clear();
     }
@@ -102,7 +103,7 @@ impl SerialController {
     pub fn stop_simulation(&self) {
         self.state.conn.set_simulating(false);
         self.state.conn.set_reading(false);
-        self.state.conn.set_connected(None, None);
+        self.state.conn.set_connected(None, None, None);
         self.state.warning("Simulation Stopped");
     }
 }
@@ -146,7 +147,7 @@ async fn cleanup_serial_connection(state: AppState) {
     }
 
     // 4. Final State Reset
-    state.conn.set_connected(None, None);
+    state.conn.set_connected(None, None, None);
     // state.conn.set_busy(false); // Caller is now responsible for setting busy to false
 }
 
@@ -193,9 +194,10 @@ fn start_read_task(state: AppState, bridge: WorkerController, port: web_sys::Ser
             .get_reader()
             .unchecked_into::<ReadableStreamDefaultReader>();
 
+        let device_info = crate::utils::get_port_info(&port);
         state
             .conn
-            .set_connected(Some(port.clone()), Some(reader.clone()));
+            .set_connected(Some(port.clone()), Some(reader.clone()), Some(device_info));
         state.conn.set_reading(true);
 
         let s_clone = state;

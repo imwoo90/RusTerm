@@ -35,6 +35,7 @@ pub struct SerialSettings {
 pub struct ConnectionState {
     pub port: Signal<Option<SerialPort>>,
     pub reader: Signal<Option<ReadableStreamDefaultReader>>,
+    pub device_info: Signal<Option<crate::utils::SerialDeviceInfo>>,
     pub is_simulating: Signal<bool>,
     pub log_worker: Signal<Option<web_sys::Worker>>,
     pub is_busy: Signal<bool>,
@@ -122,9 +123,11 @@ impl ConnectionState {
         &self,
         port: Option<SerialPort>,
         reader: Option<ReadableStreamDefaultReader>,
+        device_info: Option<crate::utils::SerialDeviceInfo>,
     ) {
         { self.port }.set(port);
         { self.reader }.set(reader);
+        { self.device_info }.set(device_info);
     }
 
     pub fn set_simulating(&self, simulating: bool) {
@@ -227,6 +230,7 @@ pub fn use_provide_app_state() -> AppState {
         conn: ConnectionState {
             port: use_signal(|| None),
             reader: use_signal(|| None),
+            device_info: use_signal(|| None),
             is_simulating: use_signal(|| false),
             log_worker: use_signal(|| None::<web_sys::Worker>),
             is_busy: use_signal(|| false),

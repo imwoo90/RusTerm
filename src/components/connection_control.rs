@@ -108,7 +108,7 @@ pub fn ConnectionControl() -> Element {
 
     rsx! {
         div { class: "flex items-center gap-3 h-full",
-            PortStatus { connected: state.conn.is_connected() }
+            PortStatus { device_info: (state.conn.device_info)() }
             BaudRatePicker {}
 
             IconButton {
