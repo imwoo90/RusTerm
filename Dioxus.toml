@@ -5,7 +5,7 @@ tailwind_output = "public/assets/tailwind.css"
 [web.app]
 
 # HTML title tag content
-title = "RusTerm - High Performance Serial Monitor & Terminal"
+title = "RusTerm - High Performance Web Serial Monitor & Terminal"
 
 # include `assets` in web platform
 [web.resource]

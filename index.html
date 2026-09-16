@@ -1,9 +1,61 @@
 <!DOCTYPE html>
-<html class="dark">
+<html lang="en" class="dark">
 <head>
   <meta charset="utf-8">
   <title></title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Primary SEO Meta Tags -->
+  <meta name="title" content="RusTerm - High Performance Web Serial Monitor & Terminal">
+  <meta name="description" content="High-performance, browser-based Serial Monitor & Terminal built with Rust and WebAssembly. Connect to COM ports with Web Serial API, handle gigabyte-scale logs with OPFS, full VT100 ANSI terminal, and zero UI latency.">
+  <meta name="keywords" content="RusTerm, Web Serial API, Serial Monitor, Serial Terminal, Web Serial, Rust, WebAssembly, WASM, VT100, ANSI Terminal, ESP32, Arduino, STM32, Embedded Development, OPFS">
+  <meta name="author" content="imwoo90">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://imwoo90.github.io/RusTerm/">
+  <meta name="theme-color" content="#0a0b0c">
+
+  <!-- Open Graph / Facebook / Discord -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://imwoo90.github.io/RusTerm/">
+  <meta property="og:title" content="RusTerm - High Performance Web Serial Monitor & Terminal">
+  <meta property="og:description" content="High-performance, browser-based Serial Monitor & Terminal built with Rust and WebAssembly. Zero installation required.">
+  <meta property="og:image" content="https://imwoo90.github.io/RusTerm/assets/og-image.png">
+  <meta property="og:site_name" content="RusTerm">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://imwoo90.github.io/RusTerm/">
+  <meta name="twitter:title" content="RusTerm - High Performance Web Serial Monitor & Terminal">
+  <meta name="twitter:description" content="High-performance, browser-based Serial Monitor & Terminal built with Rust and WebAssembly. Zero installation required.">
+  <meta name="twitter:image" content="https://imwoo90.github.io/RusTerm/assets/og-image.png">
+
+  <!-- Google Search Console verification tag -->
+  <meta name="google-site-verification" content="Z60MMCKeg9laVsPok7iQuQWayuy9ptB0kgrC2AgGh3s">
+
+  <!-- Structured Data: Schema.org WebApplication -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "RusTerm",
+    "url": "https://imwoo90.github.io/RusTerm/",
+    "description": "High-performance browser-based Serial Monitor & Terminal built with Rust and WebAssembly. Connect COM ports directly from Chrome/Edge with zero installation.",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "All (Web Browser with Web Serial API support)",
+    "browserRequirements": "Requires Web Serial API support (Google Chrome, Microsoft Edge, Opera)",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "author": {
+      "@type": "Person",
+      "name": "imwoo90",
+      "url": "https://github.com/imwoo90"
+    }
+  }
+  </script>
+
   <link rel="icon" href="assets/favicon.ico">
   
   <!-- Preconnect to Google Fonts -->
@@ -42,6 +94,21 @@
       </div>
     </div>
   </div>
+
+  <!-- Fallback & SEO content for crawlers / non-JS environments -->
+  <noscript>
+    <div style="max-width: 800px; margin: 2rem auto; padding: 1.5rem; background-color: #111418; border: 1px solid #1f2937; border-radius: 8px; font-family: sans-serif; line-height: 1.6;">
+      <h1 style="color: #00bfff; font-size: 1.5rem; margin-bottom: 0.5rem;">RusTerm - High Performance Web Serial Monitor & Terminal</h1>
+      <p style="color: #d1d5db;">RusTerm is an open-source, high-performance serial monitor and terminal running natively in your browser using Rust and WebAssembly. No drivers or software installation required.</p>
+      <ul style="color: #9ca3af; margin: 1rem 0; padding-left: 1.5rem;">
+        <li><strong>Web Serial API:</strong> Direct hardware serial communication over USB-CDC and COM ports.</li>
+        <li><strong>Gigabyte-Scale Logging:</strong> OPFS (Origin Private File System) backing with zero UI latency.</li>
+        <li><strong>VT100 / ANSI Terminal:</strong> Full interactive xterm.js terminal with color and cursor escape sequences.</li>
+        <li><strong>Real-Time Filtering:</strong> Progressive search and regex filtering without UI blocking.</li>
+      </ul>
+      <p style="color: #e5e7eb;">To use RusTerm, please enable JavaScript and open this page in a browser that supports the Web Serial API (Google Chrome, Microsoft Edge, Opera).</p>
+    </div>
+  </noscript>
 
   <style>
     @keyframes spin {

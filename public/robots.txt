@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://imwoo90.github.io/RusTerm/sitemap.xml
