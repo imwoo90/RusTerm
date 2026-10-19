@@ -5,10 +5,10 @@
 //! byte-boundary line splitting, and log line formatting for display and OPFS storage.
 //!
 //! ## Submodules
-//! - [`vt100_stream`]: VT100 ANSI sequence streaming parser and virtual terminal row updates.
-//! - [`scanner`]: Scans chunk for line endings (`\n`, `\r`) and splits lines on buffer-full using safe UTF-8 cuts.
-//! - [`line_builder`]: Downstream subline formatting, line length clamping, and timestamping.
-//! - [`hex`]: Hexadecimal dump mode formatter.
+//! - [`vt100_stream`] (`vt100_stream.rs`): VT100 ANSI sequence streaming parser and virtual terminal row updates.
+//! - [`scanner`] (`scanner.rs`): Scans chunk for line endings (`\n`, `\r`) and splits lines on buffer-full using safe UTF-8 cuts.
+//! - [`line_builder`] (`line_builder.rs`): Downstream subline formatting, line length clamping, and timestamping.
+//! - [`hex`] (`hex.rs`): Hexadecimal dump mode formatter.
 //!
 //! ## Search Tags
 //! #chunk-handler, #vt100, #line-wrapping, #terminal-stream, #utf8-boundary

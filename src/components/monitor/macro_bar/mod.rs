@@ -4,8 +4,8 @@
 //! Provides a persistent horizontal strip of quick-access macro buttons for triggering pre-configured serial commands, adding macros, and editing entries.
 //!
 //! ## Submodules
-//! - [`context_menu`]: Context menu for editing, reordering, or deleting existing macro buttons.
-//! - [`form_modal`]: Modal dialog for creating and editing macro titles, commands, and keybindings.
+//! - [`context_menu`] (`context_menu.rs`): Context menu for editing, reordering, or deleting existing macro buttons.
+//! - [`form_modal`] (`form_modal.rs`): Modal dialog for creating and editing macro titles, commands, and keybindings.
 //!
 //! ## Search Tags
 //! #macro-bar, #quick-commands, #macros, #shortcuts

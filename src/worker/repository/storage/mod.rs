@@ -5,8 +5,8 @@
 //! Origin Private File System (OPFS) synchronous access handles for zero-copy file persistence.
 //!
 //! ## Submodules
-//! - [`backend`]: Generic `StorageBackend` trait abstracting disk and memory backends.
-//! - [`opfs`]: OPFS synchronous access handle implementation and session directory management.
+//! - [`backend`] (`backend.rs`): Generic `StorageBackend` trait abstracting disk and memory backends.
+//! - [`opfs`] (`opfs.rs`): OPFS synchronous access handle implementation and session directory management.
 //!
 //! ## Search Tags
 //! #storage, #opfs, #file-persistence, #sync-access-handle

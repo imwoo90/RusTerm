@@ -4,16 +4,16 @@
 //! General helper utilities covering terminal ANSI parsing, device identification, hex/text format conversions, command history, and Web Serial API interop bindings.
 //!
 //! ## Submodules
-//! - [`ansi_decoder`]: Fast ANSI terminal color and styling escape code parser.
-//! - [`device_id`]: USB VID/PID hardware chip identification and user-defined port aliases.
-//! - [`file_save`]: Browser file download triggers for exported log files.
-//! - [`format`](mod@format): Bidirectional text-to-hex formatting, hex parsing, and worker message senders.
-//! - [`history`]: FIFO command history ring buffer with deduplication and persistence.
-//! - [`macros`]: User-configurable macro buttons with keybindings and hex/ascii transmission.
-//! - [`scroll`]: Virtual scrolling window index and viewport offset math.
-//! - [`serial_api`]: Web Serial API browser JavaScript interop wrappers.
-//! - [`simulation`]: Mock serial port generator for local development without hardware.
-//! - [`terminal_bindings`]: DOM keyboard and terminal event binding handlers.
+//! - [`ansi_decoder`] (`ansi_decoder.rs`): Fast ANSI terminal color and styling escape code parser.
+//! - [`device_id`] (`device_id/mod.rs`): USB VID/PID hardware chip identification and user-defined port aliases.
+//! - [`file_save`] (`file_save.rs`): Browser file download triggers for exported log files.
+//! - [`format`](mod@format) (`format.rs`): Bidirectional text-to-hex formatting, hex parsing, and worker message senders.
+//! - [`history`] (`history.rs`): FIFO command history ring buffer with deduplication and persistence.
+//! - [`macros`] (`macros.rs`): User-configurable macro buttons with keybindings and hex/ascii transmission.
+//! - [`scroll`] (`scroll.rs`): Virtual scrolling window index and viewport offset math.
+//! - [`serial_api`] (`serial_api.rs`): Web Serial API browser JavaScript interop wrappers.
+//! - [`simulation`] (`simulation.rs`): Mock serial port generator for local development without hardware.
+//! - [`terminal_bindings`] (`terminal_bindings.rs`): DOM keyboard and terminal event binding handlers.
 //!
 //! ## Search Tags
 //! #utils, #ansi-decoder, #device-id, #hex-format, #history, #macros, #virtual-scroll

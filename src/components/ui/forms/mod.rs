@@ -4,10 +4,10 @@
 //! Re-exports reusable UI controls including command input bars, custom dropdowns, line ending selectors, and animated toggle switches following the design system.
 //!
 //! ## Submodules
-//! - [`command_input`]: Text entry bar for typing and transmitting serial commands with history.
-//! - [`line_ending`]: Dropdown selector for carriage return and newline line terminators.
-//! - [`select`]: Generic styled select dropdown component for option picking.
-//! - [`toggle`]: Reusable animated boolean toggle switch control.
+//! - [`command_input`] (`command_input.rs`): Text entry bar for typing and transmitting serial commands with history.
+//! - [`line_ending`] (`line_ending.rs`): Dropdown selector for carriage return and newline line terminators.
+//! - [`select`] (`select.rs`): Generic styled select dropdown component for option picking.
+//! - [`toggle`] (`toggle.rs`): Reusable animated boolean toggle switch control.
 //!
 //! ## Search Tags
 //! #forms, #inputs, #controls, #dropdowns, #toggles

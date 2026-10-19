@@ -5,8 +5,8 @@
 //! for high-capacity log persistence and fast random-access retrieval.
 //!
 //! ## Submodules
-//! - [`index`]: In-memory byte offset indexing, filtered line ranges, and active filter evaluation.
-//! - [`storage`]: Storage backends (OPFS synchronous file access handle, in-memory buffer fallback).
+//! - [`index`] (`index/mod.rs`): In-memory byte offset indexing, filtered line ranges, and active filter evaluation.
+//! - [`storage`] (`storage/mod.rs`): Storage backends (OPFS synchronous file access handle, in-memory buffer fallback).
 //!
 //! ## Search Tags
 //! #repository, #opfs-storage, #line-index, #persistence, #random-access

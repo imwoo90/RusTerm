@@ -4,8 +4,8 @@
 //! Contains modular command execution routines processing specific client requests like search, export, clear, and settings synchronization.
 //!
 //! ## Submodules
-//! - [`command`]: Strongly-typed worker command enums and dispatch payloads.
-//! - [`handlers`]: Execution routines processing client commands within the worker.
+//! - [`command`] (`command.rs`): Strongly-typed worker command enums and dispatch payloads.
+//! - [`handlers`] (`handlers.rs`): Execution routines processing client commands within the worker.
 //!
 //! ## Search Tags
 //! #commands, #command-pattern, #dispatch-routines, #worker-tasks

@@ -4,9 +4,9 @@
 //! Aggregates serial port status displays, baud rate picker dropdowns, and serial port settings panels into cohesive UI controls for connection lifecycle management.
 //!
 //! ## Submodules
-//! - [`baud_rate_picker`]: Dropdown selector for standard and custom serial baud rates.
-//! - [`settings_dropdown`]: Configuration panel for data bits, stop bits, parity, and flow control.
-//! - [`status`]: Visual connection badge showing connected, disconnected, or error states.
+//! - [`baud_rate_picker`] (`baud_rate_picker.rs`): Dropdown selector for standard and custom serial baud rates.
+//! - [`settings_dropdown`] (`settings_dropdown.rs`): Configuration panel for data bits, stop bits, parity, and flow control.
+//! - [`status`] (`status.rs`): Visual connection badge showing connected, disconnected, or error states.
 //!
 //! ## Search Tags
 //! #connection, #baud-rate, #serial-settings, #port-status

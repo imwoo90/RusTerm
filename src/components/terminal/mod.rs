@@ -4,8 +4,8 @@
 //! Embeds full VT100/ANSI terminal emulation via WebAssembly bindings to xterm.js v6.0, managing input throttling buffers, periodic screen writes, and window resizing.
 //!
 //! ## Submodules
-//! - [`hooks`]: Terminal lifecycle hooks managing xterm.js instance initialization and resizing.
-//! - [`toolbar`]: Action bar hosting clear buffer, copy output, and auto-scroll controls.
+//! - [`hooks`] (`hooks.rs`): Terminal lifecycle hooks managing xterm.js instance initialization and resizing.
+//! - [`toolbar`] (`toolbar.rs`): Action bar hosting clear buffer, copy output, and auto-scroll controls.
 //!
 //! ## Search Tags
 //! #terminal, #xtermjs, #vt100, #ansi, #emulation

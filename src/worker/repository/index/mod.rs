@@ -5,9 +5,9 @@
 //! enabling instant O(1) random-access and virtual scroll lookups across persisted logs.
 //!
 //! ## Submodules
-//! - [`log_index`]: Core LogIndex structure maintaining line start/end byte offsets and filtered line mapping.
-//! - [`filter`]: Active regex and case-sensitive/inverted search filter compilers.
-//! - [`types`]: Strongly-typed primitives (`ByteOffset`, `LineIndex`, `LineRange`).
+//! - [`log_index`] (`log_index.rs`): Core LogIndex structure maintaining line start/end byte offsets and filtered line mapping.
+//! - [`filter`] (`filter.rs`): Active regex and case-sensitive/inverted search filter compilers.
+//! - [`types`] (`types.rs`): Strongly-typed primitives (`ByteOffset`, `LineIndex`, `LineRange`).
 //!
 //! ## Search Tags
 //! #line-index, #byte-offset, #filter, #virtual-scroll, #fast-lookup

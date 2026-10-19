@@ -16,17 +16,18 @@ This project strictly adheres to the compiler-enforced **Agent-Native** architec
 ---
 
 ## 2. System Architecture & Module Domains
-RusTerm is a high-performance serial terminal and log analysis web application built with Rust and Dioxus 0.7:
+RusTerm is a high-performance serial terminal and log analysis web application built with Rust and Dioxus 0.7. Its root crate index (`src/main.rs`) organizes the codebase into seven top-level domains:
 
-1. **`src/worker/`**:
-   - Web Worker thread handling serial port data streams, VT100 ANSI parsing, and chunk dispatching.
-   - Refer to [`LogChunk`](crate::worker::LogChunk) for streaming packet structures.
-2. **`src/worker/repository/`**:
-   - High-throughput storage engine backing log history using Origin Private File System (OPFS) and indexed search offsets.
-3. **`src/utils/`**:
-   - Cohesive helper utilities for device discovery (`device_id`), hex/text conversions (`format`), command history, and ANSI decode tables.
-4. **`src/gui/` & `src/views/`**:
-   - Reactive UI components powered by Dioxus 0.7 signals and RSX.
+1. **`src/components/` (`src/components/mod.rs`)**:
+   - Reactive Dioxus 0.7 UI component tree including top-level layout (`rust_term.rs`), connection panel (`connection/mod.rs`), virtual-scrolled log monitor (`monitor/mod.rs`), interactive xterm.js bridge (`terminal/mod.rs`), and reusable UI controls (`ui/mod.rs`).
+2. **`src/hooks/` (`src/hooks/mod.rs`)**:
+   - Reactive state hooks bridging browser Web Serial hardware streams (`serial.rs`) and background Web Worker message channels (`worker_bridge.rs`, `worker_handler.rs`).
+3. **`src/worker/` (`src/worker/mod.rs`)**:
+   - Dedicated background Web Worker handling high-throughput serial ingestion (`chunk_handler/mod.rs`), command dispatch (`commands/mod.rs`), regex/substring search (`search.rs`), and Origin Private File System (OPFS) log storage (`repository/mod.rs`).
+4. **`src/utils/` (`src/utils/mod.rs`)**:
+   - Cohesive helper utilities for USB/Bluetooth device identification (`device_id/mod.rs`), hex/text formatting (`format.rs`), ANSI escape decoding (`ansi_decoder.rs`), and browser storage/Serial API wrappers (`storage.rs`, `serial_api.rs`).
+5. **`src/state.rs`**, **`src/types.rs`**, & **`src/config.rs`**:
+   - Global reactive context signals (`AppState`), shared IPC message envelopes (`WorkerCommand`, `WorkerResponse`), and system-wide buffering/UI constants.
 
 ---
 
@@ -53,9 +54,9 @@ npm run test:e2e
 ---
 
 ## 4. AI Agent Navigation Guide
-1. **Entry Points**: Start with `AGENTS.md` (this file) and `README.md` to grasp project architecture and verification requirements.
-2. **Module Indexing**: Treat `mod.rs` in any directory as the module's architecture map. Read the `//!` header to understand submodules and dependencies before diving into child files.
-3. **Graph Traversal via Rustdoc Links**: Follow compile-checked intra-doc links (`[Type]`) to traverse dependencies deterministically.
+1. **Entry Points**: Start with `AGENTS.md` (this file), `AGENT_NATIVE.md`, and `src/main.rs` to grasp the project architecture and top-level module catalog.
+2. **Module Indexing (`mod.rs` = `index.md`)**: Treat `src/main.rs` and every `mod.rs` as a directory's Living LLM-Wiki index. Read its `//!` header (`## Overview` and `## Submodules`)—which explicitly specifies whether each child is a leaf file (`foo.rs`) or directory index (`foo/mod.rs`)—before opening child files.
+3. **Graph Traversal via Rustdoc Links**: Follow compile-checked intra-doc links (`[Type]`) to traverse dependencies deterministically without brute-force filesystem searches.
 4. **Pre-commit Verification**: Never consider a task complete without passing all 5 steps in the Verification Protocol.
 
 ---
