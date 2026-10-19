@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 //! Unit tests for line indexing tables, byte offset mappings, and active filters.
 //!
 //! Validates monotonic line offsets, filtered range projections, case-sensitivity,

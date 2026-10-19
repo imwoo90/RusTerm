@@ -49,9 +49,9 @@ pub fn start_worker() -> bool {
 
 /// Gets the path to the application script by searching the DOM
 pub fn get_app_script_path() -> String {
-    let document = web_sys::window()
-        .and_then(|w| w.document())
-        .expect("No document");
+    let Some(document) = web_sys::window().and_then(|w| w.document()) else {
+        return String::new();
+    };
     let pkg_name = env!("CARGO_PKG_NAME");
 
     // Select only relevant tags that contain the package name in their source/href

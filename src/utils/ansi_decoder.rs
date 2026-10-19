@@ -41,13 +41,16 @@ fn parse_ansi_segments(content: &str) -> Vec<(String, Option<String>)> {
     let mut segments = Vec::new();
 
     thread_local! {
-        static ANSI_RE: Regex = Regex::new(r"\x1B\[([0-9;]*)([A-Za-z])").unwrap();
+        static ANSI_RE: Option<Regex> = Regex::new(r"\x1B\[([0-9;]*)([A-Za-z])").ok();
     }
 
     let mut last_pos = 0;
     let mut current_color: Option<String> = None;
 
-    ANSI_RE.with(|re| {
+    ANSI_RE.with(|re_opt| {
+        let Some(re) = re_opt else {
+            return;
+        };
         for cap in re.captures_iter(content) {
             let m = match cap.get(0) {
                 Some(m) => m,

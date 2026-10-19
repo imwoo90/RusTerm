@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 //! Unit and integration tests for combined log repository storage and indexing.
 //!
 //! Validates synchronous append routines, atomic line range reads, filter matching,

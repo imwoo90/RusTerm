@@ -43,7 +43,9 @@ fn process_search_batch(
 
     let text = String::from_utf8_lossy(&buf[..size]);
 
-    let filter = repo.index.active_filter.as_ref().unwrap().clone();
+    let Some(filter) = repo.index.active_filter.as_ref().cloned() else {
+        return Ok(());
+    };
     let mut batch_matches = Vec::new();
 
     for (j, line) in text.trim_end_matches('\n').split('\n').enumerate() {

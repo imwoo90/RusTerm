@@ -187,14 +187,11 @@ pub fn Xterm(props: XtermProps) -> Element {
             id: "xterm-container",
             onmounted: move |_| {
                 if let Some(element) = window()
-                    .unwrap()
-                    .document()
-                    .unwrap()
-                    .get_element_by_id("xterm-container")
+                    .and_then(|w| w.document())
+                    .and_then(|d| d.get_element_by_id("xterm-container"))
+                    && let Ok(html_elem) = element.dyn_into::<web_sys::HtmlElement>()
                 {
-                    if let Ok(html_elem) = element.dyn_into::<web_sys::HtmlElement>() {
-                        terminal_div.set(Some(html_elem));
-                    }
+                    terminal_div.set(Some(html_elem));
                 }
             },
         }
