@@ -1,21 +1,82 @@
-//! # Monitor View Container
+//! # Monitor View Container, Header & Control Toolbar
 //!
 //! ## Overview
-//! Combines the virtualized scroll viewport, monitor toolbar, search filter bar, and command transmit strip into a unified serial monitor interface.
+//! Combines the virtualized scroll viewport, monitor header (`MonitorHeader`), control toolbar (`MonitorToolbar`),
+//! search filter bar, and command transmit strip into a unified serial monitor interface (`Monitor`).
 //!
 //! ## Search Tags
-//! #monitor-view, #container, #layout, #serial-monitor
+//! #monitor-view, #monitor-header, #monitor-toolbar, #container, #serial-monitor
 
-use crate::components::monitor::hooks::effects::{use_search_sync, use_settings_sync};
-use crate::components::monitor::monitor_header::MonitorHeader;
+use crate::components::monitor::hooks::{use_search_sync, use_settings_sync, use_virtual_scroll};
 use crate::components::monitor::monitor_viewport::MonitorViewport;
+use crate::components::monitor::{HighlightButton, SearchBar, TransmitBar};
 use crate::components::ui::buttons::ResumeScrollButton;
-use crate::components::ui::console::ConsoleFrame;
+use crate::components::ui::console::{
+    ConsoleFrame, ConsoleSeparator, ConsoleToggleButton, UnifiedConsoleToolbar,
+};
 use crate::hooks::use_worker_controller;
 use crate::state::AppState;
 use dioxus::prelude::*;
 
-use crate::components::monitor::hooks::virtual_scroll::use_virtual_scroll;
+#[component]
+pub fn MonitorToolbar() -> Element {
+    let highlight_open = use_signal(|| false);
+
+    rsx! {
+        div {
+            class: "shrink-0 p-2 bg-background-dark relative",
+            class: if highlight_open() { "z-60" } else { "z-40" },
+            div { class: "flex gap-2 h-10 items-stretch min-w-[600px]",
+                HighlightButton { is_open: highlight_open }
+                SearchBar {}
+                div { class: "w-px bg-[#2a2e33] my-2 mx-1" }
+                TransmitBar {}
+            }
+        }
+    }
+}
+
+#[component]
+pub fn MonitorHeader(
+    autoscroll: bool,
+    count: usize,
+    onexport: EventHandler<MouseEvent>,
+    onclear: EventHandler<MouseEvent>,
+    ontoggle_autoscroll: EventHandler<MouseEvent>,
+) -> Element {
+    let state = use_context::<AppState>();
+
+    rsx! {
+        UnifiedConsoleToolbar {
+            left: rsx! {
+                span { class: "text-[10px] text-gray-500 font-mono hidden sm:block", "[ LINES: {count} / OPFS ENABLED ]" }
+                ConsoleSeparator {}
+                div { class: "flex items-center gap-1",
+                    ConsoleToggleButton {
+                        icon: "schedule",
+                        title: "Toggle Timestamps",
+                        active: (state.ui.show_timestamps)(),
+                        onclick: move |_| state.ui.toggle_timestamps(),
+                    }
+                    ConsoleToggleButton {
+                        icon: "hexagon",
+                        title: "Toggle Hex View",
+                        active: (state.ui.is_hex_view)(),
+                        onclick: move |_| state.ui.toggle_hex_view(),
+                    }
+                }
+            },
+            font_size: state.ui.font_size,
+            is_autoscroll: autoscroll,
+            is_tracking_interactive: true,
+            on_toggle_autoscroll: move |evt| ontoggle_autoscroll.call(evt),
+            on_clear: move |evt| onclear.call(evt),
+            on_export: move |evt| onexport.call(evt),
+            min_font_size: 8,
+            max_font_size: 36,
+        }
+    }
+}
 
 #[component]
 pub fn Monitor() -> Element {
@@ -23,7 +84,6 @@ pub fn Monitor() -> Element {
     let bridge = use_worker_controller();
     let mut vs = use_virtual_scroll();
 
-    // Initial log sync and effects
     use_settings_sync(bridge);
     use_search_sync(bridge);
 

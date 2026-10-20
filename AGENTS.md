@@ -21,11 +21,11 @@ RusTerm is a high-performance serial terminal and log analysis web application b
 1. **`src/components/` (`src/components/mod.rs`)**:
    - Reactive Dioxus 0.7 UI component tree including top-level layout (`rust_term.rs`), connection panel (`connection/mod.rs`), virtual-scrolled log monitor (`monitor/mod.rs`), interactive xterm.js bridge (`terminal/mod.rs`), and reusable UI controls (`ui/mod.rs`).
 2. **`src/hooks/` (`src/hooks/mod.rs`)**:
-   - Reactive state hooks bridging browser Web Serial hardware streams (`serial.rs`) and background Web Worker message channels (`worker_bridge.rs`, `worker_handler.rs`).
+   - Reactive state hooks bridging browser Web Serial hardware streams (`serial.rs`) and background Web Worker message channels (`worker.rs`).
 3. **`src/worker/` (`src/worker/mod.rs`)**:
-   - Dedicated background Web Worker handling high-throughput serial ingestion (`chunk_handler/mod.rs`), command dispatch (`commands/mod.rs`), regex/substring search (`search.rs`), and Origin Private File System (OPFS) log storage (`repository/mod.rs`).
+   - Dedicated background Web Worker handling high-throughput serial ingestion (`chunk_handler.rs`, `processor.rs`), command dispatch (`commands.rs`, `dispatcher.rs`), regex/substring search (`search.rs`), and Origin Private File System (OPFS) log storage (`repository/mod.rs` -> `index.rs`, `storage.rs`).
 4. **`src/utils/` (`src/utils/mod.rs`)**:
-   - Cohesive helper utilities for USB/Bluetooth device identification (`device_id/mod.rs`), hex/text formatting (`format.rs`), ANSI escape decoding (`ansi_decoder.rs`), and browser storage/Serial API wrappers (`storage.rs`, `serial_api.rs`).
+   - Cohesive helper utilities for USB/Bluetooth device identification and alias persistence (`device_id/mod.rs`), hex/text formatting (`format.rs`), ANSI escape decoding (`ansi_decoder.rs`), and Web Serial API wrappers (`serial_api.rs`).
 5. **`src/state.rs`**, **`src/types.rs`**, & **`src/config.rs`**:
    - Global reactive context signals (`AppState`), shared IPC message envelopes (`WorkerCommand`, `WorkerResponse`), and system-wide buffering/UI constants.
 

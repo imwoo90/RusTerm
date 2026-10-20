@@ -82,6 +82,12 @@ extern "C" {
     pub fn base_y(this: &TerminalBuffer) -> i32;
 }
 
+#[wasm_bindgen(module = "/public/assets/js/file_save.js")]
+extern "C" {
+    pub fn save_stream_to_disk(stream: JsValue);
+    pub fn save_terminal_history(terminal: &JsValue);
+}
+
 #[wasm_bindgen]
 extern "C" {
     pub type TerminalOptions;

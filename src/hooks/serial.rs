@@ -313,7 +313,7 @@ fn start_simulation_task(state: AppState, bridge: WorkerController) {
                 break;
             }
 
-            let chunk = crate::utils::simulation::generate_simulated_chunk();
+            let chunk = crate::utils::generate_simulated_chunk();
             if (state.ui.view_mode)() == crate::state::ViewMode::Terminal {
                 state.terminal.push_data(chunk.to_vec());
             } else {

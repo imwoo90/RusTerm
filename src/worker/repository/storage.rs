@@ -1,16 +1,25 @@
-//! # OPFS Sync Storage Backend
+//! # Storage Backend & OPFS Sync Persistence
 //!
 //! ## Overview
-//! Leverages FileSystemSyncAccessHandle in Web Workers for ultra-low latency, non-blocking binary disk persistence of streaming serial logs.
+//! Defines the `StorageBackend` trait and `OpfsBackend` implementation leveraging
+//! `FileSystemSyncAccessHandle` in Web Workers with an in-memory `RwLock<Vec<u8>>` fallback.
 //!
 //! ## Search Tags
-//! #opfs, #sync-access-handle, #disk-persistence, #zero-copy, #low-latency
+//! #storage, #opfs, #sync-access-handle, #disk-persistence, #file-persistence
 
 use crate::worker::error::LogError;
 use crate::worker::repository::index::ByteOffset;
-use crate::worker::repository::storage::backend::StorageBackend;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
+
+/// Trait for storage backend operations
+pub trait StorageBackend {
+    fn read_at(&self, offset: ByteOffset, buf: &mut [u8]) -> Result<usize, LogError>;
+    fn write_at(&self, offset: ByteOffset, data: &[u8]) -> Result<usize, LogError>;
+    fn get_file_size(&self) -> Result<ByteOffset, LogError>;
+    fn truncate(&self, size: u64) -> Result<(), LogError>;
+    fn flush(&self) -> Result<(), LogError>;
+}
 
 /// OPFS-based storage backend with in-memory fallback for non-secure contexts
 pub struct OpfsBackend {

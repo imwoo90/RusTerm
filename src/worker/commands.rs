@@ -1,23 +1,74 @@
-//! # Worker Command Execution Handlers
+//! # Worker Commands & Execution Handlers
 //!
 //! ## Overview
-//! Implements specific handler routines executing file clearance, filter updates, search cancellations, and status inquiries within the worker.
+//! Defines the `WorkerCommand` execution trait, message factory `create_command_from_msg`,
+//! and concrete command handlers for chunk ingestion, window retrieval, search, clear, and export.
 //!
 //! ## Search Tags
-//! #command-handlers, #execution, #clear-logs, #filter-updates, #search-cancellation
+//! #commands, #command-pattern, #command-handlers, #dispatch-routines, #worker-tasks
 
-use crate::worker::commands::command::WorkerCommand;
+use crate::types::WorkerMsg;
 use crate::worker::error::LogError;
 use crate::worker::export::LogExporter;
 use crate::worker::repository::index::LineIndex;
 use crate::worker::repository::storage::StorageBackend;
 use crate::worker::search::LogSearcher;
 use crate::worker::state::WorkerState;
-use crate::types::WorkerMsg;
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::JsValue;
 use wasm_bindgen_futures::spawn_local;
+
+/// Command interface for worker operations.
+pub trait WorkerCommand {
+    /// Executes the command on the worker state.
+    /// Returns `Ok(true)` if synchronous, `Ok(false)` if asynchronous handling is needed by caller.
+    fn execute(
+        &self,
+        state: &mut WorkerState,
+        state_rc: &Rc<RefCell<WorkerState>>,
+    ) -> Result<bool, JsValue>;
+}
+
+/// Factory to convert `WorkerMsg` into a concrete `WorkerCommand`.
+pub fn create_command_from_msg(msg: WorkerMsg) -> Box<dyn WorkerCommand> {
+    match msg {
+        WorkerMsg::NewSession => Box::new(NewSessionCommand),
+        WorkerMsg::AppendChunk { chunk, is_hex } => Box::new(AppendChunkCommand { chunk, is_hex }),
+        WorkerMsg::SetTimestampState(enabled) => Box::new(SetTimestampStateCommand(enabled)),
+
+        WorkerMsg::RequestWindow { start_line, count } => {
+            Box::new(RequestWindowCommand { start_line, count })
+        }
+        WorkerMsg::Clear => Box::new(ClearCommand),
+
+        WorkerMsg::SearchLogs {
+            query,
+            match_case,
+            use_regex,
+            invert,
+        } => Box::new(SearchLogsCommand {
+            query,
+            match_case,
+            use_regex,
+            invert,
+        }),
+        WorkerMsg::ExportLogs { .. } => Box::new(ExportLogsCommand),
+
+        _ => Box::new(NoOpCommand),
+    }
+}
+
+pub struct NoOpCommand;
+impl WorkerCommand for NoOpCommand {
+    fn execute(
+        &self,
+        _state: &mut WorkerState,
+        _state_rc: &Rc<RefCell<WorkerState>>,
+    ) -> Result<bool, JsValue> {
+        Ok(true)
+    }
+}
 
 pub struct NewSessionCommand;
 
@@ -27,7 +78,6 @@ impl WorkerCommand for NewSessionCommand {
         _state: &mut WorkerState,
         _state_rc: &Rc<RefCell<WorkerState>>,
     ) -> Result<bool, JsValue> {
-        // Needs async handling by caller
         Ok(false)
     }
 }
@@ -50,7 +100,6 @@ impl WorkerCommand for AppendChunkCommand {
         if let Some(line) = active_line {
             state.send_msg(WorkerMsg::ActiveLine(Some(line)));
         } else {
-            // Send None to clear if active line became empty (e.g. newline received)
             state.send_msg(WorkerMsg::ActiveLine(None));
         }
         Ok(true)

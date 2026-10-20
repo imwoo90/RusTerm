@@ -6,7 +6,7 @@
 //! ## Search Tags
 //! #highlight, #rules, #tags, #color-accents, #regex-matching
 
-use crate::components::monitor::utils::style::get_highlight_classes;
+use crate::components::monitor::utils::get_highlight_classes;
 use crate::components::ui::{IconButton, PanelHeader};
 use crate::config::HIGHLIGHT_COLORS;
 use crate::state::AppState;

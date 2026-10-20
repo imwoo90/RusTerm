@@ -1,11 +1,13 @@
-//! # Select Dropdown Component
+//! # Select, Line Ending & Toggle Controls
 //!
 //! ## Overview
-//! Provides a styled generic select dropdown component supporting keyboard navigation, custom option renderers, and accessible focus states.
+//! Provides styled generic select dropdowns (`CustomSelect`, `CustomInputSelect`), serial line
+//! termination selectors (`LineEndSelector`), and animated boolean toggle switches (`ToggleSwitch`).
 //!
 //! ## Search Tags
-//! #select, #dropdown, #combo-box, #form-control
+//! #select, #dropdown, #combo-box, #line-ending, #toggle, #form-control
 
+use crate::state::LineEnding;
 use dioxus::prelude::*;
 
 #[component]
@@ -123,7 +125,7 @@ fn ComboInputControls(
     }
 }
 
-/// A select component that also allows custom user input
+/// A select component that also allows custom user input.
 #[component]
 pub fn CustomInputSelect(
     options: Vec<&'static str>,
@@ -165,6 +167,69 @@ pub fn CustomInputSelect(
                     onclose: move |_| is_open.set(false),
                     scrollable: true,
                 }
+            }
+        }
+    }
+}
+
+/// Renders a selector for configuring serial line termination characters (`None`, `LF`, `CR`, `CRLF`).
+#[component]
+pub fn LineEndSelector(
+    label: &'static str,
+    selected: LineEnding,
+    onselect: EventHandler<LineEnding>,
+    active_class: &'static str,
+    is_rx: bool,
+) -> Element {
+    rsx! {
+        div { class: "flex items-center gap-2",
+            span { class: "text-[10px] font-bold text-gray-500 uppercase tracking-widest",
+                "{label}"
+            }
+            div { class: "flex bg-[#0d0f10] p-0.5 rounded-lg border border-[#2a2e33]",
+                for ending in [LineEnding::None, LineEnding::NL, LineEnding::CR, LineEnding::NLCR] {
+                    button {
+                        class: "px-2 py-1 rounded text-[10px] font-bold transition-all duration-200",
+                        class: if selected == ending { "{active_class} border shadow-sm" } else { "text-gray-500 hover:text-white" },
+                        onclick: move |_| onselect.call(ending),
+                        match ending {
+                            LineEnding::None => if is_rx { "RAW" } else { "NONE" }
+                            LineEnding::NL => "LF",
+                            LineEnding::CR => "CR",
+                            LineEnding::NLCR => "CRLF",
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// A toggle switch for boolean settings.
+#[component]
+pub fn ToggleSwitch(
+    label: &'static str,
+    active: bool,
+    onclick: EventHandler<MouseEvent>,
+) -> Element {
+    rsx! {
+        button {
+            class: "flex items-center cursor-pointer group gap-2",
+            onclick: move |evt| onclick.call(evt),
+            div { class: "relative flex items-center",
+                div {
+                    class: "w-7 h-3.5 rounded-full transition-all duration-200 border border-white/5",
+                    class: if active { "bg-primary border-primary shadow-[0_0_8px_rgba(0,191,255,0.4)]" } else { "bg-[#2a2e33] group-hover:bg-[#34393e]" },
+                }
+                div {
+                    class: "absolute left-0 w-3.5 h-3.5 rounded-full transition-all duration-200",
+                    class: if active { "translate-x-3.5 bg-white" } else { "bg-gray-500" },
+                }
+            }
+            span {
+                class: "text-[10px] font-bold uppercase tracking-widest transition-colors leading-none",
+                class: if active { "text-primary" } else { "text-gray-500 group-hover:text-gray-300" },
+                "{label}"
             }
         }
     }

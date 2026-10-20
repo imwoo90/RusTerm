@@ -5,10 +5,10 @@
 //! OPFS binary persistence, indexed search offsets, and formatted batch delivery to UI.
 //!
 //! ## Submodules
-//! - [`chunk_handler`] (`chunk_handler/mod.rs`): Incoming serial chunk buffering, VT100 ANSI parsing, and UTF-8 line splitting.
+//! - [`chunk_handler`] (`chunk_handler.rs`): Incoming serial chunk buffering, VT100 ANSI parsing, and UTF-8 line splitting.
 //! - [`processor`] (`processor.rs`): Core ingestion pipeline loop (`LogProcessor`) coordinating chunk handlers and storage.
 //! - [`repository`] (`repository/mod.rs`): High-throughput log storage engine backed by OPFS and indexed offset lookup.
-//! - [`commands`] (`commands/mod.rs`): Typed command pattern implementations for worker request/response messaging.
+//! - [`commands`] (`commands.rs`): Typed command pattern implementations for worker request/response messaging.
 //! - [`dispatcher`] (`dispatcher.rs`): Top-level worker message routing from web worker `onmessage` events.
 //! - [`search`] (`search.rs`): Regex-powered log searching and active filter execution.
 //! - [`formatter`] (`formatter.rs`): Log display formatting strategies (ASCII, ANSI VT100, Hex dump).

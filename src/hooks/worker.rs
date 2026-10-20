@@ -101,7 +101,7 @@ fn setup_worker_message_handler(worker: &web_sys::Worker, state: AppState) {
             && let Ok(msg_type) = js_sys::Reflect::get(&obj, &"type".into())
                 && msg_type.as_string() == Some("EXPORT_STREAM".to_string())
                     && let Ok(stream) = js_sys::Reflect::get(&obj, &"stream".into()) {
-                        crate::utils::file_save::save_stream_to_disk(stream);
+                        crate::utils::save_stream_to_disk(stream);
                         return;
                     }
 

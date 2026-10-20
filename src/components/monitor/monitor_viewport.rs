@@ -1,18 +1,41 @@
-//! # Virtualized Monitor Viewport
+//! # Virtualized Monitor Viewport & Log Line Renderer
 //!
 //! ## Overview
-//! Implements the high-speed virtualized scrolling viewport that only mounts DOM elements for visible lines, maintaining 60fps rendering over large histories.
+//! Implements the high-speed virtualized scrolling viewport (`MonitorViewport`) and ANSI-styled
+//! log line renderer (`MonitorLogLine`) that only mounts DOM elements for visible lines.
 //!
 //! ## Search Tags
-//! #viewport, #virtual-scroll, #dom-recycling, #high-performance
+//! #viewport, #virtual-scroll, #log-line, #ansi-styling, #dom-recycling, #high-performance
 
-use crate::components::monitor::monitor_log_line::MonitorLogLine;
-use crate::config::{CONSOLE_BOTTOM_PADDING, CONSOLE_TOP_PADDING};
+use crate::config::{line_height_from_font, CONSOLE_BOTTOM_PADDING, CONSOLE_TOP_PADDING};
 use crate::hooks::WorkerController;
 use crate::state::{AppState, Highlight, LineEnding};
-use crate::utils::serial;
+use crate::utils::{decode_ansi_text, serial};
 use dioxus::prelude::*;
 use js_sys::Uint8Array;
+
+#[component]
+pub fn MonitorLogLine(text: String, highlights: Vec<Highlight>, show_highlights: bool) -> Element {
+    let state = use_context::<AppState>();
+    let font_size = *state.ui.font_size.read();
+    let line_height = line_height_from_font(font_size);
+    let segments = decode_ansi_text(&text, &highlights, show_highlights);
+
+    rsx! {
+        div {
+            style: "height: {line_height}px; line-height: {line_height}px;",
+            class: "text-gray-300 whitespace-pre font-mono",
+            style: "font-size: {font_size}px;",
+            for (content , color) in segments {
+                if let Some(c) = color {
+                    span { class: "font-bold", style: "color: {c};", "{content}" }
+                } else {
+                    "{content}"
+                }
+            }
+        }
+    }
+}
 
 fn key_to_bytes(key: Key, ending: LineEnding) -> Option<Vec<u8>> {
     match key {
@@ -51,53 +74,13 @@ fn handle_viewport_keydown(evt: KeyboardEvent, state: &AppState, bridge: &Worker
 
     spawn(async move {
         if let Some(p) = port
-            && serial::send_data(&p, &data).await.is_ok() && local_echo {
-                let array = Uint8Array::from(data.as_slice());
-                bridge_clone.append_chunk(array, false);
-            }
-    });
-}
-
-#[component]
-fn ViewportLogList(
-    offset_top: f64,
-    highlights: Vec<Highlight>,
-    show_highlights: bool,
-    active_line: Option<String>,
-) -> Element {
-    let state = use_context::<AppState>();
-    let visible_logs = state.log.visible_logs;
-    let total_lines = state.log.total_lines;
-
-    let logs = visible_logs.read();
-    let is_at_bottom = logs
-        .last()
-        .map(|(idx, _)| *idx + 1 == total_lines())
-        .unwrap_or(total_lines() == 0);
-
-    rsx! {
-        div {
-            style: "position: absolute; top: 0; left: 0; right: 0; transform: translateY({offset_top}px); padding: {CONSOLE_TOP_PADDING}px 0 {CONSOLE_BOTTOM_PADDING}px 0; pointer-events: auto; min-width: 100%; width: max-content;",
-            for (line_idx, text) in logs.iter() {
-                MonitorLogLine {
-                    key: "{line_idx}",
-                    text: text.clone(),
-                    highlights: highlights.clone(),
-                    show_highlights,
-                }
-            }
-            if is_at_bottom {
-                if let Some(text) = active_line {
-                    MonitorLogLine {
-                        key: "{0}",
-                        text: text.clone(),
-                        highlights: highlights.clone(),
-                        show_highlights: false,
-                    }
-                }
-            }
+            && serial::send_data(&p, &data).await.is_ok()
+            && local_echo
+        {
+            let array = Uint8Array::from(data.as_slice());
+            bridge_clone.append_chunk(array, false);
         }
-    }
+    });
 }
 
 #[component]
@@ -117,6 +100,12 @@ pub fn MonitorViewport(
     let show_highlights = (state.ui.show_highlights)();
     let active_line = (state.log.active_line)();
 
+    let logs = visible_logs.read();
+    let is_at_bottom = logs
+        .last()
+        .map(|(idx, _)| *idx + 1 == total_lines())
+        .unwrap_or(total_lines() == 0);
+
     rsx! {
         div {
             class: "flex-1 overflow-y-auto font-mono text-xs md:text-sm leading-[20px] scrollbar-custom relative",
@@ -129,14 +118,29 @@ pub fn MonitorViewport(
 
             div { style: "height: {total_height}px; width: 100%; position: absolute; top: 0; left: 0; pointer-events: none;" }
 
-            ViewportLogList {
-                offset_top,
-                highlights,
-                show_highlights,
-                active_line,
+            div {
+                style: "position: absolute; top: 0; left: 0; right: 0; transform: translateY({offset_top}px); padding: {CONSOLE_TOP_PADDING}px 0 {CONSOLE_BOTTOM_PADDING}px 0; pointer-events: auto; min-width: 100%; width: max-content;",
+                for (line_idx, text) in logs.iter() {
+                    MonitorLogLine {
+                        key: "{line_idx}",
+                        text: text.clone(),
+                        highlights: highlights.clone(),
+                        show_highlights,
+                    }
+                }
+                if is_at_bottom {
+                    if let Some(text) = active_line {
+                        MonitorLogLine {
+                            key: "{0}",
+                            text: text.clone(),
+                            highlights: highlights.clone(),
+                            show_highlights: false,
+                        }
+                    }
+                }
             }
 
-            if visible_logs.read().is_empty() && total_lines() > 0 {
+            if logs.is_empty() && total_lines() > 0 {
                 div { class: "text-gray-500 animate-pulse text-[12px] px-4", "Loading buffer..." }
             }
             div {

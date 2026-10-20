@@ -5,20 +5,14 @@
 //!
 //! ## Submodules
 //! - [`command_input`] (`command_input.rs`): Text entry bar for typing and transmitting serial commands with history.
-//! - [`line_ending`] (`line_ending.rs`): Dropdown selector for carriage return and newline line terminators.
-//! - [`select`] (`select.rs`): Generic styled select dropdown component for option picking.
-//! - [`toggle`] (`toggle.rs`): Reusable animated boolean toggle switch control.
+//! - [`select`] (`select.rs`): Styled select dropdowns, line ending selectors, and boolean toggle switches.
 //!
 //! ## Search Tags
 //! #forms, #inputs, #controls, #dropdowns, #toggles
 
 mod command_input;
-mod line_ending;
 mod select;
-mod toggle;
 
 pub use command_input::CommandInputGroup;
 #[allow(unused_imports)]
-pub use line_ending::LineEndSelector;
-pub use select::{CustomInputSelect, CustomSelect};
-pub use toggle::ToggleSwitch;
+pub use select::{CustomInputSelect, CustomSelect, LineEndSelector, ToggleSwitch};
