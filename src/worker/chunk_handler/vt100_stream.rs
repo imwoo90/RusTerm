@@ -8,7 +8,7 @@
 //! #vt100, #ansi-parser, #screen-row, #stream-processor
 
 use crate::config::MAX_LINE_BYTES;
-use crate::worker::chunk_handler::line_builder::format_and_append_line;
+use crate::worker::chunk_handler::line_builder::LineBatchAccumulator;
 use crate::worker::chunk_handler::scanner::find_next_line_ending_or_full;
 use crate::worker::formatter::LogFormatterStrategy;
 use crate::worker::repository::index::{ByteOffset, LineRange};
@@ -32,10 +32,13 @@ pub fn process_vt100_stream(
     is_filtering: bool,
     filter_matcher: impl Fn(&str) -> bool,
 ) -> (String, Vec<ByteOffset>, Vec<LineRange>, Option<String>) {
-    let mut batch = String::new();
-    let mut offsets = Vec::new();
-    let mut filtered = Vec::new();
-    let mut relative_offset = ByteOffset(0);
+    let mut acc = LineBatchAccumulator::with_capacity(
+        0,
+        formatter,
+        timestamp,
+        is_filtering,
+        &filter_matcher,
+    );
 
     let mut start = 0;
     let len = chunk.len();
@@ -49,17 +52,7 @@ pub fn process_vt100_stream(
             parser.process(line_bytes);
 
             if let Some(line_str) = extract_screen_row(parser) {
-                format_and_append_line(
-                    &line_str,
-                    formatter,
-                    timestamp,
-                    &mut batch,
-                    &mut offsets,
-                    &mut filtered,
-                    &mut relative_offset,
-                    is_filtering,
-                    &filter_matcher,
-                );
+                acc.append_line(&line_str);
             }
 
             // Clear row for next line: Carriage Return + Clear Line
@@ -78,5 +71,5 @@ pub fn process_vt100_stream(
         .filter(|s| !s.trim().is_empty())
         .filter(|s| !is_filtering || filter_matcher(s));
 
-    (batch, offsets, filtered, active_line)
+    (acc.batch, acc.offsets, acc.filtered, active_line)
 }

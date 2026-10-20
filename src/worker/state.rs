@@ -8,7 +8,7 @@
 
 use crate::worker::processor::LogProcessor;
 use crate::worker::repository::storage::{get_opfs_root, init_opfs_session, new_session};
-use crate::worker::types::WorkerMsg;
+use crate::types::WorkerMsg;
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;

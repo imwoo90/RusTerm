@@ -8,7 +8,7 @@
 
 use crate::worker::commands::{create_command_from_msg, AppendChunkCommand, WorkerCommand};
 use crate::worker::state::WorkerState;
-use crate::worker::types::WorkerMsg;
+use crate::types::WorkerMsg;
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;

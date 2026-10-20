@@ -96,7 +96,7 @@ pub fn send_chunk_to_worker(worker: &web_sys::Worker, arr: js_sys::Uint8Array, i
 }
 
 /// Helper to send general control messages to worker
-pub fn send_worker_msg(worker: &web_sys::Worker, msg: crate::worker::types::WorkerMsg) {
+pub fn send_worker_msg(worker: &web_sys::Worker, msg: crate::types::WorkerMsg) {
     if let Ok(msg_str) = serde_json::to_string(&msg) {
         let _ = worker.post_message(&msg_str.into());
     }

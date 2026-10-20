@@ -13,7 +13,7 @@ use crate::worker::repository::index::LineIndex;
 use crate::worker::repository::storage::StorageBackend;
 use crate::worker::search::LogSearcher;
 use crate::worker::state::WorkerState;
-use crate::worker::types::WorkerMsg;
+use crate::types::WorkerMsg;
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::JsValue;

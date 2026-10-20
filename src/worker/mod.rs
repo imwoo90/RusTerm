@@ -15,7 +15,6 @@
 //! - [`export`] (`export.rs`): Log file download and export generation (text/raw).
 //! - [`lifecycle`] (`lifecycle.rs`): Web Worker initialization, script path resolution, and error handlers.
 //! - [`state`] (`state.rs`): Thread-local worker mutable state containers.
-//! - [`types`] (`types.rs`): Public IPC message types and log chunk envelopes.
 //! - [`error`] (`error.rs`): Worker domain error types and Result aliases.
 //!
 //! ## Search Tags
@@ -34,7 +33,6 @@ pub mod processor;
 pub mod repository;
 pub mod search;
 pub mod state;
-pub mod types;
 
 // Re-export public functions
 pub use lifecycle::get_app_script_path;

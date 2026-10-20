@@ -16,7 +16,7 @@ pub mod handlers;
 pub use command::WorkerCommand;
 pub use handlers::*;
 
-use crate::worker::types::WorkerMsg;
+use crate::types::WorkerMsg;
 
 /// Factory to convert WorkerMsg into a specific Command
 pub fn create_command_from_msg(msg: WorkerMsg) -> Box<dyn WorkerCommand> {

@@ -7,7 +7,7 @@
 //! ## Search Tags
 //! #hex, #hex-stream, #fixed-width, #leftover-buffer
 
-use crate::worker::chunk_handler::line_builder::format_and_append_line;
+use crate::worker::chunk_handler::line_builder::LineBatchAccumulator;
 use crate::worker::formatter::LogFormatterStrategy;
 use crate::worker::repository::index::{ByteOffset, LineRange};
 use std::borrow::Cow;
@@ -33,10 +33,13 @@ pub fn process_hex_stream(
         Cow::Owned(format!("{}{}", leftover_buffer, chunk))
     };
 
-    let mut batch = String::with_capacity(full_text.len() * 2);
-    let mut offsets = Vec::new();
-    let mut filtered = Vec::new();
-    let mut relative_offset = ByteOffset(0);
+    let mut acc = LineBatchAccumulator::with_capacity(
+        full_text.len() * 2,
+        formatter,
+        timestamp,
+        is_filtering,
+        &filter_matcher,
+    );
 
     let text_bytes = full_text.as_bytes();
     let len = text_bytes.len();
@@ -47,18 +50,7 @@ pub fn process_hex_stream(
         if remaining >= max_len {
             let end = start + max_len;
             let line_str = &full_text[start..end];
-
-            format_and_append_line(
-                line_str,
-                formatter,
-                timestamp,
-                &mut batch,
-                &mut offsets,
-                &mut filtered,
-                &mut relative_offset,
-                is_filtering,
-                &filter_matcher,
-            );
+            acc.append_line(line_str);
             start = end;
         } else {
             break;
@@ -74,5 +66,5 @@ pub fn process_hex_stream(
         None
     };
 
-    (batch, offsets, filtered, active_line)
+    (acc.batch, acc.offsets, acc.filtered, active_line)
 }
