@@ -1,4 +1,4 @@
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::module_inception)]
 //! Unit tests for streaming line processor, VT100 parser, and hex chunking.
 
 #[cfg(test)]

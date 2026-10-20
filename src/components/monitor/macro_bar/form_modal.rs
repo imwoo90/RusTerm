@@ -24,12 +24,11 @@ fn save_macro_item(
         state.error("Please fill in all fields");
         return false;
     }
-    if is_hex {
-        if let Err(e) = parse_hex_string(&cmd) {
+    if is_hex
+        && let Err(e) = parse_hex_string(&cmd) {
             state.error(&format!("Macro Hex Error: {}", e));
             return false;
         }
-    }
     if let Some(id) = editing_id {
         storage.write().update(id, label, cmd, is_hex, ending);
         state.success("Macro Updated");

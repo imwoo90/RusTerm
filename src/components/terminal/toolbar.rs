@@ -70,11 +70,10 @@ fn ScrollbackInput() -> Element {
             value: "{val_str}",
             oninput: move |e| {
                 input_value.set(e.value());
-                if let Ok(val) = e.value().parse::<u32>() {
-                    if (1000..=99999).contains(&val) {
+                if let Ok(val) = e.value().parse::<u32>()
+                    && (1000..=99999).contains(&val) {
                         *state.terminal.scrollback.write() = val;
                     }
-                }
             },
             onblur: move |_| {
                 // Reset to current valid state on blur

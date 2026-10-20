@@ -201,11 +201,10 @@ pub async fn new_session(
     cleanup_current: bool,
     current_filename: &mut Option<String>,
 ) -> Result<web_sys::FileSystemSyncAccessHandle, JsValue> {
-    if cleanup_current {
-        if let Some(name) = current_filename {
+    if cleanup_current
+        && let Some(name) = current_filename {
             let _ = wasm_bindgen_futures::JsFuture::from(root.remove_entry(name)).await;
         }
-    }
 
     let filename = format!("logs_{}.txt", chrono::Utc::now().timestamp_millis());
     let opts = web_sys::FileSystemGetFileOptions::new();

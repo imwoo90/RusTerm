@@ -131,11 +131,10 @@ fn use_serial_sender(
                 }
                 std::mem::take(&mut *buf)
             };
-            if let Some(port) = port_sig.peek().clone() {
-                if let Err(e) = crate::utils::serial_api::send_data(&port, &data).await {
+            if let Some(port) = port_sig.peek().clone()
+                && let Err(e) = crate::utils::serial_api::send_data(&port, &data).await {
                     web_sys::console::error_1(&e);
                 }
-            }
         }
     });
 }

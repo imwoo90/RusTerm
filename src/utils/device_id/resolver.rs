@@ -139,8 +139,8 @@ pub fn build_device_info(
     let base_label = dev.label.clone();
     let base_desc = dev.description.clone();
 
-    if let Some(ref a) = alias {
-        if !a.trim().is_empty() {
+    if let Some(ref a) = alias
+        && !a.trim().is_empty() {
             if let Some(idx) = port_index {
                 dev.label = format!("{a} [{base_label} #{idx}]");
                 dev.description = format!("{a} ({base_desc}, Port #{idx})");
@@ -150,14 +150,12 @@ pub fn build_device_info(
             }
             return dev;
         }
-    }
 
-    if let Some(idx) = port_index {
-        if total_ports > 1 || idx > 1 {
+    if let Some(idx) = port_index
+        && (total_ports > 1 || idx > 1) {
             dev.label = format!("{base_label} #{idx}");
             dev.description = format!("{base_desc} (Port #{idx})");
         }
-    }
 
     dev
 }

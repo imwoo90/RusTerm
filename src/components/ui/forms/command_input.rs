@@ -187,11 +187,10 @@ pub fn CommandInputGroup(
                     }
                 },
                 onkeydown: move |evt| {
-                    if evt.key() == Key::Enter {
-                        if let Some(handler) = on_submit {
+                    if evt.key() == Key::Enter
+                        && let Some(handler) = on_submit {
                             handler.call(());
                         }
-                    }
                     if let Some(handler) = on_keydown {
                         handler.call(evt);
                     }

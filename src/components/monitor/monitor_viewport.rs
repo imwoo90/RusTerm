@@ -47,15 +47,14 @@ fn handle_viewport_keydown(evt: KeyboardEvent, state: &AppState, bridge: &Worker
 
     let port = state.conn.port.peek().as_ref().cloned();
     let local_echo = *state.serial.tx_local_echo.peek();
-    let bridge_clone = bridge.clone();
+    let bridge_clone = *bridge;
 
     spawn(async move {
-        if let Some(p) = port {
-            if serial::send_data(&p, &data).await.is_ok() && local_echo {
+        if let Some(p) = port
+            && serial::send_data(&p, &data).await.is_ok() && local_echo {
                 let array = Uint8Array::from(data.as_slice());
                 bridge_clone.append_chunk(array, false);
             }
-        }
     });
 }
 

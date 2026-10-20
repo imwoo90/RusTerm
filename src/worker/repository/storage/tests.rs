@@ -1,4 +1,4 @@
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::module_inception)]
 //! Unit tests for storage backends and in-memory fallback persistence.
 //!
 //! Validates binary chunk persistence, partial reads, offsets, file sizing,

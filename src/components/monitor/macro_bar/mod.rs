@@ -159,7 +159,7 @@ pub fn MacroBar() -> Element {
     let on_send = move |(cmd, is_hex, ending): (String, bool, LineEnding)| {
         let port = state.conn.port.peek().as_ref().cloned();
         let local_echo = (state.serial.tx_local_echo)();
-        let b = bridge.clone();
+        let b = bridge;
         let s = state;
         spawn(async move {
             execute_macro_send(cmd, is_hex, ending, port, local_echo, b, s).await;

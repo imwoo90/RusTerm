@@ -17,14 +17,15 @@ use js_sys::Uint8Array;
 async fn execute_send(
     text: String,
     is_hex: bool,
-    ending: LineEnding,
-    local_echo: bool,
-    port: Option<web_sys::SerialPort>,
+    state: AppState,
     bridge: crate::hooks::WorkerController,
     mut history: Signal<CommandHistory>,
     mut history_index: Signal<Option<usize>>,
     mut input_value: Signal<String>,
 ) {
+    let ending = *state.serial.tx_line_ending.peek();
+    let local_echo = *state.serial.tx_local_echo.peek();
+    let port = state.conn.port.peek().as_ref().cloned();
     if text.is_empty() && matches!(ending, LineEnding::None) {
         return;
     }
@@ -57,8 +58,8 @@ async fn execute_send(
         _ => {}
     }
 
-    if let Some(conn_port) = port {
-        if serial::send_data(&conn_port, &data).await.is_ok() {
+    if let Some(conn_port) = port
+        && serial::send_data(&conn_port, &data).await.is_ok() {
             if local_echo {
                 let array = Uint8Array::from(data.as_slice());
                 bridge.append_chunk(array, false);
@@ -69,7 +70,6 @@ async fn execute_send(
             }
             history_index.set(None);
         }
-    }
 }
 
 fn handle_history_key(
@@ -133,17 +133,14 @@ pub fn TransmitBar() -> Element {
     let bridge = crate::hooks::use_worker_controller();
 
     let send_task = use_coroutine(move |mut rx| {
-        let b = bridge.clone();
+        let b = bridge;
         async move {
             while rx.next().await.is_some() {
                 let text = input_value();
-                let ending = *state.serial.tx_line_ending.peek();
                 let is_hex = is_hex_input();
-                let local_echo = *state.serial.tx_local_echo.peek();
-                let port = state.conn.port.peek().as_ref().cloned();
                 execute_send(
-                    text, is_hex, ending, local_echo, port,
-                    b.clone(), history, history_index, input_value,
+                    text, is_hex, state,
+                    b, history, history_index, input_value,
                 ).await;
             }
         }

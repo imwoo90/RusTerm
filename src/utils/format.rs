@@ -17,7 +17,7 @@ pub fn parse_hex_string(input: &str) -> Result<Vec<u8>, String> {
         .replace("-", "")
         .replace("0x", "");
 
-    if clean.len() % 2 != 0 {
+    if !clean.len().is_multiple_of(2) {
         return Err("Hex string must have an even number of characters".to_string());
     }
 
@@ -69,13 +69,11 @@ pub fn convert_hex_to_text(input: &str) -> String {
     if trimmed.is_empty() {
         return String::new();
     }
-    if let Ok(bytes) = parse_hex_string(trimmed) {
-        if let Ok(text) = String::from_utf8(bytes) {
-            if text.chars().all(|c| !c.is_control() || c == '\n' || c == '\r' || c == '\t') {
+    if let Ok(bytes) = parse_hex_string(trimmed)
+        && let Ok(text) = String::from_utf8(bytes)
+            && text.chars().all(|c| !c.is_control() || c == '\n' || c == '\r' || c == '\t') {
                 return text;
             }
-        }
-    }
     input.to_string()
 }
 

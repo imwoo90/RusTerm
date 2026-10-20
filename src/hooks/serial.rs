@@ -158,15 +158,14 @@ async fn cleanup_serial_connection(state: AppState) {
 
     // 4. Close Port if exists
 
-    if let Some(conn_port) = maybe_port {
-        if crate::utils::serial_api::close_port(&conn_port)
+    if let Some(conn_port) = maybe_port
+        && crate::utils::serial_api::close_port(&conn_port)
             .await
             .is_err()
         {
             // Log error if needed, but we proceed to reset state anyway
             web_sys::console::warn_1(&"Failed to close port cleanly".into());
         }
-    }
 
     // 4. Final State Reset
     state.conn.set_connected(None, None, None);
@@ -287,7 +286,7 @@ fn start_read_task_with_info(
         state.conn.set_reading(true);
 
         let s_clone = state;
-        let b_clone = bridge.clone();
+        let b_clone = bridge;
         let status = crate::utils::serial_api::read_loop(reader, move |data| {
             if (s_clone.ui.view_mode)() == crate::state::ViewMode::Terminal {
                 s_clone.terminal.push_data(data.to_vec());

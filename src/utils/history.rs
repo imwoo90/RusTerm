@@ -51,11 +51,10 @@ impl CommandHistory {
         }
 
         // Remove strictly logic: if same as last, don't add.
-        if let Some(last) = self.commands.last() {
-            if last == &cmd {
+        if let Some(last) = self.commands.last()
+            && last == &cmd {
                 return;
             }
-        }
 
         self.commands.push(cmd);
         if self.commands.len() > MAX_HISTORY {

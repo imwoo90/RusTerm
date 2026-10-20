@@ -97,20 +97,17 @@ fn setup_worker_message_handler(worker: &web_sys::Worker, state: AppState) {
         let data = event.data();
 
         // 1. Handle Binary/Object Messages (Stream Exports)
-        if let Ok(obj) = data.clone().dyn_into::<js_sys::Object>() {
-            if let Ok(msg_type) = js_sys::Reflect::get(&obj, &"type".into()) {
-                if msg_type.as_string() == Some("EXPORT_STREAM".to_string()) {
-                    if let Ok(stream) = js_sys::Reflect::get(&obj, &"stream".into()) {
+        if let Ok(obj) = data.clone().dyn_into::<js_sys::Object>()
+            && let Ok(msg_type) = js_sys::Reflect::get(&obj, &"type".into())
+                && msg_type.as_string() == Some("EXPORT_STREAM".to_string())
+                    && let Ok(stream) = js_sys::Reflect::get(&obj, &"stream".into()) {
                         crate::utils::file_save::save_stream_to_disk(stream);
                         return;
                     }
-                }
-            }
-        }
 
         // 2. Handle Structured Messages (WorkerMsg)
-        if let Some(msg_str) = data.as_string() {
-            if let Ok(msg) = serde_json::from_str::<WorkerMsg>(&msg_str) {
+        if let Some(msg_str) = data.as_string()
+            && let Ok(msg) = serde_json::from_str::<WorkerMsg>(&msg_str) {
                 match msg {
                     WorkerMsg::TotalLines(count) => {
                         tl.set(count);
@@ -130,7 +127,6 @@ fn setup_worker_message_handler(worker: &web_sys::Worker, state: AppState) {
                     _ => {}
                 }
             }
-        }
     }) as Box<dyn FnMut(_)>);
 
     worker.set_onmessage(Some(callback.as_ref().unchecked_ref()));

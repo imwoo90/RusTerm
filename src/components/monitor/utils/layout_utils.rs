@@ -74,15 +74,13 @@ pub fn use_auto_scroller(
             // Use plain JS to set scrollTop ONLY, preserving scrollLeft.
             // Dioxus visible/scrollTo APIs often mess with X-axis.
             // Element ID is "console-output"
-            if let Some(window) = web_sys::window() {
-                if let Some(document) = window.document() {
-                    if let Some(el) = document.get_element_by_id("console-output") {
+            if let Some(window) = web_sys::window()
+                && let Some(document) = window.document()
+                    && let Some(el) = document.get_element_by_id("console-output") {
                         // scrollTop = scrollHeight
                         let scroll_height = el.scroll_height();
                         el.set_scroll_top(scroll_height);
                     }
-                }
-            }
         }
     });
 }

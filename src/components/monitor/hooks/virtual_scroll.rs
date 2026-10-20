@@ -31,11 +31,10 @@ fn use_height_observer(
     use_resource(move || {
         let handle = console_handle();
         async move {
-            if let Some(handle) = handle {
-                if let Ok(rect) = handle.get_client_rect().await {
+            if let Some(handle) = handle
+                && let Ok(rect) = handle.get_client_rect().await {
                     console_height.set(rect.height());
                 }
-            }
         }
     });
 }
@@ -54,8 +53,8 @@ fn use_scroll_observer(
         let total_lines = (state.log.total_lines)();
         let current_height = *console_height.read();
         async move {
-            if let Some(handle) = handle {
-                if let Ok(offset) = handle.get_scroll_offset().await {
+            if let Some(handle) = handle
+                && let Ok(offset) = handle.get_scroll_offset().await {
                     let (new_index, is_at_bottom) = calculate_scroll_state(
                         offset.y,
                         current_height,
@@ -71,7 +70,6 @@ fn use_scroll_observer(
                         state.ui.set_autoscroll(is_at_bottom);
                     }
                 }
-            }
         }
     })
 }

@@ -134,7 +134,7 @@ mod tests {
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].label, "Status");
         assert_eq!(items[0].command, "AT+STATUS");
-        assert_eq!(items[0].is_hex, false);
+        assert!(!items[0].is_hex);
         assert_eq!(items[0].line_ending, LineEnding::NLCR);
 
         let retrieved = storage.get(items[0].id);
@@ -152,7 +152,7 @@ mod tests {
         let updated = storage.get(id).expect("Item should exist");
         assert_eq!(updated.label, "New");
         assert_eq!(updated.command, "33 44");
-        assert_eq!(updated.is_hex, true);
+        assert!(updated.is_hex);
         assert_eq!(updated.line_ending, LineEnding::NL);
     }
 
@@ -180,6 +180,6 @@ mod tests {
         assert_eq!(items.len(), 2);
         assert_eq!(items[0].label, "M1");
         assert_eq!(items[1].label, "M2");
-        assert_eq!(items[1].is_hex, true);
+        assert!(items[1].is_hex);
     }
 }
