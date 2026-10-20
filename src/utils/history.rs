@@ -22,26 +22,23 @@ pub struct CommandHistory {
 impl CommandHistory {
     pub fn load() -> Self {
         #[cfg(target_arch = "wasm32")]
-        if let Some(win) = window() {
-            if let Ok(Some(storage)) = win.local_storage() {
-                if let Ok(Some(json)) = storage.get_item(HISTORY_KEY) {
-                    if let Ok(history) = serde_json::from_str(&json) {
-                        return history;
-                    }
-                }
-            }
+        if let Some(win) = window()
+            && let Ok(Some(storage)) = win.local_storage()
+            && let Ok(Some(json)) = storage.get_item(HISTORY_KEY)
+            && let Ok(history) = serde_json::from_str(&json)
+        {
+            return history;
         }
         Self::default()
     }
 
     pub fn save(&self) {
         #[cfg(target_arch = "wasm32")]
-        if let Some(win) = window() {
-            if let Ok(Some(storage)) = win.local_storage() {
-                if let Ok(json) = serde_json::to_string(self) {
-                    let _ = storage.set_item(HISTORY_KEY, &json);
-                }
-            }
+        if let Some(win) = window()
+            && let Ok(Some(storage)) = win.local_storage()
+            && let Ok(json) = serde_json::to_string(self)
+        {
+            let _ = storage.set_item(HISTORY_KEY, &json);
         }
     }
 

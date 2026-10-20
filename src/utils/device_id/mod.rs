@@ -141,19 +141,19 @@ pub fn set_stored_alias(
 ) {
     #[cfg(target_arch = "wasm32")]
     {
-        if let Some(win) = web_sys::window() {
-            if let Ok(Some(storage)) = win.local_storage() {
-                let key = format!(
-                    "rusterm_port_alias_{:04X}_{:04X}_{}",
-                    vid.unwrap_or(0),
-                    pid.unwrap_or(0),
-                    port_index.unwrap_or(1)
-                );
-                if alias.trim().is_empty() {
-                    let _ = storage.remove_item(&key);
-                } else {
-                    let _ = storage.set_item(&key, alias.trim());
-                }
+        if let Some(win) = web_sys::window()
+            && let Ok(Some(storage)) = win.local_storage()
+        {
+            let key = format!(
+                "rusterm_port_alias_{:04X}_{:04X}_{}",
+                vid.unwrap_or(0),
+                pid.unwrap_or(0),
+                port_index.unwrap_or(1)
+            );
+            if alias.trim().is_empty() {
+                let _ = storage.remove_item(&key);
+            } else {
+                let _ = storage.set_item(&key, alias.trim());
             }
         }
     }

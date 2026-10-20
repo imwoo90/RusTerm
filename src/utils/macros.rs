@@ -32,14 +32,12 @@ pub struct MacroStorage {
 impl MacroStorage {
     pub fn load() -> Self {
         #[cfg(target_arch = "wasm32")]
-        if let Some(win) = window() {
-            if let Ok(Some(storage)) = win.local_storage() {
-                if let Ok(Some(json)) = storage.get_item(MACRO_KEY) {
-                    if let Ok(macros) = serde_json::from_str(&json) {
-                        return macros;
-                    }
-                }
-            }
+        if let Some(win) = window()
+            && let Ok(Some(storage)) = win.local_storage()
+            && let Ok(Some(json)) = storage.get_item(MACRO_KEY)
+            && let Ok(macros) = serde_json::from_str(&json)
+        {
+            return macros;
         }
         // Default: Empty
         Self { items: Vec::new() }
@@ -47,12 +45,11 @@ impl MacroStorage {
 
     pub fn save(&self) {
         #[cfg(target_arch = "wasm32")]
-        if let Some(win) = window() {
-            if let Ok(Some(storage)) = win.local_storage() {
-                if let Ok(json) = serde_json::to_string(self) {
-                    let _ = storage.set_item(MACRO_KEY, &json);
-                }
-            }
+        if let Some(win) = window()
+            && let Ok(Some(storage)) = win.local_storage()
+            && let Ok(json) = serde_json::to_string(self)
+        {
+            let _ = storage.set_item(MACRO_KEY, &json);
         }
     }
 
